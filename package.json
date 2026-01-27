@@ -1,0 +1,44 @@
+{
+  "name": "edugrid",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "payload": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload",
+    "generate:types": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
+    "generate:importmap": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:importmap",
+    "migrate": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload migrate",
+    "test:db": "node test-db-connection.js",
+    "seed": "node scripts/seed-test-data.js"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "^3.73.0",
+    "@payloadcms/richtext-slate": "^3.0.0",
+    "dotenv": "^16.3.1",
+    "next": "^15.5.10",
+    "payload": "^3.73.0",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.11.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tesseract.js": "^7.0.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.16",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  }
+}
