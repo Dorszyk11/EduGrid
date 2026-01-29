@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface TypSzkoly {
   id: string | number;
@@ -18,6 +19,14 @@ interface Przedmiot {
   aktywny?: boolean;
 }
 
+interface KlasaAdmin {
+  id: string | number;
+  nazwa: string;
+  rok_szkolny: string;
+  profil: string | null;
+  typ_szkoly: { id: string; nazwa?: string } | null;
+}
+
 const TYP_ZAJEC_OPTS = [
   { value: 'ogolnoksztalcace', label: 'Ogólnokształcące' },
   { value: 'zawodowe_teoretyczne', label: 'Zawodowe teoretyczne' },
@@ -30,9 +39,22 @@ const POZIOM_OPTS = [
   { value: 'brak', label: 'Brak podziału' },
 ];
 
+const LITERY_KLAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+/** Opcje roku początku cyklu (np. 2022 dla technikum 2022–2027) */
+function opcjeRokuPoczatku(): number[] {
+  const now = new Date().getFullYear();
+  const opcje: number[] = [];
+  for (let y = now - 5; y <= now + 5; y++) {
+    opcje.push(y);
+  }
+  return opcje;
+}
+
 export default function PanelAdminaPage() {
   const [szkoly, setSzkoly] = useState<TypSzkoly[]>([]);
   const [przedmioty, setPrzedmioty] = useState<Przedmiot[]>([]);
+  const [klasy, setKlasy] = useState<KlasaAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -43,25 +65,37 @@ export default function PanelAdminaPage() {
     typ_zajec: 'ogolnoksztalcace',
     poziom: 'podstawowy',
   });
+  const [formKlasa, setFormKlasa] = useState({
+    typSzkolyId: '',
+    litera: 'A',
+    rokPoczatku: '',
+    profil: '',
+  });
   const [submittingSzkola, setSubmittingSzkola] = useState(false);
   const [submittingPrzedmiot, setSubmittingPrzedmiot] = useState(false);
+  const [submittingKlasa, setSubmittingKlasa] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingPrzedmiotId, setDeletingPrzedmiotId] = useState<string | null>(null);
+  const [deletingKlasaId, setDeletingKlasaId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [rSzk, rPrz] = await Promise.all([
+      const [rSzk, rPrz, rKlasy] = await Promise.all([
         fetch('/api/typy-szkol'),
         fetch('/api/przedmioty'),
+        fetch('/api/klasy'),
       ]);
       const szk = await rSzk.json();
       const prz = await rPrz.json();
+      const kl = await rKlasy.json();
       setSzkoly(Array.isArray(szk) ? szk : []);
       setPrzedmioty(Array.isArray(prz) ? prz : []);
+      setKlasy(kl.klasy ?? []);
     } catch {
       setSzkoly([]);
       setPrzedmioty([]);
+      setKlasy([]);
     } finally {
       setLoading(false);
     }
@@ -97,7 +131,7 @@ export default function PanelAdminaPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      setMsg({ type: 'ok', text: 'Typ szkoły dodany.' });
+      setMsg({ type: 'ok', text: 'Typ szkoły został dodany pomyślnie.' });
       setFormSzkola({ nazwa: '', liczba_lat: '', kod_mein: '' });
       fetchAll();
     } catch (e) {
@@ -175,6 +209,73 @@ export default function PanelAdminaPage() {
     }
   };
 
+  const selectedTypSzkoly = szkoly.find((s) => String(s.id) === formKlasa.typSzkolyId);
+  const liczbaLat = selectedTypSzkoly?.liczba_lat ?? 0;
+  const rokPoczatkuNum = formKlasa.rokPoczatku ? Number(formKlasa.rokPoczatku) : NaN;
+  const rokKonca = !Number.isNaN(rokPoczatkuNum) && liczbaLat > 0 ? rokPoczatkuNum + liczbaLat : null;
+
+  const handleAddKlasa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { typSzkolyId, litera, rokPoczatku } = formKlasa;
+    if (!typSzkolyId || !rokPoczatku.trim() || !litera) {
+      setMsg({ type: 'err', text: 'Wybierz typ szkoły, rok początku i literę klasy.' });
+      return;
+    }
+    const start = Number(rokPoczatku);
+    if (Number.isNaN(start) || start < 2000 || start > 2040) {
+      setMsg({ type: 'err', text: 'Rok początku: 2000–2040.' });
+      return;
+    }
+    setSubmittingKlasa(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/klasy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          typ_szkoly_id: typSzkolyId,
+          rok_poczatku: start,
+          litera: litera.trim(),
+          profil: formKlasa.profil.trim() || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setMsg({
+        type: 'ok',
+        text: `Klasa została dodana pomyślnie. (${data.nazwa ?? litera}, zakres: ${data.rok_szkolny ?? ''})`,
+      });
+      setFormKlasa((prev) => ({
+        ...prev,
+        litera: 'A',
+        profil: '',
+      }));
+      fetchAll();
+    } catch (e) {
+      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd dodawania klasy.' });
+    } finally {
+      setSubmittingKlasa(false);
+    }
+  };
+
+  const handleDeleteKlasa = async (k: KlasaAdmin) => {
+    if (!confirm(`Usunąć klasę „${k.nazwa}” (${k.rok_szkolny})?`)) return;
+    const id = String(k.id);
+    setDeletingKlasaId(id);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/klasy/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setMsg({ type: 'ok', text: 'Klasa została usunięta.' });
+      fetchAll();
+    } catch (e) {
+      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd usuwania klasy.' });
+    } finally {
+      setDeletingKlasaId(null);
+    }
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-5xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Panel admina</h1>
@@ -189,6 +290,13 @@ export default function PanelAdminaPage() {
           }`}
         >
           {msg.text}
+          {msg.type === 'ok' && msg.text.includes('Klasa') && (
+            <span className="block mt-2">
+              <Link href="/klasy" className="text-green-700 underline font-medium">
+                Przejdź do listy klas →
+              </Link>
+            </span>
+          )}
         </div>
       )}
 
@@ -276,6 +384,127 @@ export default function PanelAdminaPage() {
                 </table>
                 {szkoly.length === 0 && (
                   <p className="py-6 text-center text-gray-500 text-sm">Brak typów szkół. Dodaj pierwszy powyżej.</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Klasy */}
+          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Dodawanie klas</h2>
+              <p className="text-sm text-gray-600 mt-0.5">
+                Jedna klasa = jeden cykl (np. technikum 5 lat → rok początku 2022, rok końca 2027). Wybierz typ szkoły – na tej podstawie obliczy się koniec cyklu (początek + liczba lat).
+              </p>
+            </div>
+            <div className="p-5 space-y-5">
+              <form onSubmit={handleAddKlasa} className="flex flex-wrap gap-4 items-end">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-gray-700">Rodzaj szkoły (typ)</span>
+                  <select
+                    value={formKlasa.typSzkolyId}
+                    onChange={(e) => setFormKlasa((prev) => ({ ...prev, typSzkolyId: e.target.value }))}
+                    className="rounded-lg border border-gray-300 px-3 py-2 w-64"
+                  >
+                    <option value="">— wybierz typ szkoły —</option>
+                    {szkoly.map((s) => (
+                      <option key={String(s.id)} value={String(s.id)}>
+                        {s.nazwa} ({s.liczba_lat} lat)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {liczbaLat > 0 && (
+                  <>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-gray-700">Rok początku cyklu</span>
+                      <select
+                        value={formKlasa.rokPoczatku}
+                        onChange={(e) => setFormKlasa((s) => ({ ...s, rokPoczatku: e.target.value }))}
+                        className="rounded-lg border border-gray-300 px-3 py-2 w-24"
+                      >
+                        <option value="">—</option>
+                        {opcjeRokuPoczatku().map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {rokKonca != null && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-500">Rok końca cyklu</span>
+                        <span className="text-sm font-semibold text-gray-700">{rokKonca}</span>
+                        <span className="text-xs text-gray-500">(zakres: {formKlasa.rokPoczatku}–{rokKonca})</span>
+                      </div>
+                    )}
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-gray-700">Litera (np. A, B, C)</span>
+                      <select
+                        value={formKlasa.litera}
+                        onChange={(e) => setFormKlasa((s) => ({ ...s, litera: e.target.value }))}
+                        className="rounded-lg border border-gray-300 px-3 py-2 w-20"
+                      >
+                        {LITERY_KLAS.map((l) => (
+                          <option key={l} value={l}>{l}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-gray-700">Profil (opcjonalnie)</span>
+                      <input
+                        type="text"
+                        value={formKlasa.profil}
+                        onChange={(e) => setFormKlasa((s) => ({ ...s, profil: e.target.value }))}
+                        placeholder="np. matematyczno-fizyczny"
+                        className="rounded-lg border border-gray-300 px-3 py-2 w-48"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={submittingKlasa || !formKlasa.rokPoczatku}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                    >
+                      {submittingKlasa ? 'Dodawanie…' : 'Dodaj klasę'}
+                    </button>
+                  </>
+                )}
+              </form>
+              {formKlasa.typSzkolyId && liczbaLat === 0 && (
+                <p className="text-sm text-amber-600">Wybrany typ szkoły nie ma ustawionej liczby lat – ustaw ją w sekcji Typy szkół.</p>
+              )}
+              <div className="overflow-x-auto mt-6">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50/80">
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwa</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Typ szkoły</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Rok szkolny (zakres)</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Profil</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {klasy.map((k) => (
+                      <tr key={String(k.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                        <td className="px-4 py-2 font-medium text-gray-900">{k.nazwa}</td>
+                        <td className="px-4 py-2 text-gray-600">{k.typ_szkoly?.nazwa ?? '–'}</td>
+                        <td className="px-4 py-2 text-gray-600">{k.rok_szkolny}</td>
+                        <td className="px-4 py-2 text-gray-600">{k.profil ?? '–'}</td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteKlasa(k)}
+                            disabled={deletingKlasaId === String(k.id)}
+                            className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
+                          >
+                            {deletingKlasaId === String(k.id) ? '…' : 'Usuń'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {klasy.length === 0 && (
+                  <p className="py-6 text-center text-gray-500 text-sm">Brak klas. Dodaj pierwszą powyżej.</p>
                 )}
               </div>
             </div>

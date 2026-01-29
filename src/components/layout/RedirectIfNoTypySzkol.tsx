@@ -27,7 +27,7 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
         const hasTypy = Array.isArray(data) && data.length > 0;
         if (!hasTypy) {
           setStatus('redirect');
-          router.replace('/import/mein-pdf');
+          router.replace('/plany-mein');
         } else {
           setStatus('ok');
         }
@@ -51,7 +51,7 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
       <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
-          <p className="mt-4 text-gray-600">Przekierowanie do importu MEiN...</p>
+          <p className="mt-4 text-gray-600">Przekierowanie do planów MEiN...</p>
         </div>
       </div>
     );

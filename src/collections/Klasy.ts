@@ -4,7 +4,7 @@ export const Klasy: CollectionConfig = {
   slug: 'klasy',
   admin: {
     useAsTitle: 'nazwa',
-    defaultColumns: ['nazwa', 'typ_szkoly', 'rok_szkolny', 'numer_klasy', 'aktywna', 'updatedAt'],
+    defaultColumns: ['nazwa', 'typ_szkoly', 'rok_szkolny', 'aktywna', 'updatedAt'],
   },
   access: {
     read: () => true,
@@ -19,7 +19,7 @@ export const Klasy: CollectionConfig = {
       required: true,
       label: 'Nazwa klasy',
       admin: {
-        description: 'Np. 1A, 2B, 3C',
+        description: 'Np. A, B, C (litera oddziału)',
       },
       validate: (value) => {
         if (!value || value.length < 1) {
@@ -42,17 +42,18 @@ export const Klasy: CollectionConfig = {
       name: 'rok_szkolny',
       type: 'text',
       required: true,
-      label: 'Rok szkolny',
+      label: 'Rok szkolny (zakres cyklu)',
       admin: {
-        description: 'Format: YYYY/YYYY (np. 2024/2025)',
+        description: 'Format: YYYY-YYYY (rok początku – rok końca cyklu, np. 2022-2027 dla technikum 5-letniego) lub YYYY/YYYY (pojedynczy rok)',
       },
       validate: (value) => {
         if (!value) {
           return 'Rok szkolny jest wymagany';
         }
-        const pattern = /^\d{4}\/\d{4}$/;
-        if (!pattern.test(value)) {
-          return 'Rok szkolny musi być w formacie YYYY/YYYY (np. 2024/2025)';
+        const rangePattern = /^\d{4}-\d{4}$/;
+        const singlePattern = /^\d{4}\/\d{4}$/;
+        if (!rangePattern.test(value) && !singlePattern.test(value)) {
+          return 'Rok szkolny: YYYY-YYYY (zakres) lub YYYY/YYYY (pojedynczy)';
         }
         return true;
       },
@@ -60,12 +61,12 @@ export const Klasy: CollectionConfig = {
     {
       name: 'numer_klasy',
       type: 'number',
-      required: true,
-      label: 'Numer klasy w cyklu',
+      required: false,
+      label: 'Numer klasy w cyklu (nieużywane)',
       min: 1,
       max: 8,
       admin: {
-        description: 'Numer klasy w cyklu kształcenia (1, 2, 3, ...)',
+        description: 'Zachowane dla kompatybilności – nie używane przy nowym modelu (zakres lat).',
       },
     },
     {

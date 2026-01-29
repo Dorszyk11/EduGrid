@@ -97,7 +97,7 @@ export default function ZarzadzanieSzkolamiPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Zarządzanie szkołami</h1>
           <p className="text-gray-600 mt-1">
-            Typy szkół w bazie. Możesz je usunąć lub dodać/edytować w Panelu Admin.
+            Typy szkół w bazie. Możesz je usunąć lub dodać w Panelu admina.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -110,10 +110,10 @@ export default function ZarzadzanieSzkolamiPage() {
             {resetting ? 'Resetowanie…' : '🔄 Reset bazy i załaduj szkoły z planów MEiN'}
           </button>
           <Link
-            href="/admin/collections/typy-szkol"
+            href="/panel-admin"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
-            <span>➕</span> Panel Admin · Typy szkół
+            <span>➕</span> Panel admina
           </Link>
         </div>
       </div>
@@ -136,8 +136,8 @@ export default function ZarzadzanieSzkolamiPage() {
         <div className="py-12 px-4 bg-gray-50 rounded-xl text-center text-gray-600">
           Brak typów szkół. Użyj przycisku „Reset bazy i załaduj szkoły z planów MEiN” powyżej
           albo dodaj je w{' '}
-          <Link href="/admin/collections/typy-szkol" className="text-blue-600 hover:underline">
-            Panel Admin → Typy szkół
+          <Link href="/panel-admin" className="text-blue-600 hover:underline">
+            Panel admina
           </Link>
           .
         </div>

@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get('typSzkolyId');
     const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
+    const klasaId = searchParams.get('klasaId') || null;
 
     if (!typSzkolyId) {
       return NextResponse.json(
@@ -24,32 +25,56 @@ export async function GET(request: Request) {
 
     const payload = await getPayload({ config });
 
-    // Pobierz klasy dla danego typu szkoły
-    const klasy = await payload.find({
+    // Pobierz typ szkoły (liczba_lat, nazwa – do nagłówka tabeli)
+    const typSzkoly = await payload.findByID({
+      collection: 'typy-szkol',
+      id: typSzkolyId,
+    }).catch(() => null);
+
+    const liczbaLat = typSzkoly && typeof typSzkoly === 'object' && 'liczba_lat' in typSzkoly
+      ? (typSzkoly as { liczba_lat?: number }).liczba_lat
+      : 0;
+    const nazwaTypuSzkoly = typSzkoly && typeof typSzkoly === 'object' && 'nazwa' in typSzkoly
+      ? String((typSzkoly as { nazwa?: string }).nazwa || '')
+      : '';
+
+    // Rok z parametru (np. "2024/2025" → 2024) – do filtrowania klas po zakresie
+    const rokZParametru = (() => {
+      const m = rokSzkolny.match(/^(\d{4})/);
+      return m ? Number(m[1]) : new Date().getFullYear();
+    })();
+
+    // Pobierz wszystkie klasy danego typu (bez filtra roku)
+    const klasyWszystkie = await payload.find({
       collection: 'klasy',
       where: {
         and: [
-          {
-            typ_szkoly: {
-              equals: typSzkolyId,
-            },
-          },
-          {
-            rok_szkolny: {
-              equals: rokSzkolny,
-            },
-          },
-          {
-            aktywna: {
-              equals: true,
-            },
-          },
+          { typ_szkoly: { equals: typSzkolyId } },
+          { aktywna: { equals: true } },
         ],
       },
       limit: 1000,
       depth: 1,
       sort: 'nazwa',
     });
+
+    // Filtruj klasy: zakres YYYY-YYYY (rok w środku) lub dokładne dopasowanie YYYY/YYYY
+    let klasyFiltered = klasyWszystkie.docs.filter((k: any) => {
+      const rs = k.rok_szkolny;
+      if (!rs) return false;
+      const rangeMatch = String(rs).match(/^(\d{4})-(\d{4})$/);
+      if (rangeMatch) {
+        const start = Number(rangeMatch[1]);
+        const end = Number(rangeMatch[2]);
+        return rokZParametru >= start && rokZParametru <= end;
+      }
+      return rs === rokSzkolny;
+    });
+    // Opcjonalnie: tylko jedna klasa (dla widoku „siatka dla jednej klasy”)
+    if (klasaId) {
+      klasyFiltered = klasyFiltered.filter((k: any) => String(k.id) === String(klasaId));
+    }
+    const klasy = { ...klasyWszystkie, docs: klasyFiltered };
 
     // Pobierz rozkład godzin dla tych klas
     const rozkladGodzin = await payload.find({
@@ -169,10 +194,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       typSzkolyId,
       rokSzkolny,
+      liczbaLat,
+      nazwaTypuSzkoly,
       klasy: klasy.docs.map(k => ({
         id: k.id,
         nazwa: k.nazwa,
         profil: k.profil || null,
+        numerKlasy: (k as { numer_klasy?: number }).numer_klasy,
       })),
       przedmioty: przedmioty.docs.map(p => ({
         id: p.id,

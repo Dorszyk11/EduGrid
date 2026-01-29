@@ -5,6 +5,7 @@
       "attachment_no": "1",
       "school_type": "Szkoła podstawowa",
       "cycle": "Klasy I–III",
+      "cycle_short": "Klasy 1–3",
       "table_structure": {
         "grades": ["I", "II", "III"],
         "unit": "godziny tygodniowo"
@@ -32,6 +33,7 @@
       "attachment_no": "1",
       "school_type": "Szkoła podstawowa",
       "cycle": "Klasy IV–VIII",
+      "cycle_short": "Klasy 4–8",
       "table_structure": {
         "grades": ["IV", "V", "VI", "VII", "VIII"],
         "unit": "godziny tygodniowo"
@@ -320,7 +322,8 @@
         {
           "lp": 15,
           "subject": "Zajęcia z zakresu doradztwa zawodowego",
-          "hours_by_grade": { "VII": 10, "VIII": 10 }
+          "hours_by_grade": { "VII": 10, "VIII": 10 },
+          "total_hours": 20
         },
         {
           "director_discretion_hours": {
@@ -437,11 +440,11 @@
           "lp": 17,
           "subject": "Zajęcia z zakresu doradztwa zawodowego",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0 },
-          "total_hours": 0,
+          "total_hours": 10,
           "hours_to_choose": 10
         },
         {
-          "lp": 99,
+          "lp": 18,
           "subject": "Dodatkowe godziny języków obcych w szkołach dwujęzycznych",
           "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 2 },
           "total_hours": 11
@@ -559,22 +562,23 @@
           "lp": 16,
           "subject": "Przedmioty w zakresie rozszerzonym",
           "hours_by_grade": { "I": 1, "II": 1, "III": 2, "IV": 2, "V": 2 },
-          "hours_to_choose": 8
+          "total_hours": 8
         },
         {
           "lp": 17,
           "subject": "Kształcenie zawodowe",
           "hours_by_grade": { "I": 11, "II": 12, "III": 13, "IV": 13, "V": 7 },
-          "hours_to_choose": 56
+          "total_hours": 56
         },
         {
           "lp": 18,
           "subject": "Zajęcia z zakresu doradztwa zawodowego",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "total_hours": 10,
           "hours_to_choose": 10
         },
         {
-          "lp": 99,
+          "lp": 19,
           "subject": "Dodatkowe godziny języków obcych w szkołach dwujęzycznych",
           "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 2, "V": 1 },
           "total_hours": 9
@@ -692,6 +696,7 @@
           "lp": 16,
           "subject": "Zajęcia z zakresu doradztwa zawodowego",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0 },
+          "total_hours": 10,
           "hours_to_choose": 10
         },
         {

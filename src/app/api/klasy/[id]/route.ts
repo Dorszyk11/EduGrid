@@ -145,3 +145,41 @@ export async function GET(
     );
   }
 }
+
+/**
+ * DELETE /api/klasy/[id] - Usuń klasę
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const payload = await getPayload({ config });
+    const klasaId = params.id;
+
+    const klasa = await payload.findByID({
+      collection: 'klasy',
+      id: klasaId,
+    });
+
+    if (!klasa) {
+      return NextResponse.json(
+        { error: 'Klasa nie znaleziona' },
+        { status: 404 }
+      );
+    }
+
+    await payload.delete({
+      collection: 'klasy',
+      id: klasaId,
+    });
+
+    return NextResponse.json({ ok: true, deleted: klasaId });
+  } catch (error) {
+    console.error('Błąd przy usuwaniu klasy:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Nieznany błąd' },
+      { status: 500 }
+    );
+  }
+}

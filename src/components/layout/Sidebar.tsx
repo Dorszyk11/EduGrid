@@ -11,21 +11,13 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Siatka szkoły', href: '/siatka-szkoly', icon: '📋' },
   { name: 'Generator przydziału', href: '/przydzial', icon: '⚙️' },
   { name: 'Plany MEiN', href: '/plany-mein', icon: '🏫' },
   { name: 'Import MEiN', href: '/import/mein-pdf', icon: '📥' },
-  { name: 'Mapowania nazw', href: '/mapowania', icon: '🔗' },
   { name: 'Raporty', href: '/raporty', icon: '📈' },
-  { name: 'Zarządzanie szkołami', href: '/szkoly', icon: '🏫' },
   { name: 'Panel admina', href: '/panel-admin', icon: '⚙️' },
-  { name: 'Typy szkół', href: '/admin/collections/typy-szkol', icon: '📋' },
-  { name: 'Przedmioty', href: '/admin/collections/przedmioty', icon: '📚' },
-  { name: 'Klasy', href: '/admin/collections/klasy', icon: '👥' },
+  { name: 'Klasy', href: '/klasy', icon: '👥' },
   { name: 'Nauczyciele', href: '/admin/collections/nauczyciele', icon: '👨‍🏫' },
-  { name: 'Siatki godzin MEiN', href: '/admin/collections/siatki-godzin-mein', icon: '📋' },
-  { name: 'Rozkład godzin', href: '/admin/collections/rozkład-godzin', icon: '⏰' },
-  { name: 'Panel Admin', href: '/admin', icon: '⚙️' },
 ];
 
 export default function Sidebar() {

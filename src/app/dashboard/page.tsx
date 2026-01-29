@@ -1,23 +1,56 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import DashboardKarty from '@/components/dashboard/DashboardKarty';
-import ZgodnoscMeinWykres from '@/components/dashboard/ZgodnoscMeinWykres';
-import ObciazenieNauczycieliTabela from '@/components/dashboard/ObciazenieNauczycieliTabela';
-import BrakiKadroweLista from '@/components/dashboard/BrakiKadroweLista';
-import DashboardCTA from '@/components/dashboard/DashboardCTA';
-import Top5Listy from '@/components/dashboard/Top5Listy';
-import WskaznikRyzyka from '@/components/dashboard/WskaznikRyzyka';
-import AlertyLista from '@/components/dashboard/AlertyLista';
+import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
+import KafelkiRealizacji, { type DaneRealizacji } from '@/components/dashboard/KafelkiRealizacji';
+import { obliczRealizacjaZPrzydzialu } from '@/utils/realizacjaZPrzydzialu';
+
+interface KlasaItem {
+  id: string;
+  nazwa: string;
+  rok_szkolny: string;
+  typ_szkoly: { id: string; nazwa?: string } | null;
+}
+
+/** Z zakresu rocznika (np. "2022-2027") zwraca rok szkolny do API: bieżący rok jeśli w zakresie, inaczej pierwszy rok */
+function rokSzkolnyZRocznika(rocznik: string): string {
+  const m = rocznik.match(/^(\d{4})-(\d{4})$/);
+  if (!m) return '2024/2025';
+  const start = Number(m[1]);
+  const end = Number(m[2]);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const currentSchoolYearStart = month >= 9 ? year : year - 1;
+  if (currentSchoolYearStart >= start && currentSchoolYearStart <= end) {
+    return `${currentSchoolYearStart}/${currentSchoolYearStart + 1}`;
+  }
+  return `${start}/${start + 1}`;
+}
 
 export default function DashboardPage() {
   const [dane, setDane] = useState<any>(null);
   const [ladowanie, setLadowanie] = useState(false);
   const [typSzkolyId, setTypSzkolyId] = useState<string>('');
-  const [rokSzkolny, setRokSzkolny] = useState('2024/2025');
+  const [klasaList, setKlasaList] = useState<KlasaItem[]>([]);
+  const [selectedRocznik, setSelectedRocznik] = useState<string>('');
+  const [selectedLitera, setSelectedLitera] = useState<string>('');
   const [ladowanieTypow, setLadowanieTypow] = useState(true);
+  const [ladowanieKlas, setLadowanieKlas] = useState(false);
 
   const [typySzkol, setTypySzkol] = useState<Array<{ id: string; nazwa: string }>>([]);
+  const [zgodnoscDane, setZgodnoscDane] = useState<DaneRealizacji | null>(null);
+  const [zgodnoscLadowanie, setZgodnoscLadowanie] = useState(false);
+  const [odswiezKafelki, setOdswiezKafelki] = useState(0);
+
+  const roczniki = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
+  const literki = selectedRocznik
+    ? [...new Set(klasaList.filter((k) => k.rok_szkolny === selectedRocznik).map((k) => k.nazwa))].filter(Boolean).sort()
+    : [];
+  const selectedClass = klasaList.find(
+    (k) => k.rok_szkolny === selectedRocznik && k.nazwa === selectedLitera
+  );
+  const rokSzkolny = selectedRocznik ? rokSzkolnyZRocznika(selectedRocznik) : '2024/2025';
 
   useEffect(() => {
     // Pobierz typy szkół
@@ -62,88 +95,72 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typSzkolyId) {
-      pobierzDane();
+      setLadowanieKlas(true);
+      setSelectedRocznik('');
+      setSelectedLitera('');
+      fetch(`/api/klasy?typSzkolyId=${typSzkolyId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setKlasaList(data.klasy ?? []);
+        })
+        .catch(() => setKlasaList([]))
+        .finally(() => setLadowanieKlas(false));
     } else {
-      // Resetuj dane gdy nie ma wybranego typu szkoły
+      setKlasaList([]);
+      setSelectedRocznik('');
+      setSelectedLitera('');
+    }
+  }, [typSzkolyId]);
+
+  useEffect(() => {
+    if (typSzkolyId && selectedRocznik && selectedLitera) {
+      setDane({ ok: true });
+    } else {
       setDane(null);
-      setLadowanie(false);
     }
-  }, [typSzkolyId, rokSzkolny]);
+    setLadowanie(false);
+  }, [typSzkolyId, selectedRocznik, selectedLitera]);
 
-  const pobierzDane = async () => {
-    setLadowanie(true);
-    try {
-      const [podsumowanie, zgodnosc, obciazenia, braki, wskaznikRyzyka, alerty] = await Promise.all([
-        fetch(`/api/dashboard/podsumowanie?typSzkolyId=${typSzkolyId}&rokSzkolny=${rokSzkolny}`),
-        fetch(`/api/dashboard/zgodnosc-mein?typSzkolyId=${typSzkolyId}&rokSzkolny=${rokSzkolny}`),
-        fetch(`/api/dashboard/obciazenie-nauczycieli?rokSzkolny=${rokSzkolny}`),
-        fetch(`/api/dashboard/braki-kadrowe?typSzkolyId=${typSzkolyId}&rokSzkolny=${rokSzkolny}`),
-        fetch(`/api/dashboard/wskaznik-ryzyka?typSzkolyId=${typSzkolyId}&rokSzkolny=${rokSzkolny}`),
-        fetch(`/api/dashboard/alerty?typSzkolyId=${typSzkolyId}&rokSzkolny=${rokSzkolny}`),
-      ]);
-
-      // Sprawdź, czy odpowiedzi są poprawne
-      if (!podsumowanie.ok) {
-        throw new Error(`Błąd API podsumowanie: ${podsumowanie.status}`);
-      }
-      if (!zgodnosc.ok) {
-        throw new Error(`Błąd API zgodność: ${zgodnosc.status}`);
-      }
-      if (!obciazenia.ok) {
-        throw new Error(`Błąd API obciążenia: ${obciazenia.status}`);
-      }
-      if (!braki.ok) {
-        throw new Error(`Błąd API braki: ${braki.status}`);
-      }
-      if (!wskaznikRyzyka.ok) {
-        // Wskaźnik ryzyka nie jest krytyczny, więc tylko logujemy
-        console.warn(`Błąd API wskaźnik ryzyka: ${wskaznikRyzyka.status}`);
-      }
-      if (!alerty.ok) {
-        // Alerty nie są krytyczne, więc tylko logujemy
-        console.warn(`Błąd API alerty: ${alerty.status}`);
-      }
-
-      const [podsumowanieData, zgodnoscData, obciazeniaData, brakiData, wskaznikRyzykaData, alertyData] = await Promise.all([
-        podsumowanie.json(),
-        zgodnosc.json(),
-        obciazenia.json(),
-        braki.json(),
-        wskaznikRyzyka.ok ? wskaznikRyzyka.json() : Promise.resolve({ wskaznik: null }),
-        alerty.ok ? alerty.json() : Promise.resolve({ alerty: [], statystyki: { lacznie: 0, bledy: 0, ostrzezenia: 0, informacje: 0 } }),
-      ]);
-
-      // Sprawdź, czy nie ma błędów w odpowiedziach
-      if (podsumowanieData.error) {
-        throw new Error(podsumowanieData.error);
-      }
-      if (zgodnoscData.error) {
-        throw new Error(zgodnoscData.error);
-      }
-      if (obciazeniaData.error) {
-        throw new Error(obciazeniaData.error);
-      }
-      if (brakiData.error) {
-        throw new Error(brakiData.error);
-      }
-
-      setDane({
-        podsumowanie: podsumowanieData,
-        zgodnosc: zgodnoscData,
-        obciazenia: obciazeniaData,
-        braki: brakiData,
-        wskaznikRyzyka: wskaznikRyzykaData.wskaznik,
-        alerty: alertyData,
-      });
-    } catch (error) {
-      console.error('Błąd przy pobieraniu danych:', error);
-      setDane({
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
-      });
-    } finally {
-      setLadowanie(false);
+  // Realizacja: gdy wybrana klasa – z przypisanych godzin (localStorage); inaczej z API zgodnosc-mein
+  const nazwaTypuSzkolyDoZgodnosci = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
+  useEffect(() => {
+    if (!typSzkolyId || !selectedRocznik) {
+      setZgodnoscDane(null);
+      return;
     }
-  };
+    if (selectedClass?.id && nazwaTypuSzkolyDoZgodnosci) {
+      setZgodnoscLadowanie(false);
+      setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypuSzkolyDoZgodnosci, selectedClass.id));
+      return;
+    }
+    const rok = rokSzkolnyZRocznika(selectedRocznik);
+    setZgodnoscLadowanie(true);
+    fetch(`/api/dashboard/zgodnosc-mein?typSzkolyId=${encodeURIComponent(typSzkolyId)}&rokSzkolny=${encodeURIComponent(rok)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setZgodnoscDane(null);
+          return;
+        }
+        const wyniki = data.wyniki ?? [];
+        const statystyki = data.statystyki ?? {};
+        const brakiGodzin = wyniki
+          .filter((w: { status: string }) => w.status === 'BRAK')
+          .reduce((s: number, w: { roznica: { godziny: number } }) => s + Math.abs(w.roznica.godziny), 0);
+        const nadwyzkiGodzin = wyniki
+          .filter((w: { status: string }) => w.status === 'NADWYŻKA')
+          .reduce((s: number, w: { roznica: { godziny: number } }) => s + w.roznica.godziny, 0);
+        setZgodnoscDane({
+          procentRealizacji: Number(statystyki.sredniProcent) ?? 0,
+          brakiGodzin,
+          nadwyzkiGodzin,
+          liczbaBrakow: statystyki.zBrakami,
+          liczbaNadwyzek: statystyki.zNadwyzkami,
+        });
+      })
+      .catch(() => setZgodnoscDane(null))
+      .finally(() => setZgodnoscLadowanie(false));
+  }, [typSzkolyId, selectedRocznik, selectedClass?.id, nazwaTypuSzkolyDoZgodnosci, odswiezKafelki]);
 
   if (ladowanieTypow) {
     return (
@@ -177,160 +194,124 @@ export default function DashboardPage() {
     );
   }
 
-  if (ladowanie) {
-    return (
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Dashboard Dyrektora</h1>
-          <div className="flex gap-4">
-            <select
-              value={typSzkolyId}
-              onChange={(e) => setTypSzkolyId(e.target.value)}
-              className="border rounded px-4 py-2"
-            >
-              <option value="">Wybierz typ szkoły</option>
-              {typySzkol.map(typ => (
-                <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
-              ))}
-            </select>
-            <input
-              type="text"
-              value={rokSzkolny}
-              onChange={(e) => setRokSzkolny(e.target.value)}
-              placeholder="Rok szkolny"
-              className="border rounded px-4 py-2"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Ładowanie danych...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const SelectyKaskadowe = () => (
+    <div className="flex flex-wrap gap-4 items-center">
+      <select
+        value={typSzkolyId}
+        onChange={(e) => setTypSzkolyId(e.target.value)}
+        className="border rounded px-4 py-2 min-w-[200px]"
+      >
+        <option value="">Wybierz typ szkoły</option>
+        {typySzkol.map((typ) => (
+          <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
+        ))}
+      </select>
+      <select
+        value={selectedRocznik}
+        onChange={(e) => {
+          setSelectedRocznik(e.target.value);
+          setSelectedLitera('');
+        }}
+        disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
+        className="border rounded px-4 py-2 min-w-[140px]"
+      >
+        <option value="">Rocznik</option>
+        {roczniki.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+      <select
+        value={selectedLitera}
+        onChange={(e) => setSelectedLitera(e.target.value)}
+        disabled={!selectedRocznik || literki.length === 0}
+        className="border rounded px-4 py-2 min-w-[100px]"
+      >
+        <option value="">Klasa</option>
+        {literki.map((l) => (
+          <option key={l} value={l}>{l}</option>
+        ))}
+      </select>
+      {selectedClass && (
+        <span className="text-sm text-gray-600">
+          Wybrana klasa: <strong>{selectedClass.nazwa}</strong> ({selectedRocznik})
+        </span>
+      )}
+    </div>
+  );
 
-  if (!dane || !typSzkolyId) {
+  if (!dane || !typSzkolyId || !selectedRocznik || !selectedLitera) {
+    const nazwaTypuSzkolyShort = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
     return (
-      <div className="p-6">
+      <div className="p-6 space-y-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Dashboard Dyrektora</h1>
-          <div className="flex gap-4">
-            <select
-              value={typSzkolyId}
-              onChange={(e) => setTypSzkolyId(e.target.value)}
-              className="border rounded px-4 py-2"
-            >
-              <option value="">Wybierz typ szkoły</option>
-              {typySzkol.map(typ => (
-                <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
-              ))}
-            </select>
-            <input
-              type="text"
-              value={rokSzkolny}
-              onChange={(e) => setRokSzkolny(e.target.value)}
-              placeholder="Rok szkolny"
-              className="border rounded px-4 py-2"
+          <SelectyKaskadowe />
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-yellow-800">
+            Wybierz <strong>typ szkoły</strong>, potem <strong>rocznik</strong> (zakres lat), a na końcu <strong>klasę</strong> (literę) – wtedy załadują się dane tej klasy w dashboardzie.
+          </p>
+          {typSzkolyId && !ladowanieKlas && roczniki.length === 0 && (
+            <p className="text-amber-700 text-sm mt-2">Brak klas dla wybranego typu szkoły. Dodaj klasy w panelu admina.</p>
+          )}
+        </div>
+        {/* Wykres kołowy + kafelki: procent realizacji, braki godzin, nadwyżki */}
+        {typSzkolyId && selectedRocznik && (
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Realizacja wymagań MEiN</h2>
+            <KafelkiRealizacji
+              dane={zgodnoscDane}
+              ladowanie={zgodnoscLadowanie}
+              brakDanychKomunikat="Wybierz typ szkoły i rocznik, aby zobaczyć statystyki realizacji."
             />
           </div>
-        </div>
-        {dane?.error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 font-semibold">Błąd:</p>
-            <p className="text-red-700">{dane.error}</p>
-            <button
-              onClick={pobierzDane}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Spróbuj ponownie
-            </button>
-          </div>
-        ) : (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-yellow-800">
-              Wybierz typ szkoły z listy powyżej, aby zobaczyć dane.
+        )}
+        {/* Plan MEiN widoczny od razu po wyborze typu szkoły */}
+        {nazwaTypuSzkolyShort && (
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
+            <p className="text-gray-600 text-sm">
+              Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
             </p>
+            <PlanMeinTabela nazwaTypuSzkoly={nazwaTypuSzkolyShort} />
           </div>
         )}
       </div>
     );
   }
 
+  const nazwaTypuSzkoly = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Dashboard Dyrektora</h1>
-        <div className="flex gap-4">
-          <select
-            value={typSzkolyId}
-            onChange={(e) => setTypSzkolyId(e.target.value)}
-            className="border rounded px-4 py-2"
-          >
-            <option value="">Wybierz typ szkoły</option>
-            {typySzkol.map(typ => (
-              <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={rokSzkolny}
-            onChange={(e) => setRokSzkolny(e.target.value)}
-            placeholder="Rok szkolny"
-            className="border rounded px-4 py-2"
-          />
-        </div>
+        <SelectyKaskadowe />
       </div>
 
-      {/* Karty z podsumowaniem */}
-      <DashboardKarty dane={dane.podsumowanie} />
-
-      {/* Alerty */}
-      {dane.alerty && dane.alerty.alerty && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Alerty i ostrzeżenia</h2>
-          <AlertyLista alerty={dane.alerty.alerty} statystyki={dane.alerty.statystyki} />
-        </div>
-      )}
-
-      {/* Wskaźnik ryzyka */}
-      {dane.wskaznikRyzyka && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Wskaźnik ryzyka</h2>
-          <WskaznikRyzyka wskaznik={dane.wskaznikRyzyka} />
-        </div>
-      )}
-
-      {/* Szybkie akcje (CTA) */}
-      <DashboardCTA typSzkolyId={typSzkolyId} rokSzkolny={rokSzkolny} />
-
-      {/* Top 5 listy */}
-      {typSzkolyId && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Podsumowania widoków</h2>
-          <Top5Listy typSzkolyId={typSzkolyId} rokSzkolny={rokSzkolny} />
-        </div>
-      )}
-
-      {/* Wykres zgodności z MEiN */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Zgodność z wymaganiami MEiN</h2>
-        <ZgodnoscMeinWykres dane={dane.zgodnosc} />
+      {/* Wykres kołowy + kafelki: procent realizacji, braki godzin, nadwyżki */}
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold">Realizacja wymagań MEiN</h2>
+        <KafelkiRealizacji
+          dane={zgodnoscDane}
+          ladowanie={zgodnoscLadowanie}
+          brakDanychKomunikat="Brak danych zgodności dla wybranego typu i rocznika."
+        />
       </div>
 
-      {/* Obciążenie nauczycieli */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Obciążenie nauczycieli</h2>
-        <ObciazenieNauczycieliTabela dane={dane.obciazenia} />
-      </div>
-
-      {/* Braki kadrowe */}
-      {dane.braki?.braki?.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Braki kadrowe</h2>
-          <BrakiKadroweLista dane={dane.braki} />
+      {/* Plan ramowy MEiN */}
+      {nazwaTypuSzkoly && (
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
+          <p className="text-gray-600 text-sm">
+            Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
+          </p>
+          <PlanMeinTabela
+          nazwaTypuSzkoly={nazwaTypuSzkoly}
+          klasaId={selectedClass?.id}
+          onPrzydzialChange={() => setOdswiezKafelki((n) => n + 1)}
+          onDoradztwoChange={() => setOdswiezKafelki((n) => n + 1)}
+        />
         </div>
       )}
     </div>
