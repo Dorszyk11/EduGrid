@@ -1,14 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+
+interface RamowyPlanSubject {
+  subject: string;
+  total_hours: number | null;
+  total_hours_raw: string;
+}
+
+interface RamowyPlan {
+  plan_id: string;
+  attachment_no: string;
+  school_type: string;
+  cycle: string;
+  source_pages: number[];
+  subjects: RamowyPlanSubject[];
+}
 
 interface ImportResult {
   success: boolean;
-  imported: number;
+  plans: RamowyPlan[];
   errors: string[];
   warnings: string[];
-  preview: any[];
-  totalRows: number;
 }
 
 export default function ImportMeinPdf() {
@@ -16,29 +29,8 @@ export default function ImportMeinPdf() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle');
   const [results, setResults] = useState<ImportResult | null>(null);
-  const [options, setOptions] = useState({
-    useOCR: true,
-    typSzkolyId: '',
-    rokSzkolny: '2024/2025',
-    autoSave: false,
-  });
-  const [typySzkol, setTypySzkol] = useState<Array<{ id: string; nazwa: string }>>([]);
-
-  // Pobierz typy szkół przy montowaniu komponentu
-  useEffect(() => {
-    fetch('/api/typy-szkol')
-      .then(res => res.json())
-      .then(data => {
-        const mapped = Array.isArray(data) 
-          ? data.map((item: any) => ({
-              id: String(item.id || ''),
-              nazwa: item.nazwa || 'Brak nazwy',
-            }))
-          : [];
-        setTypySzkol(mapped);
-      })
-      .catch(err => console.error('Błąd przy pobieraniu typów szkół:', err));
-  }, []);
+  const [options, setOptions] = useState({ useOCR: false });
+  const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -49,77 +41,70 @@ export default function ImportMeinPdf() {
 
     setStatus('uploading');
     setProgress(0);
-    
-    try {
-      const response = await fetch('/api/import/mein-pdf', {
-        method: 'POST',
-        body: formData,
-      });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setResults(data);
-        setStatus('success');
-        setProgress(100);
-      } else {
-        throw new Error(data.error || 'Błąd importu');
+    try {
+      const response = await fetch('/api/import/mein-pdf', { method: 'POST', body: formData });
+      const text = await response.text();
+
+      let data: ImportResult & { error?: string } = {
+        success: false,
+        plans: [],
+        errors: [],
+        warnings: [],
+      };
+
+      const ct = response.headers.get('content-type') ?? '';
+      if (text.trimStart().startsWith('<') || !ct.includes('application/json')) {
+        const msg = !response.ok
+          ? `Błąd ${response.status}: serwer zwrócił HTML zamiast JSON. Sprawdź konsolę i logi API.`
+          : 'Odpowiedź nie jest JSON (np. strona błędu). Sprawdź konsolę.';
+        setStatus('error');
+        setResults({ ...data, errors: [msg] });
+        return;
       }
-    } catch (error) {
+
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        setStatus('error');
+        setResults({ ...data, errors: ['Nieprawidłowa odpowiedź JSON z API.'] });
+        return;
+      }
+
+      if (!response.ok) throw new Error(data.error || 'Błąd importu');
+
+      setResults({
+        success: data.success ?? false,
+        plans: data.plans ?? [],
+        errors: data.errors ?? [],
+        warnings: data.warnings ?? [],
+      });
+      setStatus('success');
+      setProgress(100);
+      if (data.plans?.length) setExpandedPlanId(data.plans[0]?.plan_id ?? null);
+    } catch (e) {
       setStatus('error');
       setResults({
         success: false,
-        imported: 0,
-        errors: [error instanceof Error ? error.message : 'Nieznany błąd'],
+        plans: [],
+        errors: [e instanceof Error ? e.message : 'Nieznany błąd'],
         warnings: [],
-        preview: [],
-        totalRows: 0,
       });
-      console.error(error);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!results || !file) return;
-
-    setStatus('processing');
-    
-    try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-      formData.append('options', JSON.stringify({
-        ...options,
-        autoSave: true,
-      }));
-
-      const response = await fetch('/api/import/mein-pdf', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setResults(data);
-        setStatus('success');
-        alert(`Pomyślnie zaimportowano ${data.imported} rekordów!`);
-      } else {
-        throw new Error(data.error || 'Błąd zapisu');
-      }
-    } catch (error) {
-      setStatus('error');
-      alert(`Błąd: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
+      console.error(e);
     }
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Import siatki godzin MEiN z PDF</h1>
-      
-      {/* Upload */}
+    <div className="p-6 max-w-5xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Import ramowych planów nauczania z PDF</h1>
+      <p className="text-gray-600 mb-6">
+        Wgraj rozporządzenie Dz.U. (np. wymagania nauczania) z załącznikami. Parser wyciąga
+        <strong> tylko kolumnę „Razem w … okresie nauczania”</strong> dla każdego przedmiotu — bez
+        sumowania, bez interpretacji przypisów.
+      </p>
+
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">1. Wybierz plik PDF</h2>
-        
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
           <input
             type="file"
@@ -130,153 +115,146 @@ export default function ImportMeinPdf() {
           />
           {file && (
             <p className="text-sm text-gray-600 mt-2">
-              Wybrany plik: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
             </p>
           )}
         </div>
-
-        {/* Opcje */}
-        <div className="space-y-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Typ szkoły (opcjonalnie)</label>
-            <select
-              value={options.typSzkolyId}
-              onChange={(e) => setOptions({ ...options, typSzkolyId: e.target.value })}
-              className="w-full border rounded px-4 py-2"
-            >
-              <option value="">Wybierz typ szkoły</option>
-              {typySzkol.map(typ => (
-                <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Rok szkolny</label>
-            <input
-              type="text"
-              value={options.rokSzkolny}
-              onChange={(e) => setOptions({ ...options, rokSzkolny: e.target.value })}
-              className="w-full border rounded px-4 py-2"
-              placeholder="2024/2025"
-            />
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="useOCR"
-              checked={options.useOCR}
-              onChange={(e) => setOptions({ ...options, useOCR: e.target.checked })}
-              className="mr-2"
-            />
-            <label htmlFor="useOCR" className="text-sm">
-              Użyj OCR (dla skanów PDF)
-            </label>
-          </div>
+        <div className="flex items-center mb-4">
+          <input
+            type="checkbox"
+            id="useOCR"
+            checked={options.useOCR}
+            onChange={(e) => setOptions({ ...options, useOCR: e.target.checked })}
+            className="mr-2"
+          />
+          <label htmlFor="useOCR" className="text-sm">Użyj OCR (dla skanów)</label>
         </div>
-
         <button
           onClick={handleUpload}
           disabled={!file || status === 'uploading' || status === 'processing'}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {status === 'uploading' ? 'Przetwarzanie...' : 'Importuj i sprawdź'}
+          {status === 'uploading' ? 'Przetwarzanie…' : 'Importuj i parsuj'}
         </button>
       </div>
 
-      {/* Progress */}
       {status === 'uploading' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-            <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="bg-blue-600 h-2.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <p className="text-sm text-gray-600">Przetwarzanie pliku PDF...</p>
+          <p className="text-sm text-gray-600">Parsowanie PDF…</p>
         </div>
       )}
 
-      {/* Wyniki */}
       {results && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">2. Wyniki importu</h2>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-green-50 border border-green-200 rounded p-4">
-              <p className="text-sm text-green-700 font-medium">Znaleziono rekordów</p>
-              <p className="text-2xl font-bold text-green-900">{results.totalRows}</p>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded p-4">
-              <p className="text-sm text-blue-700 font-medium">Zaimportowano</p>
-              <p className="text-2xl font-bold text-blue-900">{results.imported}</p>
-            </div>
+          <h2 className="text-xl font-semibold mb-4">2. Wyniki</h2>
+          <div className="mb-4">
+            <span className="font-medium text-gray-700">Plany: </span>
+            <span className="text-lg font-bold text-green-700">{results.plans.length}</span>
+            <span className="text-gray-500 ml-2">
+              ({results.plans.reduce((a, p) => a + p.subjects.length, 0)} przedmiotów łącznie)
+            </span>
           </div>
 
           {results.errors.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
-              <p className="font-semibold text-red-800 mb-2">Błędy ({results.errors.length}):</p>
+              <p className="font-semibold text-red-800 mb-2">Błędy:</p>
               <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-                {results.errors.map((error, i) => (
-                  <li key={i}>{error}</li>
+                {results.errors.map((err, i) => (
+                  <li key={i}>{err}</li>
                 ))}
               </ul>
             </div>
           )}
-
           {results.warnings.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
-              <p className="font-semibold text-yellow-800 mb-2">Ostrzeżenia ({results.warnings.length}):</p>
+              <p className="font-semibold text-yellow-800 mb-2">Ostrzeżenia:</p>
               <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-                {results.warnings.map((warning, i) => (
-                  <li key={i}>{warning}</li>
+                {results.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          {results.preview.length > 0 && (
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2">Podgląd danych:</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-2 text-left">Przedmiot</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Typ szkoły</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Klasa</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right">Godz. w cyklu</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.preview.slice(0, 10).map((row: any, i: number) => (
-                      <tr key={i}>
-                        <td className="border border-gray-300 px-4 py-2">{row.przedmiotId}</td>
-                        <td className="border border-gray-300 px-4 py-2">{row.typSzkolyId}</td>
-                        <td className="border border-gray-300 px-4 py-2">{row.klasa || '-'}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-right">{row.godziny_w_cyklu}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {results.preview.length > 10 && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Pokazano 10 z {results.preview.length} rekordów
-                  </p>
-                )}
-              </div>
+          {results.plans.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold">Plany (Razem w cyklu)</h3>
+              {results.plans.map((plan) => {
+                const isExpanded = expandedPlanId === plan.plan_id;
+                return (
+                  <div key={plan.plan_id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPlanId(isExpanded ? null : plan.plan_id)}
+                      className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 flex justify-between items-center"
+                    >
+                      <span className="font-medium">
+                        Załącznik nr {plan.attachment_no} · {plan.school_type} · {plan.cycle}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {plan.subjects.length} przedmiotów · str. {plan.source_pages.join(', ')}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse border border-gray-300 text-sm">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="border border-gray-300 px-3 py-2 text-left">Przedmiot</th>
+                              <th className="border border-gray-300 px-3 py-2 text-right">Razem (godz.)</th>
+                              <th className="border border-gray-300 px-3 py-2 text-left">Razem (raw)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {plan.subjects.map((s, i) => (
+                              <tr key={i}>
+                                <td className="border border-gray-300 px-3 py-2">{s.subject}</td>
+                                <td className="border border-gray-300 px-3 py-2 text-right">
+                                  {s.total_hours != null ? s.total_hours : '–'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-gray-500 font-mono text-xs">
+                                  {s.total_hours_raw || '–'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {results.success && results.imported === 0 && (
-            <button
-              onClick={handleSave}
-              disabled={status === 'processing'}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-            >
-              {status === 'processing' ? 'Zapisywanie...' : 'Zapisz do bazy danych'}
-            </button>
+          {results.plans.length === 0 && !results.errors.length && (
+            <p className="text-gray-500">
+              Nie znaleziono planów. Sprawdź, czy PDF zawiera tabele „RAMOWY PLAN NAUCZANIA DLA…”.
+            </p>
+          )}
+
+          {results.plans.length > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify({ plans: results.plans }, null, 2)], {
+                    type: 'application/json',
+                  });
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = 'ramowe-plany.json';
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+              >
+                Pobierz JSON (plans)
+              </button>
+            </div>
           )}
         </div>
       )}

@@ -6,12 +6,12 @@ import config from '@/payload.config';
  * GET /api/przedmioty/[id] - Pobierz szczegóły przedmiotu z podziałem na klasy
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: przedmiotId } = await params;
     const payload = await getPayload({ config });
-    const przedmiotId = params.id;
 
     // Pobierz przedmiot
     const przedmiot = await payload.findByID({
@@ -106,5 +106,33 @@ export async function GET(
       },
       { status: 500 }
     );
+  }
+}
+
+/** DELETE /api/przedmioty/[id] – usuń przedmiot. */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const payload = await getPayload({ config });
+    await payload.delete({ collection: 'przedmioty', id });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const isFk = /foreign key|violates foreign key|referential integrity/i.test(msg);
+    const isNotFound = /not found|Unknown id/i.test(msg);
+    console.error('Błąd przy usuwaniu przedmiotu:', msg);
+    if (isNotFound) {
+      return NextResponse.json({ error: 'Przedmiot nie znaleziony.' }, { status: 404 });
+    }
+    if (isFk) {
+      return NextResponse.json(
+        { error: 'Nie można usunąć: przedmiot ma powiązane dane (rozkłady, siatki MEiN itd.).' },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

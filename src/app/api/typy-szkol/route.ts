@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 
@@ -11,10 +11,6 @@ export async function GET() {
       limit: 100,
     });
 
-    console.log('Znaleziono typów szkół:', typySzkol.docs.length);
-    console.log('Przykładowy typ szkoły:', typySzkol.docs[0]);
-
-    // Zwróć dane w spójnym formacie
     const mapped = typySzkol.docs.map((item: any) => ({
       id: item.id,
       nazwa: item.nazwa || 'Brak nazwy',
@@ -24,15 +20,58 @@ export async function GET() {
 
     return NextResponse.json(mapped);
   } catch (error) {
-    console.error('Błąd przy pobieraniu typów szkół:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Nieznany błąd';
+    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
+    const isDbError =
+      /cannot connect|ECONNREFUSED|connection refused|ENOTFOUND|ETIMEDOUT|password authentication failed/i.test(
+        msg,
+      );
+
+    console.error('Błąd przy pobieraniu typów szkół:', msg);
+
+    if (isDbError) {
+      return NextResponse.json([]);
+    }
+
     return NextResponse.json(
-      { 
-        error: 'Błąd serwera',
-        details: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
+      { error: 'Błąd serwera', details: msg },
+      { status: 500 },
+    );
+  }
+}
+
+/** POST /api/typy-szkol – dodaj typ szkoły (nazwa, liczba_lat, kod_mein). */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { nazwa, liczba_lat, kod_mein } = body ?? {};
+    if (!nazwa || liczba_lat == null || !kod_mein) {
+      return NextResponse.json(
+        { error: 'Wymagane: nazwa, liczba_lat, kod_mein' },
+        { status: 400 }
+      );
+    }
+    const payload = await getPayload({ config });
+    const created = await payload.create({
+      collection: 'typy-szkol',
+      data: {
+        nazwa: String(nazwa).trim(),
+        liczba_lat: Number(liczba_lat),
+        kod_mein: String(kod_mein).trim(),
       },
-      { status: 500 }
+    });
+    return NextResponse.json({
+      id: created.id,
+      nazwa: created.nazwa,
+      liczba_lat: created.liczba_lat,
+      kod_mein: created.kod_mein,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
+    const isDup = /unique|duplicate/i.test(msg);
+    console.error('Błąd przy dodawaniu typu szkoły:', msg);
+    return NextResponse.json(
+      { error: isDup ? 'Typ szkoły z takim kodem MEiN już istnieje.' : msg },
+      { status: isDup ? 409 : 500 }
     );
   }
 }

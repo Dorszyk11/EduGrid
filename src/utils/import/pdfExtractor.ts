@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import type { PdfExtractionResult } from './types';
 
 /**
- * Ekstrahuje tekst z PDF
+ * Ekstrahuje tekst z PDF (pdf-parse 1.x – działa w Node bez DOM)
  * Jeśli PDF nie zawiera tekstu (skan), używa OCR
  */
 export async function extractTextFromPdf(
@@ -10,30 +10,41 @@ export async function extractTextFromPdf(
   useOCR: boolean = true
 ): Promise<PdfExtractionResult> {
   try {
-    // Dynamiczny import pdf-parse (może nie być zainstalowany)
-    let pdfParse: any;
+    let pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }>;
     try {
-      pdfParse = (await import('pdf-parse')).default;
-    } catch (error) {
-      throw new Error('pdf-parse nie jest zainstalowany. Uruchom: npm install pdf-parse');
+      const mod = require('pdf-parse/lib/pdf-parse');
+      pdfParse = typeof mod === 'function' ? mod : mod.default ?? mod;
+      if (typeof pdfParse !== 'function') throw new Error('pdf-parse nie eksportuje funkcji');
+    } catch (e) {
+      console.error('pdf-parse load error:', e);
+      throw new Error(
+        'pdf-parse nie jest dostępny. Uruchom: npm install pdf-parse@1.1.1. Szczegóły: ' +
+          (e instanceof Error ? e.message : String(e))
+      );
     }
 
     const buffer = readFileSync(pdfPath);
-    
-    // Próba ekstrakcji tekstu z PDF
     const data = await pdfParse(buffer);
-    
-    // Sprawdź, czy PDF zawiera tekst
-    const text = data.text.trim();
-    const hasText = text.length > 100; // Minimum 100 znaków = prawdopodobnie tekst
+    const text = (data.text ?? '').trim();
+    const hasText = text.length > 100;
 
     if (hasText) {
-      // PDF zawiera tekst - zwróć go
-      return {
-        text,
-        pages: data.text.split(/\f/), // Podział na strony
-        hasText: true,
-      };
+      let pages = text.split(/\f/).filter(Boolean);
+      if (pages.length <= 1 && (data.numpages ?? 0) > 1) {
+        const dzU = /Dziennik\s+Ustaw\s+[–\-]\s*\d+\s+[–\-]\s*Poz\.\s*\d+/gi;
+        const indices: number[] = [];
+        let m: RegExpExecArray | null;
+        while ((m = dzU.exec(text)) !== null) indices.push(m.index);
+        if (indices.length > 1) {
+          const chunks: string[] = [];
+          for (let i = 0; i < indices.length; i++) {
+            const end = i + 1 < indices.length ? indices[i + 1]! : text.length;
+            chunks.push(text.slice(indices[i], end));
+          }
+          pages = chunks;
+        }
+      }
+      return { text, pages: pages.length ? pages : [text], hasText: true };
     } else if (useOCR) {
       // PDF nie zawiera tekstu - użyj OCR
       console.log('PDF nie zawiera tekstu, używam OCR...');

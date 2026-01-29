@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { processPdfImport } from '@/utils/import/meinPdfProcessor';
+import { processRamowyPlanImport } from '@/utils/import/meinPdfProcessor';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,21 +49,15 @@ export async function POST(request: NextRequest) {
     await writeFile(tempPath, buffer);
 
     try {
-      // Przetwórz plik
-      const result = await processPdfImport(tempPath, {
-        useOCR: options.useOCR !== false, // Domyślnie włączone
-        typSzkolyId: options.typSzkolyId,
-        rokSzkolny: options.rokSzkolny || '2024/2025',
-        autoSave: options.autoSave === true, // Domyślnie wyłączone - tylko podgląd
+      const result = await processRamowyPlanImport(tempPath, {
+        useOCR: options.useOCR !== false,
       });
 
       return NextResponse.json({
-        success: true,
-        imported: result.imported,
+        success: result.errors.length === 0,
+        plans: result.plans,
         errors: result.errors,
         warnings: result.warnings,
-        preview: result.preview,
-        totalRows: result.preview.length,
       });
     } catch (error) {
       console.error('Błąd przetwarzania PDF:', error);

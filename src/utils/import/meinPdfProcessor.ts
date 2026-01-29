@@ -2,12 +2,19 @@ import { extractTextFromPdf } from './pdfExtractor';
 import { parseMeinTable } from './tableParser';
 import { mapToDatabaseStructure } from './dataMapper';
 import { validateMeinData } from './validator';
+
+import { parseRamowyPlanyFromText } from './ramowyPlanParserText';
+
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+
 import type { ImportOptions, ImportResult, MappedMeinData } from './types';
+import type { RamowyPlanParseResult } from './ramowyPlanTypes';
 
 /**
- * Główna funkcja przetwarzająca import PDF
+ * =========================================================
+ *  STANDARDOWY IMPORT MEiN (stare tabele, NIE ramowe plany)
+ * =========================================================
  */
 export async function processPdfImport(
   pdfPath: string,
@@ -22,11 +29,11 @@ export async function processPdfImport(
 
   try {
     // 1. Ekstrakcja tekstu
-    console.log('Ekstrakcja tekstu z PDF...');
+    console.log('Ekstrakcja tekstu z PDF (MEiN)...');
     const extractionResult = await extractTextFromPdf(pdfPath, useOCR);
 
     // 2. Parsowanie tabeli
-    console.log('Parsowanie tabeli...');
+    console.log('Parsowanie tabel MEiN...');
     const parsedRows = parseMeinTable(extractionResult);
     console.log(`Znaleziono ${parsedRows.length} wierszy`);
 
@@ -40,7 +47,7 @@ export async function processPdfImport(
     }
 
     // 3. Mapowanie do struktury bazy
-    console.log('Mapowanie danych...');
+    console.log('Mapowanie danych MEiN...');
     const mappedData = await mapToDatabaseStructure(
       parsedRows,
       typSzkolyId,
@@ -62,7 +69,7 @@ export async function processPdfImport(
       };
     }
 
-    // 5. Zapis do bazy (jeśli autoSave)
+    // 5. Zapis do bazy (opcjonalny)
     let imported = 0;
     if (autoSave) {
       console.log('Zapisywanie do bazy...');
@@ -87,7 +94,11 @@ export async function processPdfImport(
           imported++;
         } catch (error) {
           console.error(`Błąd zapisu rekordu:`, error);
-          validation.errors.push(`Błąd zapisu: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
+          validation.errors.push(
+            `Błąd zapisu: ${
+              error instanceof Error ? error.message : 'Nieznany błąd'
+            }`
+          );
         }
       }
     }
@@ -102,4 +113,24 @@ export async function processPdfImport(
     console.error('Błąd przetwarzania PDF:', error);
     throw error;
   }
+}
+
+/**
+ * =========================================================
+ *  IMPORT RAMOWYCH PLANÓW NAUCZANIA (TYLKO "RAZEM W CYKLU")
+ * =========================================================
+ *
+ * - extractTextFromPdf (pdf-parse 1.x) + parseRamowyPlanyFromText
+ * - Działa w Node bez pdfjs-dist; unika 500 przy API
+ */
+export async function processRamowyPlanImport(
+  pdfPath: string,
+  options: { useOCR?: boolean } = {}
+): Promise<RamowyPlanParseResult> {
+  const useOCR = options.useOCR !== false;
+  console.log('Ekstrakcja tekstu z PDF (ramowe plany)...');
+  const { extractTextFromPdf } = await import('./pdfExtractor');
+  const ext = await extractTextFromPdf(pdfPath, useOCR);
+  console.log('Parsowanie ramowych planów (tekst)...');
+  return parseRamowyPlanyFromText(ext);
 }
