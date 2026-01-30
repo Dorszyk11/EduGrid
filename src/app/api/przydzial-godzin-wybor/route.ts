@@ -23,12 +23,13 @@ export async function GET(request: Request) {
 
     const doc = result.docs[0] as any;
     if (!doc) {
-      return NextResponse.json({ przydzial: {}, doradztwo: {} });
+      return NextResponse.json({ przydzial: {}, doradztwo: {}, dyrektor: {} });
     }
 
     return NextResponse.json({
       przydzial: doc.przydzial ?? {},
       doradztwo: doc.doradztwo ?? {},
+      dyrektor: doc.dyrektor ?? {},
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Nieznany błąd';
@@ -39,13 +40,13 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/przydzial-godzin-wybor
- * Body: { klasaId: string, przydzial?: Record<string, Record<string, number>>, doradztwo?: Record<string, Record<string, number>> }
+ * Body: { klasaId: string, przydzial?, doradztwo?, dyrektor? }
  * Tworzy lub aktualizuje zapis dla klasy (upsert).
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { klasaId, przydzial, doradztwo } = body;
+    const { klasaId, przydzial, doradztwo, dyrektor } = body;
     if (!klasaId) {
       return NextResponse.json({ error: 'klasaId jest wymagane' }, { status: 400 });
     }
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
 
     const przydzialVal = przydzial != null ? przydzial : {};
     const doradztwoVal = doradztwo != null ? doradztwo : {};
+    const dyrektorVal = dyrektor != null ? dyrektor : {};
 
     if (existing.docs.length > 0) {
       const doc = existing.docs[0] as any;
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
         data: {
           przydzial: przydzialVal,
           doradztwo: doradztwoVal,
+          dyrektor: dyrektorVal,
         },
       });
       return NextResponse.json({ ok: true, updated: true });
@@ -79,6 +82,7 @@ export async function POST(request: NextRequest) {
         klasa: klasaId,
         przydzial: przydzialVal,
         doradztwo: doradztwoVal,
+        dyrektor: dyrektorVal,
       },
     });
     return NextResponse.json({ ok: true, created: true });

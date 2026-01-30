@@ -5,6 +5,7 @@ import plansData from '@/utils/import/ramowe-plany.json';
 
 const STORAGE_PREFIX = 'przydzial-wyboru-';
 const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
+const STORAGE_DYREKTOR = 'dyrektor-godziny-';
 
 type HoursByGrade = Record<string, number>;
 type RawByGrade = Record<string, string>;
@@ -131,8 +132,8 @@ function canPrzydzielacWKomorce(schoolType: string, grade: string, subjectName: 
   return !PRZEDMIOTY_BLOKOWANE_V_TECHNIKUM.includes((subjectName || '').trim());
 }
 
-/** Kolor komórki "Suma godzin w roku" wg % godzin do rozdysponowania (do wyboru) przydzielonych w tym roku. Doradztwo zawodowe nie wlicza się (jest w przedmiotach łącznych, poza tą tabelą). */
-function kolorOdProcentuGodzinDoRozdysponowania(procent: number): string {
+/** Kolor komórki "Suma godzin w roku" wg % godzin dodatkowych (do wyboru + dyrektorskie) przydzielonych w tym roku. */
+function kolorOdProcentuGodzinDodatkowych(procent: number): string {
   if (procent <= 25) return 'bg-emerald-100 text-emerald-800 ring-emerald-300';
   if (procent <= 35) return 'bg-amber-100 text-amber-800 ring-amber-300';
   if (procent <= 45) return 'bg-red-100 text-red-800 ring-red-300';
@@ -150,28 +151,33 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
   const [przydzial, setPrzydzial] = useState<Record<string, Record<string, number>>>({});
   const [zrealizowaneDoradztwo, setZrealizowaneDoradztwo] = useState<Record<string, Record<string, number>>>({});
+  const [dyrektor, setDyrektor] = useState<Record<string, Record<string, number>>>({});
   const [ladowanieZapis, setLadowanieZapis] = useState(false);
 
   useEffect(() => {
     if (!klasaId) {
       setPrzydzial({});
       setZrealizowaneDoradztwo({});
+      setDyrektor({});
       return;
     }
     let cancelled = false;
     setLadowanieZapis(true);
     fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
-      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>> }) => {
+      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>> }) => {
         if (cancelled) return;
         const p = data.przydzial && typeof data.przydzial === 'object' ? data.przydzial : {};
         const d = data.doradztwo && typeof data.doradztwo === 'object' ? data.doradztwo : {};
+        const dy = data.dyrektor && typeof data.dyrektor === 'object' ? data.dyrektor : {};
         setPrzydzial(p);
         setZrealizowaneDoradztwo(d);
+        setDyrektor(dy);
         try {
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(p));
             localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(d));
+            localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(dy));
           }
         } catch (_) {}
       })
@@ -199,6 +205,17 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         } catch {
           setZrealizowaneDoradztwo({});
         }
+        try {
+          const rawDy = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_DYREKTOR + klasaId) : null;
+          if (rawDy) {
+            const parsed = JSON.parse(rawDy) as Record<string, Record<string, number>>;
+            setDyrektor(parsed);
+          } else {
+            setDyrektor({});
+          }
+        } catch {
+          setDyrektor({});
+        }
       })
       .finally(() => {
         if (!cancelled) setLadowanieZapis(false);
@@ -208,6 +225,18 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     };
   }, [klasaId]);
 
+  const zapiszDoBazy = useCallback(
+    (p: Record<string, Record<string, number>>, d: Record<string, Record<string, number>>, dy: Record<string, Record<string, number>>) => {
+      if (!klasaId) return;
+      fetch('/api/przydzial-godzin-wybor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klasaId, przydzial: p, doradztwo: d, dyrektor: dy }),
+      }).catch((err) => console.error('Zapis przydziału do bazy:', err));
+    },
+    [klasaId]
+  );
+
   const zapiszPrzydzial = useCallback(
     (next: Record<string, Record<string, number>>) => {
       if (!klasaId) return;
@@ -216,17 +245,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(next));
       } catch (_) {}
       onPrzydzialChange?.();
-      fetch('/api/przydzial-godzin-wybor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          klasaId,
-          przydzial: next,
-          doradztwo: zrealizowaneDoradztwo,
-        }),
-      }).catch((err) => console.error('Zapis przydziału do bazy:', err));
+      zapiszDoBazy(next, zrealizowaneDoradztwo, dyrektor);
     },
-    [klasaId, onPrzydzialChange, zrealizowaneDoradztwo]
+    [klasaId, onPrzydzialChange, zrealizowaneDoradztwo, dyrektor, zapiszDoBazy]
   );
 
   const przydzielGodzine = useCallback(
@@ -268,17 +289,22 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(next));
       } catch (_) {}
       onDoradztwoChange?.();
-      fetch('/api/przydzial-godzin-wybor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          klasaId,
-          przydzial,
-          doradztwo: next,
-        }),
-      }).catch((err) => console.error('Zapis doradztwa do bazy:', err));
+      zapiszDoBazy(przydzial, next, dyrektor);
     },
-    [klasaId, onDoradztwoChange, przydzial]
+    [klasaId, onDoradztwoChange, przydzial, dyrektor, zapiszDoBazy]
+  );
+
+  const zapiszDyrektor = useCallback(
+    (next: Record<string, Record<string, number>>) => {
+      if (!klasaId) return;
+      setDyrektor(next);
+      try {
+        localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(next));
+      } catch (_) {}
+      onPrzydzialChange?.();
+      zapiszDoBazy(przydzial, zrealizowaneDoradztwo, next);
+    },
+    [klasaId, onPrzydzialChange, przydzial, zrealizowaneDoradztwo, zapiszDoBazy]
   );
 
   const dodajZrealizowanaGodzine = useCallback(
@@ -303,6 +329,47 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
       zapiszZrealizowaneDoradztwo({ ...zrealizowaneDoradztwo, [key]: cleaned });
     },
     [zrealizowaneDoradztwo, zapiszZrealizowaneDoradztwo]
+  );
+
+  /** Suma przypisanych godzin dyrektorskich dla danego planu (klucze subKey zaczynają się od planId_) */
+  const assignedDirectorForPlan = useCallback(
+    (planId: string | undefined): number => {
+      const prefix = (planId ?? 'plan') + '_';
+      let sum = 0;
+      for (const [key, byGrade] of Object.entries(dyrektor)) {
+        if (!key.startsWith(prefix)) continue;
+        for (const v of Object.values(byGrade)) sum += v;
+      }
+      return sum;
+    },
+    [dyrektor]
+  );
+
+  const dodajGodzineDyrektorska = useCallback(
+    (subKey: string, grade: string, totalDirectorHours: number, planId: string | undefined) => {
+      const assigned = assignedDirectorForPlan(planId);
+      if (assigned >= totalDirectorHours) return;
+      const bySubject = dyrektor[subKey] ?? {};
+      const byGrade = (bySubject[grade] ?? 0) + 1;
+      zapiszDyrektor({
+        ...dyrektor,
+        [subKey]: { ...bySubject, [grade]: byGrade },
+      });
+    },
+    [dyrektor, assignedDirectorForPlan, zapiszDyrektor]
+  );
+
+  const usunGodzineDyrektorska = useCallback(
+    (subKey: string, grade: string) => {
+      const bySubject = dyrektor[subKey] ?? {};
+      const current = bySubject[grade] ?? 0;
+      if (current <= 0) return;
+      const next = current - 1;
+      const nextBySubject = next === 0 ? { ...bySubject, [grade]: undefined } : { ...bySubject, [grade]: next };
+      const cleaned = Object.fromEntries(Object.entries(nextBySubject).filter(([, v]) => v != null && v > 0)) as Record<string, number>;
+      zapiszDyrektor({ ...dyrektor, [subKey]: cleaned });
+    },
+    [dyrektor, zapiszDyrektor]
   );
 
   if (plans.length === 0) {
@@ -341,12 +408,19 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         const hasGrades = grades.length > 0;
         const cycleLabel = plan.cycle_short ?? plan.cycle;
 
+        const directorRowEntry = plan.subjects.find(isDirectorRow);
+        const totalDirectorHours = directorRowEntry?.director_discretion_hours?.total_hours ?? 0;
+        const assignedDirectorHoursPlan = totalDirectorHours > 0 ? assignedDirectorForPlan(plan.plan_id) : 0;
+        const remainingDirectorHours = Math.max(0, totalDirectorHours - assignedDirectorHoursPlan);
+
         const sumByGrade: Record<string, number> = {};
         const assignedSumByGrade: Record<string, number> = {};
+        const directorSumByGrade: Record<string, number> = {};
         let totalGodzinyDoRozdysponowania = 0;
         grades.forEach((g) => {
           sumByGrade[g] = 0;
           assignedSumByGrade[g] = 0;
+          directorSumByGrade[g] = 0;
         });
         plan.subjects.forEach((entry) => {
           if (isDirectorRow(entry)) return;
@@ -356,11 +430,14 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
           totalGodzinyDoRozdysponowania += row.hours_to_choose ?? 0;
           const subKey = subjectKey(plan.plan_id, subject);
           const assignedByGrade = klasaId ? (przydzial[subKey] ?? {}) : {};
+          const directorByGrade = klasaId ? (dyrektor[subKey] ?? {}) : {};
           grades.forEach((g) => {
             const base = (row.hours_by_grade?.[g] ?? 0) as number;
             const assigned = assignedByGrade[g] ?? 0;
-            sumByGrade[g] = (sumByGrade[g] ?? 0) + base + assigned;
+            const dirH = directorByGrade[g] ?? 0;
+            sumByGrade[g] = (sumByGrade[g] ?? 0) + base + assigned + dirH;
             assignedSumByGrade[g] = (assignedSumByGrade[g] ?? 0) + assigned;
+            directorSumByGrade[g] = (directorSumByGrade[g] ?? 0) + dirH;
           });
         });
 
@@ -445,18 +522,32 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     if (isDirectorRow(entry)) {
                       const tot = entry.director_discretion_hours.total_hours;
                       return (
-                        <tr key={i} className="border-t-2 border-gray-300 font-medium">
+                        <tr key={i} className="border-t-2 border-gray-300 font-medium bg-sky-50/50">
                           <td
                             className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-700 border-r border-gray-200 text-sm"
                             colSpan={hasGrades ? 2 + grades.length : 2}
                           >
                             Godziny do dyspozycji dyrektora
+                            {klasaId && tot > 0 && (
+                              <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                                Można je dodać do dowolnego przedmiotu (przyciski „Dyr. +” / „Dyr. −” w komórkach)
+                              </span>
+                            )}
                           </td>
                           <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-gray-800 border-r border-gray-100">
                             {tot}
                           </td>
-                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-gray-400 border-l border-gray-200">
-                            –
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-gray-200 text-xs sm:text-sm">
+                            {klasaId && tot > 0 ? (
+                              <span className="tabular-nums text-gray-700">
+                                {assignedDirectorHoursPlan} z {tot}
+                                {remainingDirectorHours > 0 && (
+                                  <span className="block text-gray-500 mt-0.5">{remainingDirectorHours} do przydziału</span>
+                                )}
+                              </span>
+                            ) : (
+                              '–'
+                            )}
                           </td>
                         </tr>
                       );
@@ -468,9 +559,11 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     const subKey = subjectKey(plan.plan_id, subject);
                     const hoursToChoose = row.hours_to_choose ?? 0;
                     const assignedByGrade = klasaId ? (przydzial[subKey] ?? {}) : {};
+                    const directorByGrade = klasaId ? (dyrektor[subKey] ?? {}) : {};
                     const assignedSum = Object.values(assignedByGrade).reduce((a, b) => a + b, 0);
                     const remaining = hoursToChoose - assignedSum;
                     const canAssign = klasaId && hoursToChoose > 0 && remaining > 0;
+                    const canAddDirector = klasaId && totalDirectorHours > 0 && remainingDirectorHours > 0;
 
                     return (
                       <tr
@@ -487,46 +580,83 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           grades.map((g) => {
                             const base = (row.hours_by_grade?.[g] ?? 0) as number;
                             const assigned = assignedByGrade[g] ?? 0;
-                            const total = base + assigned;
+                            const dirH = directorByGrade[g] ?? 0;
+                            const total = base + assigned + dirH;
                             const canAssignThis =
                               canAssign && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
                             const canRemoveThis = klasaId && assigned > 0;
+                            const canAddDirectorThis = canAddDirector && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
+                            const canRemoveDirectorThis = klasaId && dirH > 0;
                             return (
                               <td
                                 key={g}
                                 className="px-1.5 sm:px-2 py-1.5 sm:py-2 text-center border-r border-gray-100 w-12 sm:w-14"
                               >
                                 <span className="tabular-nums text-gray-700">{total > 0 ? total : '–'}</span>
-                                {klasaId && hoursToChoose > 0 && (
-                                  <span className="ml-1.5 inline-flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => canAssignThis && przydzielGodzine(subKey, g, hoursToChoose)}
-                                      disabled={!canAssignThis}
-                                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ${
-                                        canAssignThis
-                                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100'
-                                          : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
-                                      }`}
-                                      title={canAssignThis ? 'Dodaj jedną godzinę do wyboru na ten rok' : 'Brak godzin do przydziału'}
-                                    >
-                                      <span aria-hidden>+</span>
-                                      <span>Dodaj</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => canRemoveThis && cofnijGodzine(subKey, g)}
-                                      disabled={!canRemoveThis}
-                                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ${
-                                        canRemoveThis
-                                          ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100'
-                                          : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
-                                      }`}
-                                      title={canRemoveThis ? 'Usuń przydział jednej godziny' : 'Brak przydzielonych godzin'}
-                                    >
-                                      <span aria-hidden>−</span>
-                                      <span>Usuń</span>
-                                    </button>
+                                {klasaId && (hoursToChoose > 0 || totalDirectorHours > 0) && (
+                                  <span className="ml-1.5 inline-flex flex-wrap items-center gap-1">
+                                    {hoursToChoose > 0 && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => canAssignThis && przydzielGodzine(subKey, g, hoursToChoose)}
+                                          disabled={!canAssignThis}
+                                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ${
+                                            canAssignThis
+                                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100'
+                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
+                                          }`}
+                                          title={canAssignThis ? 'Dodaj jedną godzinę do wyboru na ten rok' : 'Brak godzin do przydziału'}
+                                        >
+                                          <span aria-hidden>+</span>
+                                          <span>Dodaj</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => canRemoveThis && cofnijGodzine(subKey, g)}
+                                          disabled={!canRemoveThis}
+                                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ${
+                                            canRemoveThis
+                                              ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100'
+                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
+                                          }`}
+                                          title={canRemoveThis ? 'Usuń przydział jednej godziny' : 'Brak przydzielonych godzin'}
+                                        >
+                                          <span aria-hidden>−</span>
+                                          <span>Usuń</span>
+                                        </button>
+                                      </>
+                                    )}
+                                    {totalDirectorHours > 0 && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => canAddDirectorThis && dodajGodzineDyrektorska(subKey, g, totalDirectorHours, plan.plan_id)}
+                                          disabled={!canAddDirectorThis}
+                                          className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs font-medium ring-1 ${
+                                            canAddDirectorThis
+                                              ? 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100'
+                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
+                                          }`}
+                                          title={canAddDirectorThis ? 'Dodaj godzinę dyrektorską' : 'Brak godzin dyrektorskich do przydziału'}
+                                        >
+                                          Dyr. +
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => canRemoveDirectorThis && usunGodzineDyrektorska(subKey, g)}
+                                          disabled={!canRemoveDirectorThis}
+                                          className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs font-medium ring-1 ${
+                                            canRemoveDirectorThis
+                                              ? 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100'
+                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
+                                          }`}
+                                          title={canRemoveDirectorThis ? 'Usuń godzinę dyrektorską' : 'Brak godzin dyrektorskich'}
+                                        >
+                                          Dyr. −
+                                        </button>
+                                      </>
+                                    )}
                                   </span>
                                 )}
                               </td>
@@ -567,15 +697,22 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                       grades.map((g) => {
                         const sum = sumByGrade[g] ?? 0;
                         const przydzielone = assignedSumByGrade[g] ?? 0;
+                        const dyrektorG = directorSumByGrade[g] ?? 0;
+                        const totalDodatkowe = totalGodzinyDoRozdysponowania + totalDirectorHours;
+                        const przydzieloneDodatkowe = przydzielone + dyrektorG;
                         const procent =
-                          totalGodzinyDoRozdysponowania > 0
-                            ? (przydzielone / totalGodzinyDoRozdysponowania) * 100
+                          totalDodatkowe > 0
+                            ? (przydzieloneDodatkowe / totalDodatkowe) * 100
                             : 0;
+                        const titleParts = [`Razem ${sum} godz. w klasie ${g}`];
+                        if (totalDodatkowe > 0) titleParts.push(`godz. dodatkowe: ${przydzieloneDodatkowe}/${totalDodatkowe} (${procent.toFixed(0)}%)`);
+                        if (przydzielone > 0) titleParts.push(`w tym ${przydzielone} z puli do wyboru`);
+                        if (dyrektorG > 0) titleParts.push(`${dyrektorG} godz. dyrektorskich`);
                         return (
                           <td
                             key={g}
-                            className={`px-1.5 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums font-bold ring-1 ring-inset ${kolorOdProcentuGodzinDoRozdysponowania(procent)}`}
-                            title={`Razem ${sum} godz. w klasie ${g}${przydzielone > 0 ? ` (w tym ${przydzielone} z puli do wyboru, ${procent.toFixed(0)}%)` : ''}`}
+                            className={`px-1.5 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums font-bold ring-1 ring-inset ${kolorOdProcentuGodzinDodatkowych(procent)}`}
+                            title={titleParts.join('; ')}
                           >
                             {sum}
                           </td>

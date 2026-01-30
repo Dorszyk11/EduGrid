@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
-import { automatycznyRozdzialGodzin, type ParametryRozdzialu } from '@/utils/automatycznyRozdzialGodzin';
+import {
+  automatycznyRozdzialGodzin,
+  getDiagnostykaPrzydzialu,
+  type ParametryRozdzialu,
+} from '@/utils/automatycznyRozdzialGodzin';
 
 /**
  * POST /api/przydzial/generuj - Generuje propozycję przydziału godzin
@@ -38,22 +42,32 @@ export async function POST(request: NextRequest) {
     const payload = await getPayload({ config });
 
     const parametry: ParametryRozdzialu = {
-      rokSzkolny,
+      rokSzkolny: String(rokSzkolny).trim(),
       wymagajKwalifikacji,
       maksymalnePrzekroczenie,
       preferujKontynuacje,
       minimalneObciazenie,
     };
 
-    if (typSzkolyId) {
-      parametry.typSzkolyId = typSzkolyId;
+    if (typSzkolyId != null && typSzkolyId !== '') {
+      parametry.typSzkolyId = String(typSzkolyId);
     }
 
     const wynik = await automatycznyRozdzialGodzin(payload, parametry);
 
+    let diagnostyka = null;
+    if (wynik.metryki.lacznieZadan === 0) {
+      try {
+        diagnostyka = await getDiagnostykaPrzydzialu(payload, parametry);
+      } catch (e) {
+        console.error('Diagnostyka przydziału:', e);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       wynik,
+      diagnostyka,
     });
   } catch (error) {
     console.error('Błąd przy generowaniu przydziału:', error);

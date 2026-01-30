@@ -22,6 +22,8 @@ export interface ZadaniePrzypisania {
   przedmiotNazwa: string;
   klasaId: string;
   klasaNazwa: string;
+  /** Numer klasy w cyklu (1–5 lub 1–8) – do sortowania round-robin */
+  numerKlasy?: number;
   godzinyTygodniowo: number;
   godzinyRoczne: number;
   priorytet: number; // Im wyższy, tym ważniejsze zadanie
@@ -91,6 +93,85 @@ export interface ParametryRozdzialu {
   minimalneObciazenie?: number; // Minimalne obciążenie nauczyciela (opcjonalnie)
 }
 
+export interface DiagnostykaPrzydzialu {
+  liczbaKlas: number;
+  liczbaKlasTylkoRok: number;
+  liczbaSiatekMein: number;
+  rokSzkolny: string;
+  typSzkolyId: string | undefined;
+  nazwyKlas: string[];
+}
+
+/**
+ * Diagnostyka: zwraca liczbę klas i siatek MEiN dla podanych parametrów (gdy 0 zadań).
+ */
+export async function getDiagnostykaPrzydzialu(
+  payload: Payload,
+  parametry: ParametryRozdzialu
+): Promise<DiagnostykaPrzydzialu> {
+  const { typSzkolyId, rokSzkolny } = parametry;
+  const rok = String(rokSzkolny).trim();
+
+  const warunkiTylkoRok: any = {
+    and: [
+      { aktywna: { equals: true } },
+      { rok_szkolny: { equals: rok } },
+    ],
+  };
+
+  const klasyTylkoRok = await payload.find({
+    collection: 'klasy',
+    where: warunkiTylkoRok,
+    limit: 500,
+  });
+
+  const warunkiKlas: any = {
+    and: [
+      { aktywna: { equals: true } },
+      { rok_szkolny: { equals: rok } },
+    ],
+  };
+  if (typSzkolyId) {
+    const typId =
+      typeof typSzkolyId === 'string' && /^\d+$/.test(typSzkolyId)
+        ? Number(typSzkolyId)
+        : typSzkolyId;
+    warunkiKlas.and.push({ typ_szkoly: { equals: typId } });
+  }
+
+  const klasy = await payload.find({
+    collection: 'klasy',
+    where: warunkiKlas,
+    limit: 500,
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  const siatkiMein = await payload.find({
+    collection: 'siatki-godzin-mein',
+    where: {
+      and: [
+        { data_obowiazywania_od: { less_than_equal: today } },
+        {
+          or: [
+            { data_obowiazywania_do: { greater_than_equal: today } },
+            { data_obowiazywania_do: { equals: null } },
+          ],
+        },
+      ],
+    },
+    limit: 1000,
+  });
+
+  return {
+    liczbaKlas: klasy.docs.length,
+    liczbaKlasTylkoRok: klasyTylkoRok.docs.length,
+    liczbaSiatekMein: siatkiMein.docs.length,
+    rokSzkolny: rok,
+    typSzkolyId: parametry.typSzkolyId,
+    nazwyKlas: klasy.docs.map((k: any) => k.nazwa ?? String(k.id)),
+  };
+}
+
 /**
  * Pobiera wszystkie zadania do przypisania (przedmioty w klasach)
  */
@@ -117,10 +198,19 @@ async function pobierzZadania(
   };
 
   if (typSzkolyId) {
+    // Payload/Postgres może trzymać relationship jako number lub string – dopasuj oba
+    const typIdNum =
+      typeof typSzkolyId === 'string' && /^\d+$/.test(typSzkolyId)
+        ? Number(typSzkolyId)
+        : typeof typSzkolyId === 'number'
+          ? typSzkolyId
+          : null;
+    const typIdStr = String(typSzkolyId);
     warunkiKlas.and.push({
-      typ_szkoly: {
-        equals: typSzkolyId,
-      },
+      or: [
+        { typ_szkoly: { equals: typIdStr } },
+        ...(typIdNum != null ? [{ typ_szkoly: { equals: typIdNum } }] : []),
+      ],
     });
   }
 
@@ -131,20 +221,21 @@ async function pobierzZadania(
   });
 
   // Pobierz wymagania MEiN (aby wiedzieć, ile godzin potrzeba)
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD, zgodne z polem date
   const siatkiMein = await payload.find({
     collection: 'siatki-godzin-mein',
     where: {
       and: [
         {
           data_obowiazywania_od: {
-            less_than_equal: new Date().toISOString(),
+            less_than_equal: today,
           },
         },
         {
           or: [
             {
               data_obowiazywania_do: {
-                greater_than_equal: new Date().toISOString(),
+                greater_than_equal: today,
               },
             },
             {
@@ -167,13 +258,20 @@ async function pobierzZadania(
       id: typeof klasa.typ_szkoly === 'string' ? klasa.typ_szkoly : klasa.typ_szkoly.id,
     });
 
-    // Znajdź wymagania MEiN dla tego typu szkoły i klasy
+    // Numer klasy: z bazy lub z początku nazwy (np. "1A" → 1), żeby dopasować wymagania per klasa
+    const numerKlasyFilter =
+      (klasa as { numer_klasy?: number }).numer_klasy ??
+      (typeof klasa.nazwa === 'string' && /^\d+/.test(klasa.nazwa)
+        ? Number(klasa.nazwa.match(/^\d+/)?.[0])
+        : undefined);
+
+    // Znajdź wymagania MEiN dla tego typu szkoły i klasy (porównanie ID jako string, żeby 5 === "5")
     const wymaganiaDlaKlasy = siatkiMein.docs.filter(sm => {
       const smTypSzkoly = typeof sm.typ_szkoly === 'object' ? sm.typ_szkoly.id : sm.typ_szkoly;
       const klasaTypSzkoly = typeof klasa.typ_szkoly === 'object' ? klasa.typ_szkoly.id : klasa.typ_szkoly;
-      
-      return smTypSzkoly === klasaTypSzkoly && 
-             (sm.klasa === null || sm.klasa === klasa.numer_klasy);
+      if (String(smTypSzkoly) !== String(klasaTypSzkoly)) return false;
+      // Wymaganie dla całego cyklu (sm.klasa null) lub dla tego numeru klasy
+      return sm.klasa == null || sm.klasa === numerKlasyFilter;
     });
 
     // Sprawdź, czy są już przypisania dla tej klasy
@@ -214,6 +312,12 @@ async function pobierzZadania(
         continue;
       }
 
+      // Godziny dyrektorskie nie są przydzielane przez generator – tylko ręcznie w planie MEiN
+      const nazwaPrzedmiotu = (przedmiot.nazwa || '').trim();
+      if (/godziny\s+do\s+dyspozycji\s+dyrektora/i.test(nazwaPrzedmiotu)) {
+        continue;
+      }
+
       // Sprawdź, czy już jest przypisanie
       const istniejące = istniejącePrzypisania.docs.find(rg => {
         const rgPrzedmiot = typeof rg.przedmiot === 'object' ? rg.przedmiot.id : rg.przedmiot;
@@ -243,12 +347,19 @@ async function pobierzZadania(
 
       const godzinyRoczne = godzinyTygodniowo * 30; // Przybliżenie (30 tygodni w roku)
 
+      const numerKlasy =
+        (klasa as { numer_klasy?: number }).numer_klasy ??
+        (typeof klasa.nazwa === 'string' && /^\d+/.test(klasa.nazwa)
+          ? Number(klasa.nazwa.match(/^\d+/)?.[0])
+          : undefined);
+
       zadania.push({
         id: `${klasa.id}-${przedmiot.id}`,
         przedmiotId: String(przedmiot.id),
         przedmiotNazwa: przedmiot.nazwa,
         klasaId: String(klasa.id),
         klasaNazwa: klasa.nazwa,
+        numerKlasy: numerKlasy ?? undefined,
         godzinyTygodniowo,
         godzinyRoczne,
         priorytet: wymaganie.obowiazkowe ? 100 : 50,
@@ -257,10 +368,27 @@ async function pobierzZadania(
     }
   }
 
-  // Sortuj według priorytetu (wyższy = ważniejsze)
-  zadania.sort((a, b) => b.priorytet - a.priorytet);
-
-  return zadania;
+  // Sortowanie round-robin: po kolei po jednej od klasy 1 do 5 (lub 1–8) i tak w kółko
+  const byClass: Record<number, ZadaniePrzypisania[]> = {};
+  for (const z of zadania) {
+    const n = z.numerKlasy ?? 0;
+    if (n <= 0) continue;
+    if (!byClass[n]) byClass[n] = [];
+    byClass[n].push(z);
+  }
+  const classNumbers = [...new Set(zadania.map((z) => z.numerKlasy).filter((n): n is number => n != null && n > 0))].sort(
+    (a, b) => a - b
+  );
+  const maxRounds = Math.max(0, ...Object.values(byClass).map((arr) => arr.length));
+  const ordered: ZadaniePrzypisania[] = [];
+  for (let r = 0; r < maxRounds; r++) {
+    for (const k of classNumbers) {
+      if (byClass[k] && byClass[k][r]) ordered.push(byClass[k][r]);
+    }
+  }
+  // Zadania bez numerKlasy na końcu (zachowaj dotychczasową kolejność)
+  const bezNumeru = zadania.filter((z) => !z.numerKlasy || z.numerKlasy <= 0);
+  return [...ordered, ...bezNumeru];
 }
 
 /**

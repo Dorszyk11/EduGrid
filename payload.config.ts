@@ -4,18 +4,18 @@ import { postgresAdapter } from '@payloadcms/db-postgres';
 import { slateEditor } from '@payloadcms/richtext-slate';
 import path from 'path';
 
-// Importy kolekcji (z rozszerzeniem .ts dla Payload CLI / ESM)
-import { Users } from './src/collections/Users.ts';
-import { TypySzkol } from './src/collections/TypySzkol.ts';
-import { Przedmioty } from './src/collections/Przedmioty.ts';
-import { Klasy } from './src/collections/Klasy.ts';
-import { Nauczyciele } from './src/collections/Nauczyciele.ts';
-import { SiatkiGodzinMein } from './src/collections/SiatkiGodzinMein.ts';
-import { Kwalifikacje } from './src/collections/Kwalifikacje.ts';
-import { RozkladGodzin } from './src/collections/RozkladGodzin.ts';
-import { Zawody } from './src/collections/Zawody.ts';
-import { MapowaniaNazw } from './src/collections/MapowaniaNazw.ts';
-import { PrzydzialGodzinWybor } from './src/collections/PrzydzialGodzinWybor.ts';
+// Importy kolekcji (bez rozszerzenia .ts – Next.js/TypeScript nie pozwala na .ts w importach)
+import { Users } from './src/collections/Users';
+import { TypySzkol } from './src/collections/TypySzkol';
+import { Przedmioty } from './src/collections/Przedmioty';
+import { Klasy } from './src/collections/Klasy';
+import { Nauczyciele } from './src/collections/Nauczyciele';
+import { SiatkiGodzinMein } from './src/collections/SiatkiGodzinMein';
+import { Kwalifikacje } from './src/collections/Kwalifikacje';
+import { RozkladGodzin } from './src/collections/RozkladGodzin';
+import { Zawody } from './src/collections/Zawody';
+import { MapowaniaNazw } from './src/collections/MapowaniaNazw';
+import { PrzydzialGodzinWybor } from './src/collections/PrzydzialGodzinWybor';
 
 // Automatyczne wykrywanie URL:
 // 1. PAYLOAD_PUBLIC_SERVER_URL (jeśli ustawione ręcznie)

@@ -7,6 +7,7 @@ import plansData from '@/utils/import/ramowe-plany.json';
 
 const STORAGE_PREFIX = 'przydzial-wyboru-';
 const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
+const STORAGE_DYREKTOR = 'dyrektor-godziny-';
 
 type HoursByGrade = Record<string, number>;
 
@@ -94,6 +95,27 @@ function readDoradztwo(klasaId: string): Record<string, Record<string, number>> 
   }
 }
 
+function readDyrektor(klasaId: string): Record<string, Record<string, number>> {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_DYREKTOR + klasaId);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, Record<string, number>>;
+  } catch {
+    return {};
+  }
+}
+
+function assignedDirectorForPlan(dyrektor: Record<string, Record<string, number>>, planId: string | undefined): number {
+  const prefix = (planId ?? 'plan') + '_';
+  let sum = 0;
+  for (const [key, byGrade] of Object.entries(dyrektor)) {
+    if (!key.startsWith(prefix)) continue;
+    for (const v of Object.values(byGrade)) sum += v;
+  }
+  return sum;
+}
+
 /**
  * Liczy realizację wymagań MEiN na podstawie planu i przypisanych godzin (localStorage).
  * Używane gdy wybrana jest klasa – dane z tabeli „godziny do wyboru” i „doradztwo zawodowe”.
@@ -111,12 +133,19 @@ export function obliczRealizacjaZPrzydzialu(
 
   const przydzial = readPrzydzial(klasaId);
   const doradztwo = readDoradztwo(klasaId);
+  const dyrektor = readDyrektor(klasaId);
 
   let totalRequired = 0;
   let totalRealized = 0;
 
   for (const plan of plans) {
     const grades = getGrades(plan);
+    const directorRow = plan.subjects.find(isDirectorRow);
+    const totalDirectorHours = directorRow?.director_discretion_hours?.total_hours ?? 0;
+    if (totalDirectorHours > 0) {
+      totalRequired += totalDirectorHours;
+      totalRealized += assignedDirectorForPlan(dyrektor, plan.plan_id);
+    }
     for (const entry of plan.subjects) {
       if (isDirectorRow(entry)) continue;
       const row = entry as SubjectRow;

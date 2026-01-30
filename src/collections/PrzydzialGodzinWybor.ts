@@ -49,6 +49,15 @@ export const PrzydzialGodzinWybor: CollectionConfig = {
         description: 'Obiekt: klucz = planId_Przedmiot, wartość = { klasa/rok: liczba zrealizowanych godzin }',
       },
     },
+    {
+      name: 'dyrektor',
+      type: 'json',
+      required: false,
+      label: 'Godziny dyrektorskie przypisane do przedmiotów',
+      admin: {
+        description: 'Obiekt: klucz = planId_Przedmiot, wartość = { klasa/rok: liczba godzin z puli dyrektorskiej }',
+      },
+    },
   ],
   timestamps: true,
 };
