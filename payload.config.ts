@@ -16,9 +16,23 @@ import { RozkladGodzin } from './src/collections/RozkladGodzin';
 import { Zawody } from './src/collections/Zawody';
 import { MapowaniaNazw } from './src/collections/MapowaniaNazw';
 
+// Automatyczne wykrywanie URL:
+// 1. PAYLOAD_PUBLIC_SERVER_URL (jeśli ustawione ręcznie)
+// 2. VERCEL_URL (automatyczna zmienna Vercel, dostępna tylko na Vercel)
+// 3. localhost (domyślnie dla developmentu)
+const getServerURL = () => {
+  if (process.env.PAYLOAD_PUBLIC_SERVER_URL) {
+    return process.env.PAYLOAD_PUBLIC_SERVER_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'http://localhost:3000';
+};
+
 export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || '',
-  serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
+  serverURL: getServerURL(),
   admin: {
     user: 'users',
   },
