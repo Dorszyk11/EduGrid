@@ -58,7 +58,7 @@ export default function DashboardCTA({ typSzkolyId, rokSzkolny = '2024/2025' }: 
           className="flex flex-col items-center justify-center p-6 bg-indigo-50 hover:bg-indigo-100 rounded-lg border-2 border-indigo-200 hover:border-indigo-400 transition-all cursor-pointer"
         >
           <div className="text-4xl mb-2">⚙️</div>
-          <h3 className="font-semibold text-lg mb-1">Generator przydziału</h3>
+          <h3 className="font-semibold text-lg mb-1">Przydział</h3>
           <p className="text-sm text-gray-600 text-center">Wygeneruj propozycję</p>
         </Link>
 

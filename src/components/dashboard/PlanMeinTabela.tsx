@@ -96,6 +96,8 @@ export interface PlanMeinTabelaProps {
   cycleFilter?: string;
   /** ID klasy – gdy podane, każda klasa ma niezależny przydział „godzin do wyboru” i zrealizowane godziny doradztwa (np. klasa A 2 godz., klasa B 3 godz.) */
   klasaId?: string;
+  /** Gdy true – tylko odczyt planu, bez przycisków dodawania/usuwania godzin (np. na dashboardzie) */
+  tylkoOdczyt?: boolean;
   /** Gdy się zmieni – odświeża dane z API (np. po „Generuj przydział”) */
   refetchTrigger?: number;
   /** Wywoływane po każdej zmianie przydziału „godzin do wyboru” – np. do odświeżenia kafelków realizacji na dashboardzie */
@@ -143,7 +145,7 @@ function kolorOdProcentuGodzinDodatkowych(procent: number): string {
   return 'bg-red-400 text-red-950 ring-red-600 font-bold';
 }
 
-export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, refetchTrigger, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
+export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
   const cycleFilterAuto = cycleFilter ?? cycleFilterZNazwy(nazwaTypuSzkoly);
   const plans = allPlans.filter(
     (p) =>
@@ -530,7 +532,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                             colSpan={hasGrades ? 2 + grades.length : 2}
                           >
                             Godziny do dyspozycji dyrektora
-                            {klasaId && tot > 0 && (
+                            {!tylkoOdczyt && klasaId && tot > 0 && (
                               <span className="block text-xs font-normal text-gray-500 mt-0.5">
                                 Można je dodać do dowolnego przedmiotu (przyciski „Dyr. +” / „Dyr. −” w komórkach)
                               </span>
@@ -595,7 +597,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                 className="px-1.5 sm:px-2 py-1.5 sm:py-2 text-center border-r border-gray-100 w-12 sm:w-14"
                               >
                                 <span className="tabular-nums text-gray-700">{total > 0 ? total : '–'}</span>
-                                {klasaId && (hoursToChoose > 0 || totalDirectorHours > 0) && (
+                                {!tylkoOdczyt && klasaId && (hoursToChoose > 0 || totalDirectorHours > 0) && (
                                   <span className="ml-1.5 inline-flex flex-wrap items-center gap-1">
                                     {hoursToChoose > 0 && (
                                       <>
@@ -767,7 +769,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                 <td key={g} className="px-2 py-2 text-center border-l border-gray-100 align-top">
                                   <div className="flex flex-col items-center gap-1">
                                     <span className="tabular-nums font-medium text-gray-800">{val > 0 ? val : '–'}</span>
-                                    {klasaId && (
+                                    {!tylkoOdczyt && klasaId && (
                                       <span className="inline-flex items-center gap-1 flex-wrap justify-center">
                                         <button
                                           type="button"

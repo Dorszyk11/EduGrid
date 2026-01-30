@@ -25,8 +25,10 @@ export default function PrzydzialPage() {
   const [selectedLitera, setSelectedLitera] = useState<string>('');
   const [ladowanieKlas, setLadowanieKlas] = useState(false);
   const [ladowanie, setLadowanie] = useState(false);
+  const [resetowanie, setResetowanie] = useState(false);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [komunikat, setKomunikat] = useState<{ typ: 'success' | 'error'; tekst: string } | null>(null);
+  const [pokazPotwierdzenieReset, setPokazPotwierdzenieReset] = useState(false);
 
   const roczniki = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
   const literki = selectedRocznik
@@ -117,17 +119,73 @@ export default function PrzydzialPage() {
     }
   };
 
+  /** Otwiera okno potwierdzenia resetu. */
+  const otworzPotwierdzenieReset = () => {
+    if (!selectedClass?.id) {
+      setKomunikat({ typ: 'error', tekst: 'Wybierz klasę (rocznik i literę)' });
+      return;
+    }
+    setPokazPotwierdzenieReset(true);
+  };
+
+  /** Wykonuje reset po potwierdzeniu (Tak). */
+  const wykonajReset = async () => {
+    if (!selectedClass?.id) return;
+    setPokazPotwierdzenieReset(false);
+    setResetowanie(true);
+    setKomunikat(null);
+
+    try {
+      const response = await fetch('/api/przydzial-godzin-wybor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          klasaId: selectedClass.id,
+          przydzial: {},
+          doradztwo: {},
+          dyrektor: {},
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Błąd przy resetowaniu');
+      }
+
+      setKomunikat({
+        typ: 'success',
+        tekst: 'Przydział godzin dla tej klasy został zresetowany.',
+      });
+      setRefetchTrigger((t) => t + 1);
+    } catch (error) {
+      console.error('Błąd:', error);
+      setKomunikat({
+        typ: 'error',
+        tekst: error instanceof Error ? error.message : 'Nieznany błąd',
+      });
+    } finally {
+      setResetowanie(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Generator przydziału godzin do wyboru</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Przydział</h1>
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={generujPrzydzial}
-            disabled={ladowanie || !typSzkolyId || !selectedClass?.id}
+            disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
             className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
           >
             {ladowanie ? 'Generowanie...' : 'Generuj przydział'}
+          </button>
+          <button
+            onClick={otworzPotwierdzenieReset}
+            disabled={ladowanie || resetowanie || !selectedClass?.id}
+            className="px-4 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed font-medium border border-red-200"
+          >
+            {resetowanie ? 'Resetowanie...' : 'Reset'}
           </button>
           <button
             onClick={() => router.push('/dashboard')}
@@ -145,6 +203,34 @@ export default function PrzydzialPage() {
           }`}
         >
           {komunikat.tekst}
+        </div>
+      )}
+
+      {/* Okno potwierdzenia resetu – Tak / Nie */}
+      {pokazPotwierdzenieReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Czy na pewno?</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego oraz godziny dyrektorskie.
+            </p>
+            <div className="flex flex-row gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setPokazPotwierdzenieReset(false)}
+                className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
+              >
+                Nie
+              </button>
+              <button
+                type="button"
+                onClick={wykonajReset}
+                className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Tak
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

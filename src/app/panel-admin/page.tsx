@@ -279,9 +279,6 @@ export default function PanelAdminaPage() {
   return (
     <div className="p-6 md:p-8 max-w-5xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Panel admina</h1>
-      <p className="text-gray-600 mb-8">
-        Dodawanie typów szkół i przedmiotów. Klasy, nauczyciele, siatki MEiN itd. w Panelu Payload.
-      </p>
 
       {msg && (
         <div
@@ -304,54 +301,56 @@ export default function PanelAdminaPage() {
         <div className="py-12 text-center text-gray-500">Ładowanie…</div>
       ) : (
         <div className="space-y-12">
-          {/* Szkoły */}
-          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {/* Szkoły – ukryte (display: none) */}
+          <section className="hidden bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Typy szkół</h2>
               <p className="text-sm text-gray-600 mt-0.5">Dodaj nowy typ szkoły (nazwa, liczba lat, kod MEiN).</p>
             </div>
             <div className="p-5 space-y-5">
-              <form onSubmit={handleAddSzkola} className="flex flex-wrap gap-3 items-end">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Nazwa</span>
-                  <input
-                    type="text"
-                    value={formSzkola.nazwa}
-                    onChange={(e) => setFormSzkola((s) => ({ ...s, nazwa: e.target.value }))}
-                    placeholder="np. Liceum ogólnokształcące"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-64"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Liczba lat</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={8}
-                    value={formSzkola.liczba_lat}
-                    onChange={(e) => setFormSzkola((s) => ({ ...s, liczba_lat: e.target.value }))}
-                    placeholder="4"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-24"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Kod MEiN</span>
-                  <input
-                    type="text"
-                    value={formSzkola.kod_mein}
-                    onChange={(e) => setFormSzkola((s) => ({ ...s, kod_mein: e.target.value }))}
-                    placeholder="LO"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-28"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={submittingSzkola}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
-                >
-                  {submittingSzkola ? 'Dodawanie…' : 'Dodaj szkołę'}
-                </button>
-              </form>
+              <div className="hidden">
+                <form onSubmit={handleAddSzkola} className="flex flex-wrap gap-3 items-end">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Nazwa</span>
+                    <input
+                      type="text"
+                      value={formSzkola.nazwa}
+                      onChange={(e) => setFormSzkola((s) => ({ ...s, nazwa: e.target.value }))}
+                      placeholder="np. Liceum ogólnokształcące"
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-64"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Liczba lat</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={8}
+                      value={formSzkola.liczba_lat}
+                      onChange={(e) => setFormSzkola((s) => ({ ...s, liczba_lat: e.target.value }))}
+                      placeholder="4"
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-24"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Kod MEiN</span>
+                    <input
+                      type="text"
+                      value={formSzkola.kod_mein}
+                      onChange={(e) => setFormSzkola((s) => ({ ...s, kod_mein: e.target.value }))}
+                      placeholder="LO"
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-28"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={submittingSzkola}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                  >
+                    {submittingSzkola ? 'Dodawanie…' : 'Dodaj szkołę'}
+                  </button>
+                </form>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
@@ -510,66 +509,68 @@ export default function PanelAdminaPage() {
             </div>
           </section>
 
-          {/* Przedmioty */}
-          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {/* Przedmioty – ukryte (display: none) */}
+          <section className="hidden bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Przedmioty</h2>
               <p className="text-sm text-gray-600 mt-0.5">Dodaj nowy przedmiot (nazwa, typ zajęć, poziom).</p>
             </div>
             <div className="p-5 space-y-5">
-              <form onSubmit={handleAddPrzedmiot} className="flex flex-wrap gap-3 items-end">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Nazwa</span>
-                  <input
-                    type="text"
-                    value={formPrzedmiot.nazwa}
-                    onChange={(e) => setFormPrzedmiot((s) => ({ ...s, nazwa: e.target.value }))}
-                    placeholder="np. Język polski"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-56"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Kod MEiN</span>
-                  <input
-                    type="text"
-                    value={formPrzedmiot.kod_mein}
-                    onChange={(e) => setFormPrzedmiot((s) => ({ ...s, kod_mein: e.target.value }))}
-                    placeholder="JP (opcjonalnie)"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-28"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Typ zajęć</span>
-                  <select
-                    value={formPrzedmiot.typ_zajec}
-                    onChange={(e) => setFormPrzedmiot((s) => ({ ...s, typ_zajec: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-44"
+              <div className="hidden">
+                <form onSubmit={handleAddPrzedmiot} className="flex flex-wrap gap-3 items-end">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Nazwa</span>
+                    <input
+                      type="text"
+                      value={formPrzedmiot.nazwa}
+                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, nazwa: e.target.value }))}
+                      placeholder="np. Język polski"
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-56"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Kod MEiN</span>
+                    <input
+                      type="text"
+                      value={formPrzedmiot.kod_mein}
+                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, kod_mein: e.target.value }))}
+                      placeholder="JP (opcjonalnie)"
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-28"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Typ zajęć</span>
+                    <select
+                      value={formPrzedmiot.typ_zajec}
+                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, typ_zajec: e.target.value }))}
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-44"
+                    >
+                      {TYP_ZAJEC_OPTS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-700">Poziom</span>
+                    <select
+                      value={formPrzedmiot.poziom}
+                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, poziom: e.target.value }))}
+                      className="rounded-lg border border-gray-300 px-3 py-2 w-36"
+                    >
+                      {POZIOM_OPTS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={submittingPrzedmiot}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
                   >
-                    {TYP_ZAJEC_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Poziom</span>
-                  <select
-                    value={formPrzedmiot.poziom}
-                    onChange={(e) => setFormPrzedmiot((s) => ({ ...s, poziom: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-36"
-                  >
-                    {POZIOM_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="submit"
-                  disabled={submittingPrzedmiot}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
-                >
-                  {submittingPrzedmiot ? 'Dodawanie…' : 'Dodaj przedmiot'}
-                </button>
-              </form>
+                    {submittingPrzedmiot ? 'Dodawanie…' : 'Dodaj przedmiot'}
+                  </button>
+                </form>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>

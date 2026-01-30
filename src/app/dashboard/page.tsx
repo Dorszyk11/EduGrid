@@ -111,45 +111,16 @@ export default function DashboardPage() {
     setLadowanie(false);
   }, [typSzkolyId, selectedRocznik, selectedLitera]);
 
-  // Realizacja: gdy wybrana klasa – z przypisanych godzin (localStorage); inaczej z API zgodnosc-mein
+  // Realizacja wymagań: tylko gdy wybrana pełna klasa (typ + rocznik + litera) – z przypisanych godzin
   const nazwaTypuSzkolyDoZgodnosci = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
   useEffect(() => {
-    if (!typSzkolyId || !selectedRocznik) {
+    if (!typSzkolyId || !selectedRocznik || !selectedClass?.id || !nazwaTypuSzkolyDoZgodnosci) {
       setZgodnoscDane(null);
-      return;
-    }
-    if (selectedClass?.id && nazwaTypuSzkolyDoZgodnosci) {
       setZgodnoscLadowanie(false);
-      setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypuSzkolyDoZgodnosci, selectedClass.id));
       return;
     }
-    const rok = rokSzkolnyZRocznika(selectedRocznik);
-    setZgodnoscLadowanie(true);
-    fetch(`/api/dashboard/zgodnosc-mein?typSzkolyId=${encodeURIComponent(typSzkolyId)}&rokSzkolny=${encodeURIComponent(rok)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setZgodnoscDane(null);
-          return;
-        }
-        const wyniki = data.wyniki ?? [];
-        const statystyki = data.statystyki ?? {};
-        const brakiGodzin = wyniki
-          .filter((w: { status: string }) => w.status === 'BRAK')
-          .reduce((s: number, w: { roznica: { godziny: number } }) => s + Math.abs(w.roznica.godziny), 0);
-        const nadwyzkiGodzin = wyniki
-          .filter((w: { status: string }) => w.status === 'NADWYŻKA')
-          .reduce((s: number, w: { roznica: { godziny: number } }) => s + w.roznica.godziny, 0);
-        setZgodnoscDane({
-          procentRealizacji: Number(statystyki.sredniProcent) ?? 0,
-          brakiGodzin,
-          nadwyzkiGodzin,
-          liczbaBrakow: statystyki.zBrakami,
-          liczbaNadwyzek: statystyki.zNadwyzkami,
-        });
-      })
-      .catch(() => setZgodnoscDane(null))
-      .finally(() => setZgodnoscLadowanie(false));
+    setZgodnoscLadowanie(false);
+    setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypuSzkolyDoZgodnosci, selectedClass.id));
   }, [typSzkolyId, selectedRocznik, selectedClass?.id, nazwaTypuSzkolyDoZgodnosci, odswiezKafelki]);
 
   if (ladowanieTypow) {
@@ -245,14 +216,14 @@ export default function DashboardPage() {
             <p className="text-amber-700 text-sm mt-2">Brak klas dla wybranego typu szkoły. Dodaj klasy w panelu admina.</p>
           )}
         </div>
-        {/* Wykres kołowy + kafelki: procent realizacji, braki godzin, nadwyżki */}
-        {typSzkolyId && selectedRocznik && (
+        {/* Realizacja wymagań – tylko gdy wybrana pełna klasa (typ + rocznik + litera) */}
+        {typSzkolyId && selectedRocznik && selectedLitera && selectedClass && (
           <div className="space-y-2">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Realizacja wymagań MEiN</h2>
             <KafelkiRealizacji
               dane={zgodnoscDane}
               ladowanie={zgodnoscLadowanie}
-              brakDanychKomunikat="Wybierz typ szkoły i rocznik, aby zobaczyć statystyki realizacji."
+              brakDanychKomunikat="Wybierz typ szkoły, rocznik i klasę, aby zobaczyć statystyki realizacji."
             />
           </div>
         )}
@@ -263,7 +234,7 @@ export default function DashboardPage() {
             <p className="text-gray-600 text-sm leading-relaxed">
               Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
             </p>
-            <PlanMeinTabela nazwaTypuSzkoly={nazwaTypuSzkolyShort} />
+            <PlanMeinTabela nazwaTypuSzkoly={nazwaTypuSzkolyShort} tylkoOdczyt />
           </div>
         )}
       </div>
@@ -299,6 +270,7 @@ export default function DashboardPage() {
           <PlanMeinTabela
             nazwaTypuSzkoly={nazwaTypuSzkoly}
             klasaId={selectedClass?.id}
+            tylkoOdczyt
             onPrzydzialChange={() => setOdswiezKafelki((n) => n + 1)}
             onDoradztwoChange={() => setOdswiezKafelki((n) => n + 1)}
           />

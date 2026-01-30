@@ -11,7 +11,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Generator przydziału', href: '/przydzial', icon: '⚙️' },
+  { name: 'Przydział', href: '/przydzial', icon: '⚙️' },
   { name: 'Plany MEiN', href: '/plany-mein', icon: '🏫' },
   { name: 'Import MEiN', href: '/import/mein-pdf', icon: '📥' },
   { name: 'Raporty', href: '/raporty', icon: '📈' },

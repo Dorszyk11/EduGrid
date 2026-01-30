@@ -46,16 +46,31 @@ function subjectKey(planId: string | undefined, subjectName: string): string {
 }
 
 /**
- * Rozdaje godziny do wyboru po latach (po kolei): 1 godz. na I rok, 1 na II, itd., w kółko.
+ * Uzupełnia tylko nierozdysponowane godziny: zostawia już przydzielone,
+ * a pozostałe wpisuje optymalnie (najpierw zera, potem wyrównuje).
  */
-function rozdzielGodzinyPoLatach(grades: string[], hoursToChoose: number): HoursByGrade {
-  const byGrade: HoursByGrade = {};
-  if (grades.length === 0 || hoursToChoose <= 0) return byGrade;
-  for (let i = 0; i < hoursToChoose; i++) {
-    const g = grades[i % grades.length];
-    byGrade[g] = (byGrade[g] ?? 0) + 1;
+function uzupełnijNierozdysponowane(
+  current: HoursByGrade,
+  totalRequired: number,
+  grades: string[]
+): HoursByGrade {
+  if (grades.length === 0 || totalRequired <= 0) return { ...current };
+  const result: HoursByGrade = {};
+  let assigned = 0;
+  for (const g of grades) {
+    const v = (current[g] ?? 0);
+    result[g] = v;
+    assigned += v;
   }
-  return byGrade;
+  let remaining = totalRequired - assigned;
+  if (remaining <= 0) return result;
+  for (let i = 0; i < remaining; i++) {
+    const g = grades.reduce((min, gr) =>
+      (result[gr] ?? 0) < (result[min] ?? 0) ? gr : min
+    , grades[0]);
+    result[g] = (result[g] ?? 0) + 1;
+  }
+  return result;
 }
 
 /**
@@ -108,29 +123,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const przydzialNowy: Record<string, HoursByGrade> = {};
-    const doradztwoNowy: Record<string, HoursByGrade> = {};
-    for (const plan of plans) {
-      const grades = plan.table_structure?.grades ?? plan.grades ?? [];
-      for (const entry of plan.subjects) {
-        if (isDirectorRow(entry)) continue;
-        const row = entry as SubjectRow;
-        const subject = row.subject ?? '';
-        if (isPrzedmiotLaczny(subject)) {
-          // Zajęcia z zakresu doradztwa zawodowego – total_hours rozłożone po latach po kolei
-          const totalHours = row.total_hours ?? 0;
-          if (totalHours <= 0) continue;
-          const key = subjectKey(plan.plan_id, subject);
-          doradztwoNowy[key] = rozdzielGodzinyPoLatach(grades, totalHours);
-          continue;
-        }
-        const hoursToChoose = row.hours_to_choose ?? 0;
-        if (hoursToChoose <= 0) continue;
-        const key = subjectKey(plan.plan_id, subject);
-        przydzialNowy[key] = rozdzielGodzinyPoLatach(grades, hoursToChoose);
-      }
-    }
-
     // ID klasy dla relacji – Payload/PostgreSQL może wymagać number
     const klasaIdForRelation = /^\d+$/.test(klasaId) ? Number(klasaId) : klasaId;
 
@@ -142,10 +134,36 @@ export async function POST(request: NextRequest) {
 
     const currentDoc = existing.docs[0] as { id: string; przydzial?: Record<string, HoursByGrade>; doradztwo?: Record<string, HoursByGrade>; dyrektor?: Record<string, HoursByGrade> } | undefined;
     const currentPrzydzial = currentDoc?.przydzial && typeof currentDoc.przydzial === 'object' ? currentDoc.przydzial : {};
-    const mergedPrzydzial = { ...currentPrzydzial, ...przydzialNowy };
     const currentDoradztwo = currentDoc?.doradztwo && typeof currentDoc.doradztwo === 'object' ? currentDoc.doradztwo : {};
-    const mergedDoradztwo = { ...currentDoradztwo, ...doradztwoNowy };
     const dyrektorVal = currentDoc?.dyrektor ?? {};
+
+    // Uzupełnij tylko nierozdysponowane godziny – już przydzielone zostaw, resztę wpisz optymalnie (najpierw zera)
+    const przydzialNowy: Record<string, HoursByGrade> = {};
+    const doradztwoNowy: Record<string, HoursByGrade> = {};
+    for (const plan of plans) {
+      const grades = plan.table_structure?.grades ?? plan.grades ?? [];
+      for (const entry of plan.subjects) {
+        if (isDirectorRow(entry)) continue;
+        const row = entry as SubjectRow;
+        const subject = row.subject ?? '';
+        if (isPrzedmiotLaczny(subject)) {
+          const totalHours = row.total_hours ?? 0;
+          if (totalHours <= 0) continue;
+          const key = subjectKey(plan.plan_id, subject);
+          const current = currentDoradztwo[key] ?? {};
+          doradztwoNowy[key] = uzupełnijNierozdysponowane(current, totalHours, grades);
+          continue;
+        }
+        const hoursToChoose = row.hours_to_choose ?? 0;
+        if (hoursToChoose <= 0) continue;
+        const key = subjectKey(plan.plan_id, subject);
+        const current = currentPrzydzial[key] ?? {};
+        przydzialNowy[key] = uzupełnijNierozdysponowane(current, hoursToChoose, grades);
+      }
+    }
+
+    const mergedPrzydzial = { ...currentPrzydzial, ...przydzialNowy };
+    const mergedDoradztwo = { ...currentDoradztwo, ...doradztwoNowy };
 
     if (existing.docs.length > 0) {
       await payload.update({

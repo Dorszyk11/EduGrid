@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import KafelkiRealizacji, { type DaneRealizacji } from '@/components/dashboard/KafelkiRealizacji';
+import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
+import { obliczRealizacjaZPrzydzialu } from '@/utils/realizacjaZPrzydzialu';
+
+const STORAGE_PREFIX = 'przydzial-wyboru-';
+const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
+const STORAGE_DYREKTOR = 'dyrektor-godziny-';
 
 export default function KlasaPage() {
   const params = useParams();
@@ -12,12 +19,35 @@ export default function KlasaPage() {
   const [dane, setDane] = useState<any>(null);
   const [ladowanie, setLadowanie] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [zgodnoscDane, setZgodnoscDane] = useState<DaneRealizacji | null>(null);
 
   useEffect(() => {
     if (klasaId) {
       pobierzDane();
     }
   }, [klasaId]);
+
+  // Po załadowaniu klasy: pobierz przydział z API, zapisz do localStorage, policz realizację (jak na dashboardzie)
+  useEffect(() => {
+    if (!dane?.klasa?.typ_szkoly?.nazwa || !klasaId) {
+      setZgodnoscDane(null);
+      return;
+    }
+    const nazwaTypu = dane.klasa.typ_szkoly.nazwa;
+    fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((api: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>> }) => {
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(api.przydzial ?? {}));
+            localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(api.doradztwo ?? {}));
+            localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(api.dyrektor ?? {}));
+          } catch (_) {}
+        }
+        setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypu, klasaId));
+      })
+      .catch(() => setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypu, klasaId)));
+  }, [dane, klasaId]);
 
   const pobierzDane = async () => {
     setLadowanie(true);
@@ -74,36 +104,10 @@ export default function KlasaPage() {
     return null;
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OK':
-        return 'bg-green-100 text-green-800';
-      case 'BRAK':
-        return 'bg-red-100 text-red-800';
-      case 'NADWYŻKA':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'OK':
-        return '✅';
-      case 'BRAK':
-        return '❌';
-      case 'NADWYŻKA':
-        return '⚠️';
-      default:
-        return '';
-    }
-  };
-
   return (
     <div className="p-6 space-y-6">
       {/* Nagłówek */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Klasa {dane.klasa.nazwa}</h1>
           {dane.klasa.profil && (
@@ -113,131 +117,46 @@ export default function KlasaPage() {
             {dane.klasa.typ_szkoly.nazwa} • Rok szkolny: {dane.klasa.rok_szkolny}
           </p>
         </div>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
-        >
-          ← Wróć do dashboardu
-        </Link>
-      </div>
-
-      {/* Podsumowanie */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Podsumowanie</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Planowane godziny</p>
-            <p className="text-2xl font-bold">{dane.podsumowanie.suma_godzin}</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Wymagane MEiN</p>
-            <p className="text-2xl font-bold">{dane.podsumowanie.suma_wymaganych}</p>
-          </div>
-          <div className="bg-yellow-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Różnica</p>
-            <p className={`text-2xl font-bold ${
-              dane.podsumowanie.suma_roznica < 0 ? 'text-red-600' : 
-              dane.podsumowanie.suma_roznica > 0 ? 'text-yellow-600' : 
-              'text-green-600'
-            }`}>
-              {dane.podsumowanie.suma_roznica > 0 ? '+' : ''}{dane.podsumowanie.suma_roznica}
-            </p>
-          </div>
-          <div className="bg-purple-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Realizacja</p>
-            <p className="text-2xl font-bold">{dane.podsumowanie.procent_realizacji}%</p>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/klasy"
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium"
+          >
+            ← Wróć do klas
+          </Link>
+          <Link
+            href="/przydzial"
+            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium"
+          >
+            Przydział
+          </Link>
         </div>
       </div>
 
-      {/* Tabela przedmiotów */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Przedmioty i nauczyciele</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Przedmiot
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nauczyciel
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Godz./tyg
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Godz./rok
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Wymagane MEiN
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Różnica
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Realizacja
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {dane.przedmioty.map((przedmiot: any, index: number) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link
-                      href={`/przedmioty/${przedmiot.przedmiot.id}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      {przedmiot.przedmiot.nazwa}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {przedmiot.nauczyciel ? (
-                      <Link
-                        href={`/nauczyciele/${przedmiot.nauczyciel.id}`}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        {przedmiot.nauczyciel.imie} {przedmiot.nauczyciel.nazwisko}
-                      </Link>
-                    ) : (
-                      <span className="text-gray-400">Brak przypisania</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {przedmiot.godziny_tyg}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {przedmiot.godziny_roczne}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {przedmiot.wymagane_mein}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={
-                      przedmiot.roznica < 0 ? 'text-red-600 font-semibold' :
-                      przedmiot.roznica > 0 ? 'text-yellow-600 font-semibold' :
-                      'text-green-600 font-semibold'
-                    }>
-                      {przedmiot.roznica > 0 ? '+' : ''}{przedmiot.roznica}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {przedmiot.procent_realizacji}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(przedmiot.status)}`}>
-                      {getStatusIcon(przedmiot.status)} {przedmiot.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Realizacja wymagań MEiN – jak na dashboardzie */}
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold text-gray-800">Realizacja wymagań MEiN</h2>
+        <KafelkiRealizacji
+          dane={zgodnoscDane}
+          ladowanie={false}
+          brakDanychKomunikat="Brak danych przydziału dla tej klasy (godziny do wyboru, doradztwo, dyrektorskie)."
+        />
       </div>
+
+      {/* Plan ramowy MEiN – jak na dashboardzie (tylko odczyt) */}
+      {dane.klasa.typ_szkoly?.nazwa && (
+        <div className="space-y-2 min-w-0">
+          <h2 className="text-xl font-semibold text-gray-800">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            Wymagania MEiN dla typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
+          </p>
+          <PlanMeinTabela
+            nazwaTypuSzkoly={dane.klasa.typ_szkoly.nazwa}
+            klasaId={klasaId}
+            tylkoOdczyt
+          />
+        </div>
+      )}
     </div>
   );
 }
