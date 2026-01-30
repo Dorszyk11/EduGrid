@@ -24,11 +24,11 @@ export default function KlasyPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/typy-szkol')
+    fetch('/api/typy-szkol', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
-        if (data.error) return;
-        const list = Array.isArray(data) ? data : [];
+        if (data?.error) return;
+        const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
         setTypySzkol(list.map((t: any) => ({ id: String(t.id), nazwa: t.nazwa || 'Brak nazwy' })));
       })
       .catch(() => {});

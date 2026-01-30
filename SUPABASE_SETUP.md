@@ -39,7 +39,7 @@ Krótki przewodnik: założenie bazy PostgreSQL w Supabase i połączenie z apli
    postgresql://postgres.xxx:MOJE_HASLO@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require
    ```
 
-Używamy **Session mode** (port **5432**), bo EduGrid działa na zwykłym serwerze Next.js (np. `npm run dev`), a nie w serverless.
+EduGrid **automatycznie używa Transaction mode** (port **6543**) przy połączeniu z Supabase – w `payload.config.ts` port 5432 jest zamieniany na 6543. Dzięki temu nie występuje błąd „max clients reached” (w Session mode limit połączeń jest niski).
 
 ---
 
@@ -110,6 +110,10 @@ Jeśli połączenie jest OK, zobaczysz m.in. „Połączenie udane!” oraz nazw
 
 ### Błędy SSL
 - Konfiguracja Payload dla Supabase włącza SSL. Jeśli nadal są błędy, sprawdź czy w `DATABASE_URI` jest `?sslmode=require`.
+
+### „MaxClientsInSessionMode: max clients reached”
+- Aplikacja przy adresie **poolera** (`pooler.supabase.com`) **samodzielnie przełącza** na port **6543** (Transaction mode).
+- Jeśli widzisz ten błąd: w `.env` **użyj connection stringa z poolera** (w Supabase: Project Settings → Database → Connection string → **URI**; wybierz **Transaction** albo skopiuj URI z hostem `aws-0-xxx.pooler.supabase.com`). Nie używaj adresu `db.xxx.supabase.co` (direct) – tam limit połączeń jest bardzo niski.
 
 ---
 

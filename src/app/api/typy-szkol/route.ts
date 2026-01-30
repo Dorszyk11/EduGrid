@@ -18,7 +18,12 @@ export async function GET() {
       kod_mein: item.kod_mein,
     }));
 
-    return NextResponse.json(mapped);
+    return NextResponse.json(mapped, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Nieznany błąd';
     const isDbError =

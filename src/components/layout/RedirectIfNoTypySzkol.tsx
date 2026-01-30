@@ -21,7 +21,7 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
       return;
     }
 
-    fetch('/api/typy-szkol')
+    fetch('/api/typy-szkol', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
       .then((data) => {
         const hasTypy = Array.isArray(data) && data.length > 0;

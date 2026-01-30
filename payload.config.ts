@@ -30,6 +30,16 @@ const getServerURL = () => {
   return 'http://localhost:3000';
 };
 
+/** Dla Supabase poolera: użyj Transaction mode (port 6543), żeby uniknąć błędu "max clients reached". */
+function getConnectionString(): string | undefined {
+  const uri = process.env.DATABASE_URI;
+  if (!uri) return undefined;
+  if (uri.includes('pooler.supabase.com') && uri.includes(':5432/')) {
+    return uri.replace(':5432/', ':6543/');
+  }
+  return uri;
+}
+
 export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || '',
   serverURL: getServerURL(),
@@ -51,7 +61,9 @@ export default buildConfig({
   ],
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI,
+      connectionString: getConnectionString(),
+      max: 2,
+      idleTimeoutMillis: 10000,
       ...(process.env.DATABASE_URI?.includes('supabase') && {
         ssl: { rejectUnauthorized: false },
       }),

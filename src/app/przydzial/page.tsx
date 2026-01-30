@@ -35,11 +35,10 @@ export default function PrzydzialPage() {
 
   const pobierzTypySzkol = async () => {
     try {
-      const response = await fetch('/api/typy-szkol');
+      const response = await fetch('/api/typy-szkol', { cache: 'no-store' });
       const data = await response.json();
-      if (data.typySzkol) {
-        setTypySzkol(data.typySzkol);
-      }
+      const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
+      setTypySzkol(list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' })));
     } catch (error) {
       console.error('Błąd przy pobieraniu typów szkół:', error);
     }

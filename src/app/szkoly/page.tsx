@@ -22,7 +22,7 @@ export default function ZarzadzanieSzkolamiPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/typy-szkol');
+      const res = await fetch('/api/typy-szkol', { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || `HTTP ${res.status}`);

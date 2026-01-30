@@ -82,9 +82,9 @@ export default function PanelAdminaPage() {
     setLoading(true);
     try {
       const [rSzk, rPrz, rKlasy] = await Promise.all([
-        fetch('/api/typy-szkol'),
-        fetch('/api/przedmioty'),
-        fetch('/api/klasy'),
+        fetch('/api/typy-szkol', { cache: 'no-store' }),
+        fetch('/api/przedmioty', { cache: 'no-store' }),
+        fetch('/api/klasy', { cache: 'no-store' }),
       ]);
       const szk = await rSzk.json();
       const prz = await rPrz.json();

@@ -53,11 +53,9 @@ export default function DashboardPage() {
   const rokSzkolny = selectedRocznik ? rokSzkolnyZRocznika(selectedRocznik) : '2024/2025';
 
   useEffect(() => {
-    // Pobierz typy szkół
-    console.log('Pobieranie typów szkół...');
-    fetch('/api/typy-szkol')
+    // Pobierz typy szkół (cache: no-store żeby zawsze mieć świeże dane z bazy)
+    fetch('/api/typy-szkol', { cache: 'no-store' })
       .then(res => {
-        console.log('Status odpowiedzi:', res.status);
         if (!res.ok) {
           return res.json().then(err => {
             throw new Error(err.error || `HTTP error! status: ${res.status}`);
@@ -66,22 +64,14 @@ export default function DashboardPage() {
         return res.json();
       })
       .then(data => {
-        console.log('Otrzymane dane:', data);
-        
-        // Sprawdź czy to błąd
         if (data.error) {
           throw new Error(data.error);
         }
-        
-        // Mapuj dane do formatu { id, nazwa }
-        const mapped = Array.isArray(data) 
-          ? data.map((item: any) => ({
-              id: String(item.id || item._id || ''),
-              nazwa: item.nazwa || item.tytul || item.name || 'Brak nazwy',
-            }))
-          : [];
-        
-        console.log('Zmapowane typy szkół:', mapped);
+        const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
+        const mapped = list.map((item: any) => ({
+          id: String(item.id || item._id || ''),
+          nazwa: item.nazwa || item.tytul || item.name || 'Brak nazwy',
+        }));
         setTypySzkol(mapped);
         setLadowanieTypow(false);
       })
