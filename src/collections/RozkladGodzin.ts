@@ -1,10 +1,18 @@
-import { CollectionConfig } from 'payload/types';
+import { CollectionConfig } from "payload";
 
 export const RozkladGodzin: CollectionConfig = {
-  slug: 'rozkład-godzin',
+  slug: "rozkład-godzin",
   admin: {
-    useAsTitle: 'id',
-    defaultColumns: ['przedmiot', 'klasa', 'nauczyciel', 'rok_szkolny', 'godziny_roczne', 'godziny_tyg', 'updatedAt'],
+    useAsTitle: "id",
+    defaultColumns: [
+      "przedmiot",
+      "klasa",
+      "nauczyciel",
+      "rok_szkolny",
+      "godziny_roczne",
+      "godziny_tyg",
+      "updatedAt",
+    ],
   },
   access: {
     read: () => true,
@@ -14,207 +22,218 @@ export const RozkladGodzin: CollectionConfig = {
   },
   fields: [
     {
-      name: 'przedmiot',
-      type: 'relationship',
-      relationTo: 'przedmioty',
+      name: "przedmiot",
+      type: "relationship",
+      relationTo: "przedmioty",
       required: true,
-      label: 'Przedmiot',
+      label: "Przedmiot",
       admin: {
-        description: 'Przedmiot realizowany w klasie',
+        description: "Przedmiot realizowany w klasie",
       },
     },
     {
-      name: 'klasa',
-      type: 'relationship',
-      relationTo: 'klasy',
+      name: "klasa",
+      type: "relationship",
+      relationTo: "klasy",
       required: true,
-      label: 'Klasa',
+      label: "Klasa",
       admin: {
-        description: 'Klasa, w której realizowany jest przedmiot',
+        description: "Klasa, w której realizowany jest przedmiot",
       },
     },
     {
-      name: 'nauczyciel',
-      type: 'relationship',
-      relationTo: 'nauczyciele',
+      name: "nauczyciel",
+      type: "relationship",
+      relationTo: "nauczyciele",
       required: true,
-      label: 'Nauczyciel',
+      label: "Nauczyciel",
       admin: {
-        description: 'Nauczyciel prowadzący przedmiot',
+        description: "Nauczyciel prowadzący przedmiot",
       },
     },
     {
-      name: 'rok_szkolny',
-      type: 'text',
+      name: "rok_szkolny",
+      type: "text",
       required: true,
-      label: 'Rok szkolny',
+      label: "Rok szkolny",
       admin: {
-        description: 'Format: YYYY/YYYY (np. 2024/2025)',
+        description: "Format: YYYY/YYYY (np. 2024/2025)",
       },
-      validate: (value) => {
+      validate: (value: any) => {
         if (!value) {
-          return 'Rok szkolny jest wymagany';
+          return "Rok szkolny jest wymagany";
         }
         const pattern = /^\d{4}\/\d{4}$/;
         if (!pattern.test(value)) {
-          return 'Rok szkolny musi być w formacie YYYY/YYYY (np. 2024/2025)';
+          return "Rok szkolny musi być w formacie YYYY/YYYY (np. 2024/2025)";
         }
         return true;
       },
     },
     {
-      name: 'godziny_roczne',
-      type: 'number',
+      name: "godziny_roczne",
+      type: "number",
       required: true,
-      label: 'Godziny roczne',
+      label: "Godziny roczne",
       min: 0,
       admin: {
-        description: 'Liczba godzin w roku szkolnym',
+        description: "Liczba godzin w roku szkolnym",
       },
-      validate: (value) => {
+      validate: (value: any) => {
         if (value < 0) {
-          return 'Liczba godzin nie może być ujemna';
+          return "Liczba godzin nie może być ujemna";
         }
         return true;
       },
     },
     {
-      name: 'godziny_tyg',
-      type: 'number',
+      name: "godziny_tyg",
+      type: "number",
       required: true,
-      label: 'Godziny tygodniowo',
+      label: "Godziny tygodniowo",
       min: 0,
       max: 10,
       admin: {
-        description: 'Średnia liczba godzin tygodniowo',
+        description: "Średnia liczba godzin tygodniowo",
       },
-      validate: (value) => {
+      validate: (value: any) => {
         if (value < 0 || value > 10) {
-          return 'Godziny tygodniowo muszą być między 0 a 10';
+          return "Godziny tygodniowo muszą być między 0 a 10";
         }
         return true;
       },
     },
     {
-      name: 'semestr_1',
-      type: 'number',
+      name: "semestr_1",
+      type: "number",
       required: true,
-      label: 'Godziny w semestrze 1',
+      label: "Godziny w semestrze 1",
       min: 0,
       admin: {
-        description: 'Liczba godzin w pierwszym semestrze',
+        description: "Liczba godzin w pierwszym semestrze",
       },
     },
     {
-      name: 'semestr_2',
-      type: 'number',
+      name: "semestr_2",
+      type: "number",
       required: true,
-      label: 'Godziny w semestrze 2',
+      label: "Godziny w semestrze 2",
       min: 0,
       admin: {
-        description: 'Liczba godzin w drugim semestrze',
+        description: "Liczba godzin w drugim semestrze",
       },
     },
     {
-      name: 'typ_zajec',
-      type: 'select',
-      label: 'Typ zajęć',
+      name: "typ_zajec",
+      type: "select",
+      label: "Typ zajęć",
       options: [
         {
-          label: 'Ogólnokształcące',
-          value: 'ogolnoksztalcace',
+          label: "Ogólnokształcące",
+          value: "ogolnoksztalcace",
         },
         {
-          label: 'Zawodowe teoretyczne',
-          value: 'zawodowe_teoretyczne',
+          label: "Zawodowe teoretyczne",
+          value: "zawodowe_teoretyczne",
         },
         {
-          label: 'Zawodowe praktyczne',
-          value: 'zawodowe_praktyczne',
+          label: "Zawodowe praktyczne",
+          value: "zawodowe_praktyczne",
         },
       ],
       admin: {
-        description: 'Typ zajęć (kopiowane z przedmiotu)',
+        description: "Typ zajęć (kopiowane z przedmiotu)",
       },
     },
     {
-      name: 'poziom',
-      type: 'select',
-      label: 'Poziom',
+      name: "poziom",
+      type: "select",
+      label: "Poziom",
       options: [
         {
-          label: 'Podstawowy',
-          value: 'podstawowy',
+          label: "Podstawowy",
+          value: "podstawowy",
         },
         {
-          label: 'Rozszerzony',
-          value: 'rozszerzony',
+          label: "Rozszerzony",
+          value: "rozszerzony",
         },
         {
-          label: 'Brak podziału',
-          value: 'brak',
+          label: "Brak podziału",
+          value: "brak",
         },
       ],
       admin: {
-        description: 'Poziom przedmiotu (kopiowane z przedmiotu)',
+        description: "Poziom przedmiotu (kopiowane z przedmiotu)",
       },
     },
     {
-      name: 'uwagi',
-      type: 'textarea',
-      label: 'Uwagi',
+      name: "uwagi",
+      type: "textarea",
+      label: "Uwagi",
       admin: {
-        description: 'Dodatkowe uwagi (opcjonalnie)',
+        description: "Dodatkowe uwagi (opcjonalnie)",
       },
     },
     {
-      name: 'uzasadnienie_nadwyzki',
-      type: 'textarea',
-      label: 'Uzasadnienie nadwyżki',
+      name: "uzasadnienie_nadwyzki",
+      type: "textarea",
+      label: "Uzasadnienie nadwyżki",
       admin: {
-        description: 'Uzasadnienie dlaczego nadwyżka godzin jest akceptowalna (ważne przy audycie)',
-        condition: (data) => {
+        description:
+          "Uzasadnienie dlaczego nadwyżka godzin jest akceptowalna (ważne przy audycie)",
+        condition: (data: any) => {
           // Pokaż tylko jeśli są nadwyżki (można dodać logikę sprawdzającą zgodność MEiN)
           return true;
         },
       },
     },
     {
-      name: 'notatki',
-      type: 'textarea',
-      label: 'Notatki',
+      name: "notatki",
+      type: "textarea",
+      label: "Notatki",
       admin: {
-        description: 'Dodatkowe notatki dotyczące tego przypisania',
+        description: "Dodatkowe notatki dotyczące tego przypisania",
       },
     },
     {
-      name: 'zablokowane',
-      type: 'checkbox',
-      label: 'Zablokowane',
+      name: "zablokowane",
+      type: "checkbox",
+      label: "Zablokowane",
       defaultValue: false,
       admin: {
-        description: 'Czy przydział jest zablokowany (nie będzie zmieniany przez generator)',
+        description:
+          "Czy przydział jest zablokowany (nie będzie zmieniany przez generator)",
       },
     },
     {
-      name: 'powod_blokady',
-      type: 'text',
-      label: 'Powód blokady',
+      name: "powod_blokady",
+      type: "text",
+      label: "Powód blokady",
       admin: {
-        condition: (data) => data.zablokowane === true,
-        description: 'Uzasadnienie blokady przydziału',
+        condition: (data: any) => data.zablokowane === true,
+        description: "Uzasadnienie blokady przydziału",
       },
     },
   ],
   timestamps: true,
   hooks: {
     beforeValidate: [
-      ({ data }) => {
+      ({ data }: { data?: any }) => {
         // Walidacja: godziny_roczne = semestr_1 + semestr_2
-        if (data.semestr_1 !== undefined && data.semestr_2 !== undefined) {
+        if (
+          data &&
+          data.semestr_1 !== undefined &&
+          data.semestr_2 !== undefined
+        ) {
           const suma = data.semestr_1 + data.semestr_2;
-          if (data.godziny_roczne !== undefined && data.godziny_roczne !== suma) {
-            throw new Error(`Godziny roczne (${data.godziny_roczne}) muszą być równe sumie semestrów (${suma})`);
+          if (
+            data.godziny_roczne !== undefined &&
+            data.godziny_roczne !== suma
+          ) {
+            throw new Error(
+              `Godziny roczne (${data.godziny_roczne}) muszą być równe sumie semestrów (${suma})`
+            );
           }
           // Automatyczne ustawienie godzin rocznych, jeśli nie podano
           if (data.godziny_roczne === undefined) {
@@ -229,8 +248,11 @@ export const RozkladGodzin: CollectionConfig = {
         // Kopiowanie typ_zajec i poziom z przedmiotu
         if (data.przedmiot) {
           const przedmiot = await req.payload.findByID({
-            collection: 'przedmioty',
-            id: typeof data.przedmiot === 'string' ? data.przedmiot : data.przedmiot.id,
+            collection: "przedmioty",
+            id:
+              typeof data.przedmiot === "string"
+                ? data.przedmiot
+                : data.przedmiot.id,
           });
 
           if (przedmiot) {
@@ -241,11 +263,17 @@ export const RozkladGodzin: CollectionConfig = {
 
         // Sprawdzenie kwalifikacji nauczyciela
         if (data.nauczyciel && data.przedmiot) {
-          const nauczycielId = typeof data.nauczyciel === 'string' ? data.nauczyciel : data.nauczyciel.id;
-          const przedmiotId = typeof data.przedmiot === 'string' ? data.przedmiot : data.przedmiot.id;
+          const nauczycielId =
+            typeof data.nauczyciel === "string"
+              ? data.nauczyciel
+              : data.nauczyciel.id;
+          const przedmiotId =
+            typeof data.przedmiot === "string"
+              ? data.przedmiot
+              : data.przedmiot.id;
 
           const kwalifikacje = await req.payload.find({
-            collection: 'kwalifikacje',
+            collection: "kwalifikacje",
             where: {
               and: [
                 {
@@ -281,10 +309,13 @@ export const RozkladGodzin: CollectionConfig = {
       async ({ doc, req }) => {
         // Sprawdzenie obciążenia nauczyciela po zmianie
         if (doc.nauczyciel) {
-          const nauczycielId = typeof doc.nauczyciel === 'string' ? doc.nauczyciel : doc.nauczyciel.id;
-          
+          const nauczycielId =
+            typeof doc.nauczyciel === "string"
+              ? doc.nauczyciel
+              : doc.nauczyciel.id;
+
           const rozklady = await req.payload.find({
-            collection: 'rozkład-godzin',
+            collection: "rozkład-godzin",
             where: {
               and: [
                 {
@@ -301,10 +332,13 @@ export const RozkladGodzin: CollectionConfig = {
             },
           });
 
-          const sumaGodzin = rozklady.docs.reduce((sum, r) => sum + (r.godziny_tyg || 0), 0);
+          const sumaGodzin = rozklady.docs.reduce(
+            (sum, r) => sum + (r.godziny_tyg || 0),
+            0
+          );
 
           const nauczyciel = await req.payload.findByID({
-            collection: 'nauczyciele',
+            collection: "nauczyciele",
             id: nauczycielId,
           });
 

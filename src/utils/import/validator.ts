@@ -26,7 +26,8 @@ export function validateMeinData(data: MappedMeinData[]): ValidationResult {
     // Walidacja schematu
     const result = MeinDataSchema.safeParse(row);
     if (!result.success) {
-      errors.push(`Wiersz ${i + 1}: ${result.error.errors.map(e => e.message).join(', ')}`);
+      const errorMessages = result.error.issues.map(e => e.message).join(', ');
+      errors.push(`Wiersz ${i + 1}: ${errorMessages}`);
       continue;
     }
 

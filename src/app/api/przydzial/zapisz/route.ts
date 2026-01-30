@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getPayload } from 'payload';
-import config from '@/payload.config';
-import type { Przypisanie } from '@/utils/automatycznyRozdzialGodzin';
+import { NextRequest, NextResponse } from "next/server";
+import { getPayload } from "payload";
+import config from "@/payload.config";
+import type { Przypisanie } from "@/utils/automatycznyRozdzialGodzin";
 
 /**
  * POST /api/przydzial/zapisz - Zapisuje przypisania do bazy danych
- * 
+ *
  * Body:
  * {
  *   przypisania: Przypisanie[];
@@ -19,14 +19,14 @@ export async function POST(request: NextRequest) {
 
     if (!przypisania || !Array.isArray(przypisania)) {
       return NextResponse.json(
-        { error: 'przypisania musi być tablicą' },
+        { error: "przypisania musi być tablicą" },
         { status: 400 }
       );
     }
 
     if (!rokSzkolny) {
       return NextResponse.json(
-        { error: 'rokSzkolny jest wymagany' },
+        { error: "rokSzkolny jest wymagany" },
         { status: 400 }
       );
     }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       try {
         // Sprawdź, czy już istnieje przypisanie dla tego przedmiotu w klasie
         const istniejące = await payload.find({
-          collection: 'rozkład-godzin',
+          collection: "rozkład-godzin",
           where: {
             and: [
               {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         if (istniejące.docs.length > 0) {
           // Aktualizuj istniejące przypisanie
           await payload.update({
-            collection: 'rozkład-godzin',
+            collection: "rozkład-godzin",
             id: istniejące.docs[0].id,
             data: {
               godziny_tyg: przypisanie.godzinyTygodniowo,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Utwórz nowe przypisanie
           const nowe = await payload.create({
-            collection: 'rozkład-godzin',
+            collection: "rozkład-godzin",
             data: {
               przedmiot: przypisanie.przedmiotId,
               klasa: przypisanie.klasaId,
@@ -92,12 +92,12 @@ export async function POST(request: NextRequest) {
               rok_szkolny: rokSzkolny,
             },
           });
-          utworzone.push(nowe.id);
+          utworzone.push(String(nowe.id));
         }
       } catch (error) {
         bledy.push({
           przypisanie,
-          error: error instanceof Error ? error.message : 'Nieznany błąd',
+          error: error instanceof Error ? error.message : "Nieznany błąd",
         });
       }
     }
@@ -112,10 +112,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Błąd przy zapisywaniu przydziału:', error);
+    console.error("Błąd przy zapisywaniu przydziału:", error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
+        error: error instanceof Error ? error.message : "Nieznany błąd",
       },
       { status: 500 }
     );

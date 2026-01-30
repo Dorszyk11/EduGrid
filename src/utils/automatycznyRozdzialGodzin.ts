@@ -8,7 +8,7 @@
  * - Uwzględnia kwalifikacje i preferencje
  */
 
-import type { Payload } from 'payload/types';
+import type { Payload } from '@/types/payload';
 import {
   sprawdzDostepnoscNauczyciela,
   znajdzDostepnychNauczycieli,
@@ -245,9 +245,9 @@ async function pobierzZadania(
 
       zadania.push({
         id: `${klasa.id}-${przedmiot.id}`,
-        przedmiotId: przedmiot.id,
+        przedmiotId: String(przedmiot.id),
         przedmiotNazwa: przedmiot.nazwa,
-        klasaId: klasa.id,
+        klasaId: String(klasa.id),
         klasaNazwa: klasa.nazwa,
         godzinyTygodniowo,
         godzinyRoczne,
@@ -319,7 +319,7 @@ export async function automatycznyRozdzialGodzin(
     });
 
     const suma = rozklady.docs.reduce((sum, r) => sum + (r.godziny_tyg || 0), 0);
-    obciazeniaPoczatkowe.set(nauczyciel.id, suma);
+    obciazeniaPoczatkowe.set(String(nauczyciel.id), suma);
   }
 
   // KROK 4: Przypisz zadania (algorytm greedy z optymalizacją)
@@ -476,13 +476,14 @@ export async function automatycznyRozdzialGodzin(
   // KROK 5: Oblicz statystyki obciążeń
   const statystykiObciazenia: StatystykiObciazenia[] = [];
   for (const nauczyciel of nauczyciele.docs) {
-    const przed = obciazeniaPoczatkowe.get(nauczyciel.id) || 0;
-    const po = obciazeniaAktualne.get(nauczyciel.id) || przed;
+    const nauczycielIdStr = String(nauczyciel.id);
+    const przed = obciazeniaPoczatkowe.get(nauczycielIdStr) || 0;
+    const po = obciazeniaAktualne.get(nauczycielIdStr) || przed;
     const max = nauczyciel.max_obciazenie || 18;
-    const przypisaniaNauczyciela = przypisania.filter(p => p.nauczycielId === nauczyciel.id);
+    const przypisaniaNauczyciela = przypisania.filter(p => p.nauczycielId === nauczycielIdStr);
 
     statystykiObciazenia.push({
-      nauczycielId: nauczyciel.id,
+      nauczycielId: nauczycielIdStr,
       nauczycielNazwa: `${nauczyciel.imie} ${nauczyciel.nazwisko}`,
       maxObciazenie: max,
       przedObciazenie: przed,

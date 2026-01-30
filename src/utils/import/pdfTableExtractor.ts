@@ -3,7 +3,8 @@ import fs from "fs";
 import * as pdfjsLib from "pdfjs-dist";
 
 // Node: wyłącz worker
-// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - pdfjs-dist może nie mieć pełnych typów dla GlobalWorkerOptions
 pdfjsLib.GlobalWorkerOptions.workerSrc = undefined;
 
 export interface PdfTextItem {
@@ -17,6 +18,13 @@ export interface PdfTextItem {
 export interface PdfPageItems {
   pageNumber: number; // 1-based
   items: PdfTextItem[];
+}
+
+interface PdfTextContentItem {
+  str?: string;
+  transform?: number[];
+  width?: number;
+  height?: number;
 }
 
 function normalizeSpaces(s: string) {
@@ -33,7 +41,7 @@ export async function extractPdfItems(pdfPath: string): Promise<PdfPageItems[]> 
     const page = await doc.getPage(pageNum);
     const textContent = await page.getTextContent();
 
-    const items: PdfTextItem[] = (textContent.items as any[])
+    const items: PdfTextItem[] = (textContent.items as PdfTextContentItem[])
       .map((it) => {
         const str = normalizeSpaces(String(it.str ?? ""));
         if (!str) return null;
@@ -47,7 +55,7 @@ export async function extractPdfItems(pdfPath: string): Promise<PdfPageItems[]> 
 
         return { str, x, y, w, h } as PdfTextItem;
       })
-      .filter(Boolean) as PdfTextItem[];
+      .filter((item): item is PdfTextItem => item !== null);
 
     // sort: góra->dół, lewo->prawo
     items.sort((a, b) => (b.y - a.y) || (a.x - b.x));

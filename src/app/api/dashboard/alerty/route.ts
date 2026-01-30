@@ -61,7 +61,11 @@ export async function GET(request: Request) {
       limit: 1000,
     });
 
-    const przekroczenia: any[] = [];
+    interface PrzekroczenieObciazenia {
+      nauczyciel: string;
+      przekroczenie: number;
+    }
+    const przekroczenia: PrzekroczenieObciazenia[] = [];
     for (const nauczyciel of nauczyciele.docs) {
       const rozklady = await payload.find({
         collection: 'rozkład-godzin',
@@ -115,7 +119,11 @@ export async function GET(request: Request) {
       limit: 10000,
     });
 
-    const brakujaceKwalifikacje: any[] = [];
+    interface BrakujacaKwalifikacja {
+      nauczyciel: string;
+      przedmiot: string;
+    }
+    const brakujaceKwalifikacje: BrakujacaKwalifikacja[] = [];
     for (const rozklad of rozklady.docs) {
       const nauczycielId = typeof rozklad.nauczyciel === 'object' 
         ? rozklad.nauczyciel.id 
@@ -175,7 +183,11 @@ export async function GET(request: Request) {
     }
 
     // 4. Alerty niedociążenia
-    const niedociążeni: any[] = [];
+    interface NiedociążonyNauczyciel {
+      nauczyciel: string;
+      wykorzystanie: number;
+    }
+    const niedociążeni: NiedociążonyNauczyciel[] = [];
     for (const nauczyciel of nauczyciele.docs) {
       const rozklady = await payload.find({
         collection: 'rozkład-godzin',

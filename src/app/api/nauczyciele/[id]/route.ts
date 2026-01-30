@@ -1,34 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getPayload } from 'payload';
-import config from '@/payload.config';
+import { NextRequest, NextResponse } from "next/server";
+import { getPayload } from "payload";
+import config from "@/payload.config";
 
 /**
  * GET /api/nauczyciele/[id] - Pobierz szczegóły nauczyciela z obciążeniem
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config });
-    const nauczycielId = params.id;
+    const { id: nauczycielId } = await params;
 
     // Pobierz nauczyciela
     const nauczyciel = await payload.findByID({
-      collection: 'nauczyciele',
+      collection: "nauczyciele",
       id: nauczycielId,
     });
 
     if (!nauczyciel) {
       return NextResponse.json(
-        { error: 'Nauczyciel nie znaleziony' },
+        { error: "Nauczyciel nie znaleziony" },
         { status: 404 }
       );
     }
 
     // Pobierz kwalifikacje
     const kwalifikacje = await payload.find({
-      collection: 'kwalifikacje',
+      collection: "kwalifikacje",
       where: {
         nauczyciel: {
           equals: nauczycielId,
@@ -40,7 +40,7 @@ export async function GET(
 
     // Pobierz rozkład godzin dla tego nauczyciela
     const rozkladGodzin = await payload.find({
-      collection: 'rozkład-godzin',
+      collection: "rozkład-godzin",
       where: {
         nauczyciel: {
           equals: nauczycielId,
@@ -57,12 +57,12 @@ export async function GET(
 
       return {
         klasa: {
-          id: typeof klasa === 'string' ? klasa : klasa.id,
-          nazwa: typeof klasa === 'string' ? klasa : klasa.nazwa,
+          id: typeof klasa === "string" ? klasa : klasa.id,
+          nazwa: typeof klasa === "string" ? klasa : klasa.nazwa,
         },
         przedmiot: {
-          id: typeof przedmiot === 'string' ? przedmiot : przedmiot.id,
-          nazwa: typeof przedmiot === 'string' ? przedmiot : przedmiot.nazwa,
+          id: typeof przedmiot === "string" ? przedmiot : przedmiot.id,
+          nazwa: typeof przedmiot === "string" ? przedmiot : przedmiot.nazwa,
         },
         godziny_tyg: rozklad.godziny_tyg || 0,
         godziny_roczne: rozklad.godziny_roczne || 0,
@@ -72,17 +72,19 @@ export async function GET(
 
     // Oblicz sumy
     const sumaGodzinTyg = obciazenie.reduce((sum, o) => sum + o.godziny_tyg, 0);
-    const sumaGodzinRocznie = obciazenie.reduce((sum, o) => sum + o.godziny_roczne, 0);
+    const sumaGodzinRocznie = obciazenie.reduce(
+      (sum, o) => sum + o.godziny_roczne,
+      0
+    );
     const maxObciazenie = nauczyciel.max_obciazenie || 18;
     const roznica = sumaGodzinTyg - maxObciazenie;
-    const procentObciazenia = maxObciazenie > 0 
-      ? Math.round((sumaGodzinTyg / maxObciazenie) * 100) 
-      : 0;
+    const procentObciazenia =
+      maxObciazenie > 0 ? Math.round((sumaGodzinTyg / maxObciazenie) * 100) : 0;
 
     // Sprawdź status
-    let status = 'OK';
-    if (roznica > 0) status = 'PRZECIĄŻENIE';
-    else if (sumaGodzinTyg < maxObciazenie * 0.5) status = 'NIEDOCIĄŻENIE';
+    let status = "OK";
+    if (roznica > 0) status = "PRZECIĄŻENIE";
+    else if (sumaGodzinTyg < maxObciazenie * 0.5) status = "NIEDOCIĄŻENIE";
 
     return NextResponse.json({
       nauczyciel: {
@@ -97,8 +99,9 @@ export async function GET(
       },
       kwalifikacje: kwalifikacje.docs.map((k: any) => ({
         przedmiot: {
-          id: typeof k.przedmiot === 'string' ? k.przedmiot : k.przedmiot.id,
-          nazwa: typeof k.przedmiot === 'string' ? k.przedmiot : k.przedmiot.nazwa,
+          id: typeof k.przedmiot === "string" ? k.przedmiot : k.przedmiot.id,
+          nazwa:
+            typeof k.przedmiot === "string" ? k.przedmiot : k.przedmiot.nazwa,
         },
         stopien: k.stopien,
         specjalizacja: k.specjalizacja,
@@ -111,15 +114,15 @@ export async function GET(
         roznica,
         procent_obciazenia: procentObciazenia,
         status,
-        liczba_klas: new Set(obciazenie.map(o => o.klasa.id)).size,
-        liczba_przedmiotow: new Set(obciazenie.map(o => o.przedmiot.id)).size,
+        liczba_klas: new Set(obciazenie.map((o) => o.klasa.id)).size,
+        liczba_przedmiotow: new Set(obciazenie.map((o) => o.przedmiot.id)).size,
       },
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu danych nauczyciela:', error);
+    console.error("Błąd przy pobieraniu danych nauczyciela:", error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
+        error: error instanceof Error ? error.message : "Nieznany błąd",
       },
       { status: 500 }
     );

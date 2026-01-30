@@ -1,4 +1,4 @@
-import type { Payload } from 'payload/types';
+import type { Payload } from '@/types/payload';
 import { obliczZgodnoscDlaSzkoly } from './zgodnoscMein';
 import { automatycznyRozdzialGodzin } from './automatycznyRozdzialGodzin';
 

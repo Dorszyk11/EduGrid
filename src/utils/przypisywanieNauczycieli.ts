@@ -8,7 +8,7 @@
  * - Optymalizacja przypisań
  */
 
-import type { Payload } from 'payload/types';
+import type { Payload } from '@/types/payload';
 
 // Typy danych
 export interface DostepnoscNauczyciela {
@@ -184,15 +184,16 @@ export async function znajdzDostepnychNauczycieli(
   const dostepni: DostepnoscNauczyciela[] = [];
 
   for (const nauczyciel of nauczyciele.docs) {
+    const nauczycielIdStr = String(nauczyciel.id);
     // Pomiń wykluczonych
-    if (wykluczeni.includes(nauczyciel.id)) {
+    if (wykluczeni.includes(nauczycielIdStr)) {
       continue;
     }
 
     try {
       const dostepnosc = await sprawdzDostepnoscNauczyciela(
         payload,
-        nauczyciel.id,
+        nauczycielIdStr,
         przedmiotId,
         rokSzkolny
       );
@@ -209,7 +210,7 @@ export async function znajdzDostepnychNauczycieli(
       dostepni.push(dostepnosc);
     } catch (error) {
       // Pomiń nauczyciela w przypadku błędu
-      console.warn(`Błąd przy sprawdzaniu nauczyciela ${nauczyciel.id}:`, error);
+      console.warn(`Błąd przy sprawdzaniu nauczyciela ${nauczycielIdStr}:`, error);
     }
   }
 

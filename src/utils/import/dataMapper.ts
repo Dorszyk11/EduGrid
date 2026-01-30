@@ -50,7 +50,8 @@ export async function mapToDatabaseStructure(
     
     // Jeśli nie znaleziono, spróbuj mapowania nazw MEiN
     if (!przedmiotId) {
-      przedmiotId = await znajdzPrzedmiotPrzezMapowanie(payload, row.przedmiot);
+      const mappedId = await znajdzPrzedmiotPrzezMapowanie(payload, row.przedmiot);
+      przedmiotId = mappedId ?? undefined;
     }
     
     // Jeśli nadal nie znaleziono, spróbuj częściowego dopasowania
@@ -78,7 +79,8 @@ export async function mapToDatabaseStructure(
       
       // Jeśli nie znaleziono, spróbuj mapowania nazw MEiN
       if (!typSzkolyId) {
-        typSzkolyId = await znajdzTypSzkolyPrzezMapowanie(payload, row.typSzkoly);
+        const mappedId = await znajdzTypSzkolyPrzezMapowanie(payload, row.typSzkoly);
+        typSzkolyId = mappedId ?? undefined;
       }
       
       // Jeśli nadal nie znaleziono, spróbuj częściowego dopasowania

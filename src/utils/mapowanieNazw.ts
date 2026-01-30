@@ -1,4 +1,4 @@
-import type { Payload } from 'payload/types';
+import type { Payload } from '@/types/payload';
 
 /**
  * Mapuje nazwę z MEiN na nazwę używaną w szkole
@@ -100,7 +100,7 @@ export async function znajdzPrzedmiotPrzezMapowanie(
     });
 
     if (przedmioty.docs.length > 0) {
-      return przedmioty.docs[0].id;
+      return String(przedmioty.docs[0].id);
     }
 
     // Sprawdź czy mapowanie ma bezpośrednie powiązanie z przedmiotem
@@ -133,7 +133,7 @@ export async function znajdzPrzedmiotPrzezMapowanie(
       const przedmiot = typeof mapowanie.docs[0].przedmiot === 'object' 
         ? mapowanie.docs[0].przedmiot 
         : null;
-      return przedmiot?.id || null;
+      return przedmiot?.id ? String(przedmiot.id) : null;
     }
   }
 
@@ -167,7 +167,7 @@ export async function znajdzTypSzkolyPrzezMapowanie(
     });
 
     if (typySzkol.docs.length > 0) {
-      return typySzkol.docs[0].id;
+      return String(typySzkol.docs[0].id);
     }
 
     // Sprawdź czy mapowanie ma bezpośrednie powiązanie z typem szkoły
@@ -200,7 +200,7 @@ export async function znajdzTypSzkolyPrzezMapowanie(
       const typSzkoly = typeof mapowanie.docs[0].typ_szkoly === 'object' 
         ? mapowanie.docs[0].typ_szkoly 
         : null;
-      return typSzkoly?.id || null;
+      return typSzkoly?.id ? String(typSzkoly.id) : null;
     }
   }
 

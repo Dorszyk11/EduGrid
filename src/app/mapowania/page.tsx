@@ -78,7 +78,12 @@ export default function MapowaniaPage() {
             </label>
             <select
               value={filtrTyp}
-              onChange={(e) => setFiltrTyp(e.target.value as any)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'wszystkie' || value === 'przedmiot' || value === 'typ_szkoly') {
+                  setFiltrTyp(value);
+                }
+              }}
               className="w-full border rounded px-3 py-2"
             >
               <option value="wszystkie">Wszystkie</option>

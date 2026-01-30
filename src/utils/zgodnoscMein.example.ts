@@ -2,7 +2,10 @@
  * Przykłady użycia funkcji obliczania zgodności z MEiN
  */
 
-import type { Payload } from 'payload/types';
+import { getPayload } from 'payload';
+import config from '@/payload.config';
+
+type Payload = Awaited<ReturnType<typeof getPayload<typeof config>>>;
 import {
   obliczZgodnoscMein,
   obliczZgodnoscDlaPrzedmiotuWKlasie,

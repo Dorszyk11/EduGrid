@@ -2,8 +2,11 @@
  * Przykłady użycia algorytmu automatycznego rozdziału godzin
  */
 
-import type { Payload } from 'payload/types';
+import { getPayload } from 'payload';
+import config from '@/payload.config';
 import { automatycznyRozdzialGodzin } from './automatycznyRozdzialGodzin';
+
+type Payload = Awaited<ReturnType<typeof getPayload<typeof config>>>;
 
 /**
  * PRZYKŁAD 1: Automatyczny rozdział dla całej szkoły

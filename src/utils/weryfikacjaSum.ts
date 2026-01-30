@@ -1,4 +1,4 @@
-import type { Payload } from 'payload/types';
+import type { Payload } from '@/types/payload';
 
 export interface WynikWeryfikacjiSum {
   poprawna: boolean;

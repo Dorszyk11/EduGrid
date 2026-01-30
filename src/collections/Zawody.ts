@@ -1,10 +1,16 @@
-import { CollectionConfig } from 'payload/types';
+import { CollectionConfig } from "payload";
 
 export const Zawody: CollectionConfig = {
-  slug: 'zawody',
+  slug: "zawody",
   admin: {
-    useAsTitle: 'nazwa',
-    defaultColumns: ['nazwa', 'kod_zawodu', 'typ_szkoly', 'aktywny', 'updatedAt'],
+    useAsTitle: "nazwa",
+    defaultColumns: [
+      "nazwa",
+      "kod_zawodu",
+      "typ_szkoly",
+      "aktywny",
+      "updatedAt",
+    ],
   },
   access: {
     read: () => true,
@@ -14,59 +20,59 @@ export const Zawody: CollectionConfig = {
   },
   fields: [
     {
-      name: 'nazwa',
-      type: 'text',
+      name: "nazwa",
+      type: "text",
       required: true,
-      label: 'Nazwa zawodu',
+      label: "Nazwa zawodu",
       admin: {
-        description: 'Np. Technik mechanik, Technik informatyk',
+        description: "Np. Technik mechanik, Technik informatyk",
       },
     },
     {
-      name: 'kod_zawodu',
-      type: 'text',
+      name: "kod_zawodu",
+      type: "text",
       required: true,
       unique: true,
-      label: 'Kod zawodu',
+      label: "Kod zawodu",
       admin: {
-        description: 'Kod zawodu zgodny z klasyfikacją (np. 311504)',
+        description: "Kod zawodu zgodny z klasyfikacją (np. 311504)",
       },
     },
     {
-      name: 'typ_szkoly',
-      type: 'relationship',
-      relationTo: 'typy-szkol',
+      name: "typ_szkoly",
+      type: "relationship",
+      relationTo: "typy-szkol",
       required: true,
-      label: 'Typ szkoły',
+      label: "Typ szkoły",
       admin: {
-        description: 'Typ szkoły, w której realizowany jest zawód',
+        description: "Typ szkoły, w której realizowany jest zawód",
       },
     },
     {
-      name: 'godziny_teor_w_cyklu',
-      type: 'number',
-      label: 'Godziny teoretyczne w cyklu',
+      name: "godziny_teor_w_cyklu",
+      type: "number",
+      label: "Godziny teoretyczne w cyklu",
       min: 0,
       admin: {
-        description: 'Liczba godzin zajęć teoretycznych w całym cyklu',
+        description: "Liczba godzin zajęć teoretycznych w całym cyklu",
       },
     },
     {
-      name: 'godziny_prak_w_cyklu',
-      type: 'number',
-      label: 'Godziny praktyczne w cyklu',
+      name: "godziny_prak_w_cyklu",
+      type: "number",
+      label: "Godziny praktyczne w cyklu",
       min: 0,
       admin: {
-        description: 'Liczba godzin zajęć praktycznych w całym cyklu',
+        description: "Liczba godzin zajęć praktycznych w całym cyklu",
       },
     },
     {
-      name: 'aktywny',
-      type: 'checkbox',
-      label: 'Aktywny',
+      name: "aktywny",
+      type: "checkbox",
+      label: "Aktywny",
       defaultValue: true,
       admin: {
-        description: 'Czy zawód jest aktywny w systemie',
+        description: "Czy zawód jest aktywny w systemie",
       },
     },
   ],

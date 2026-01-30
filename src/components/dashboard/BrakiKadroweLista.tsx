@@ -17,6 +17,7 @@ interface BrakiKadroweListaProps {
     statystyki?: {
       lacznie: number;
       wedlugPrzedmiotu: Array<{
+        przedmiotId?: string;
         przedmiotNazwa: string;
         liczbaKlas: number;
         laczneGodziny: number;

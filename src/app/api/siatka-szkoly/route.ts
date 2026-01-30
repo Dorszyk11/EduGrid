@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
-import { getPayload } from 'payload';
-import config from '@/payload.config';
+import { NextResponse } from "next/server";
+import { getPayload } from "payload";
+import config from "@/payload.config";
 
 /**
  * GET /api/siatka-szkoly - Pobiera dane siatki szkoły w formacie tabelarycznym (przedmiot × klasa)
- * 
+ *
  * Parametry:
  * - typSzkolyId: ID typu szkoły
  * - rokSzkolny: Rok szkolny (np. 2024/2025)
@@ -12,13 +12,13 @@ import config from '@/payload.config';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const typSzkolyId = searchParams.get('typSzkolyId');
-    const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
-    const klasaId = searchParams.get('klasaId') || null;
+    const typSzkolyId = searchParams.get("typSzkolyId");
+    const rokSzkolny = searchParams.get("rokSzkolny") || "2024/2025";
+    const klasaId = searchParams.get("klasaId") || null;
 
     if (!typSzkolyId) {
       return NextResponse.json(
-        { error: 'typSzkolyId jest wymagany' },
+        { error: "typSzkolyId jest wymagany" },
         { status: 400 }
       );
     }
@@ -26,17 +26,21 @@ export async function GET(request: Request) {
     const payload = await getPayload({ config });
 
     // Pobierz typ szkoły (liczba_lat, nazwa – do nagłówka tabeli)
-    const typSzkoly = await payload.findByID({
-      collection: 'typy-szkol',
-      id: typSzkolyId,
-    }).catch(() => null);
+    const typSzkoly = await payload
+      .findByID({
+        collection: "typy-szkol",
+        id: typSzkolyId,
+      })
+      .catch(() => null);
 
-    const liczbaLat = typSzkoly && typeof typSzkoly === 'object' && 'liczba_lat' in typSzkoly
-      ? (typSzkoly as { liczba_lat?: number }).liczba_lat
-      : 0;
-    const nazwaTypuSzkoly = typSzkoly && typeof typSzkoly === 'object' && 'nazwa' in typSzkoly
-      ? String((typSzkoly as { nazwa?: string }).nazwa || '')
-      : '';
+    const liczbaLat =
+      typSzkoly && typeof typSzkoly === "object" && "liczba_lat" in typSzkoly
+        ? (typSzkoly as { liczba_lat?: number }).liczba_lat
+        : 0;
+    const nazwaTypuSzkoly =
+      typSzkoly && typeof typSzkoly === "object" && "nazwa" in typSzkoly
+        ? String((typSzkoly as { nazwa?: string }).nazwa || "")
+        : "";
 
     // Rok z parametru (np. "2024/2025" → 2024) – do filtrowania klas po zakresie
     const rokZParametru = (() => {
@@ -46,7 +50,7 @@ export async function GET(request: Request) {
 
     // Pobierz wszystkie klasy danego typu (bez filtra roku)
     const klasyWszystkie = await payload.find({
-      collection: 'klasy',
+      collection: "klasy",
       where: {
         and: [
           { typ_szkoly: { equals: typSzkolyId } },
@@ -55,7 +59,7 @@ export async function GET(request: Request) {
       },
       limit: 1000,
       depth: 1,
-      sort: 'nazwa',
+      sort: "nazwa",
     });
 
     // Filtruj klasy: zakres YYYY-YYYY (rok w środku) lub dokładne dopasowanie YYYY/YYYY
@@ -72,13 +76,15 @@ export async function GET(request: Request) {
     });
     // Opcjonalnie: tylko jedna klasa (dla widoku „siatka dla jednej klasy”)
     if (klasaId) {
-      klasyFiltered = klasyFiltered.filter((k: any) => String(k.id) === String(klasaId));
+      klasyFiltered = klasyFiltered.filter(
+        (k: any) => String(k.id) === String(klasaId)
+      );
     }
     const klasy = { ...klasyWszystkie, docs: klasyFiltered };
 
     // Pobierz rozkład godzin dla tych klas
     const rozkladGodzin = await payload.find({
-      collection: 'rozkład-godzin',
+      collection: "rozkład-godzin",
       where: {
         and: [
           {
@@ -93,22 +99,22 @@ export async function GET(request: Request) {
     });
 
     // Filtruj tylko rozkłady dla klas z wybranego typu szkoły
-    const klasaIds = klasy.docs.map(k => k.id);
+    const klasaIds = klasy.docs.map((k) => k.id);
     const rozkladFiltrowany = rozkladGodzin.docs.filter((r: any) => {
-      const rKlasa = typeof r.klasa === 'object' ? r.klasa : null;
+      const rKlasa = typeof r.klasa === "object" ? r.klasa : null;
       return rKlasa && klasaIds.includes(rKlasa.id);
     });
 
     // Pobierz wszystkie przedmioty (aktywne)
     const przedmioty = await payload.find({
-      collection: 'przedmioty',
+      collection: "przedmioty",
       where: {
         aktywny: {
           equals: true,
         },
       },
       limit: 1000,
-      sort: 'nazwa',
+      sort: "nazwa",
     });
 
     // Utwórz macierz: przedmiot × klasa
@@ -142,34 +148,44 @@ export async function GET(request: Request) {
       for (const klasa of klasy.docs) {
         // Znajdź wszystkie przypisania tego przedmiotu w tej klasie
         const przypisania = rozkladFiltrowany.filter((r: any) => {
-          const rPrzedmiot = typeof r.przedmiot === 'object' ? r.przedmiot : null;
-          const rKlasa = typeof r.klasa === 'object' ? r.klasa : null;
+          const rPrzedmiot =
+            typeof r.przedmiot === "object" ? r.przedmiot : null;
+          const rKlasa = typeof r.klasa === "object" ? r.klasa : null;
           return rPrzedmiot?.id === przedmiot.id && rKlasa?.id === klasa.id;
         });
 
         if (przypisania.length > 0) {
-          const sumaGodzinTyg = przypisania.reduce((sum: number, r: any) => sum + (r.godziny_tyg || 0), 0);
-          const sumaGodzinRocznie = przypisania.reduce((sum: number, r: any) => sum + (r.godziny_roczne || 0), 0);
-          
+          const sumaGodzinTyg = przypisania.reduce(
+            (sum: number, r: any) => sum + (r.godziny_tyg || 0),
+            0
+          );
+          const sumaGodzinRocznie = przypisania.reduce(
+            (sum: number, r: any) => sum + (r.godziny_roczne || 0),
+            0
+          );
+
           // Jeśli jest więcej niż jeden nauczyciel, pokaż pierwszego + liczbę
           const pierwszyNauczyciel = przypisania[0];
-          const nauczyciel = typeof pierwszyNauczyciel.nauczyciel === 'object' 
-            ? pierwszyNauczyciel.nauczyciel 
-            : null;
+          const nauczyciel =
+            typeof pierwszyNauczyciel.nauczyciel === "object"
+              ? pierwszyNauczyciel.nauczyciel
+              : null;
 
           klasyPrzedmiotu.push({
-            klasaId: klasa.id,
+            klasaId: String(klasa.id),
             klasaNazwa: klasa.nazwa,
             godzinyTygodniowo: sumaGodzinTyg,
             godzinyRoczne: sumaGodzinRocznie,
             nauczycielId: nauczyciel?.id,
-            nauczycielNazwa: nauczyciel ? `${nauczyciel.imie} ${nauczyciel.nazwisko}` : undefined,
+            nauczycielNazwa: nauczyciel
+              ? `${nauczyciel.imie} ${nauczyciel.nazwisko}`
+              : undefined,
             liczbaNauczycieli: przypisania.length,
           });
         } else {
           // Brak przypisania - pokaż 0
           klasyPrzedmiotu.push({
-            klasaId: klasa.id,
+            klasaId: String(klasa.id),
             klasaNazwa: klasa.nazwa,
             godzinyTygodniowo: 0,
             godzinyRoczne: 0,
@@ -178,12 +194,18 @@ export async function GET(request: Request) {
         }
       }
 
-      const sumaGodzinTygodniowo = klasyPrzedmiotu.reduce((sum, k) => sum + k.godzinyTygodniowo, 0);
-      const sumaGodzinRocznie = klasyPrzedmiotu.reduce((sum, k) => sum + k.godzinyRoczne, 0);
+      const sumaGodzinTygodniowo = klasyPrzedmiotu.reduce(
+        (sum, k) => sum + k.godzinyTygodniowo,
+        0
+      );
+      const sumaGodzinRocznie = klasyPrzedmiotu.reduce(
+        (sum, k) => sum + k.godzinyRoczne,
+        0
+      );
 
       // Dodaj tylko jeśli są jakieś godziny lub jeśli chcemy pokazać wszystkie przedmioty
       macierz.push({
-        przedmiotId: przedmiot.id,
+        przedmiotId: String(przedmiot.id),
         przedmiotNazwa: przedmiot.nazwa,
         klasy: klasyPrzedmiotu,
         sumaGodzinTygodniowo,
@@ -196,23 +218,23 @@ export async function GET(request: Request) {
       rokSzkolny,
       liczbaLat,
       nazwaTypuSzkoly,
-      klasy: klasy.docs.map(k => ({
-        id: k.id,
+      klasy: klasy.docs.map((k) => ({
+        id: String(k.id),
         nazwa: k.nazwa,
         profil: k.profil || null,
         numerKlasy: (k as { numer_klasy?: number }).numer_klasy,
       })),
-      przedmioty: przedmioty.docs.map(p => ({
-        id: p.id,
+      przedmioty: przedmioty.docs.map((p) => ({
+        id: String(p.id),
         nazwa: p.nazwa,
       })),
       macierz,
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu siatki szkoły:', error);
+    console.error("Błąd przy pobieraniu siatki szkoły:", error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
+        error: error instanceof Error ? error.message : "Nieznany błąd",
       },
       { status: 500 }
     );

@@ -1,10 +1,10 @@
-import { CollectionConfig } from 'payload/types';
+import { CollectionConfig } from "payload";
 
 export const Przedmioty: CollectionConfig = {
-  slug: 'przedmioty',
+  slug: "przedmioty",
   admin: {
-    useAsTitle: 'nazwa',
-    defaultColumns: ['nazwa', 'typ_zajec', 'poziom', 'aktywny', 'updatedAt'],
+    useAsTitle: "nazwa",
+    defaultColumns: ["nazwa", "typ_zajec", "poziom", "aktywny", "updatedAt"],
   },
   access: {
     read: () => true,
@@ -14,83 +14,83 @@ export const Przedmioty: CollectionConfig = {
   },
   fields: [
     {
-      name: 'nazwa',
-      type: 'text',
+      name: "nazwa",
+      type: "text",
       required: true,
-      label: 'Nazwa przedmiotu',
+      label: "Nazwa przedmiotu",
       admin: {
-        description: 'Np. Język polski, Matematyka, Praktyka zawodowa',
+        description: "Np. Język polski, Matematyka, Praktyka zawodowa",
       },
     },
     {
-      name: 'kod_mein',
-      type: 'text',
-      label: 'Kod MEiN',
+      name: "kod_mein",
+      type: "text",
+      label: "Kod MEiN",
       admin: {
-        description: 'Kod przedmiotu w dokumentacji MEiN (opcjonalnie)',
+        description: "Kod przedmiotu w dokumentacji MEiN (opcjonalnie)",
       },
     },
     {
-      name: 'typ_zajec',
-      type: 'select',
+      name: "typ_zajec",
+      type: "select",
       required: true,
-      label: 'Typ zajęć',
+      label: "Typ zajęć",
       options: [
         {
-          label: 'Ogólnokształcące',
-          value: 'ogolnoksztalcace',
+          label: "Ogólnokształcące",
+          value: "ogolnoksztalcace",
         },
         {
-          label: 'Zawodowe teoretyczne',
-          value: 'zawodowe_teoretyczne',
+          label: "Zawodowe teoretyczne",
+          value: "zawodowe_teoretyczne",
         },
         {
-          label: 'Zawodowe praktyczne',
-          value: 'zawodowe_praktyczne',
+          label: "Zawodowe praktyczne",
+          value: "zawodowe_praktyczne",
         },
       ],
       admin: {
-        description: 'Typ zajęć zgodnie z klasyfikacją MEiN',
+        description: "Typ zajęć zgodnie z klasyfikacją MEiN",
       },
     },
     {
-      name: 'poziom',
-      type: 'select',
+      name: "poziom",
+      type: "select",
       required: true,
-      label: 'Poziom',
+      label: "Poziom",
       options: [
         {
-          label: 'Podstawowy',
-          value: 'podstawowy',
+          label: "Podstawowy",
+          value: "podstawowy",
         },
         {
-          label: 'Rozszerzony',
-          value: 'rozszerzony',
+          label: "Rozszerzony",
+          value: "rozszerzony",
         },
         {
-          label: 'Brak podziału',
-          value: 'brak',
+          label: "Brak podziału",
+          value: "brak",
         },
       ],
       admin: {
-        description: 'Poziom przedmiotu (podstawowy/rozszerzony)',
+        description: "Poziom przedmiotu (podstawowy/rozszerzony)",
       },
     },
     {
-      name: 'jednostka_org',
-      type: 'text',
-      label: 'Jednostka organizacyjna',
+      name: "jednostka_org",
+      type: "text",
+      label: "Jednostka organizacyjna",
       admin: {
-        description: 'Np. Edukacja wczesnoszkolna (opcjonalnie)',
+        description: "Np. Edukacja wczesnoszkolna (opcjonalnie)",
       },
     },
     {
-      name: 'aktywny',
-      type: 'checkbox',
-      label: 'Aktywny',
+      name: "aktywny",
+      type: "checkbox",
+      label: "Aktywny",
       defaultValue: true,
       admin: {
-        description: 'Czy przedmiot jest aktywny w systemie',
+        description: "Czy przedmiot jest aktywny w systemie",
       },
     },
   ],

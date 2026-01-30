@@ -15,6 +15,8 @@ const COLLECTIONS_TO_CLEAR = [
   'typy-szkol',
 ] as const;
 
+type CollectionName = typeof COLLECTIONS_TO_CLEAR[number];
+
 /** Typy szkół z ramowych planów MEiN (nazwa → liczba_lat, kod_mein). */
 const SCHOOLS_FROM_PLANS: { nazwa: string; liczba_lat: number; kod_mein: string }[] = [
   { nazwa: 'Szkoła podstawowa, klasy I–III', liczba_lat: 3, kod_mein: 'SP-I-III' },
@@ -43,17 +45,17 @@ export async function POST() {
   try {
     const payload = await getPayload({ config });
 
-    async function deleteAllInCollection(collection: string): Promise<number> {
+    async function deleteAllInCollection(collection: CollectionName): Promise<number> {
       let total = 0;
       for (;;) {
         const res = await payload.find({
-          collection: collection as any,
+          collection: collection,
           limit: 200,
         });
         if (res.docs.length === 0) break;
         for (const doc of res.docs) {
           await payload.delete({
-            collection: collection as any,
+            collection: collection,
             id: doc.id,
           });
           total++;

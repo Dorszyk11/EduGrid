@@ -5,7 +5,7 @@
  * wraz z procentem realizacji.
  */
 
-import type { Payload } from 'payload/types';
+import type { Payload } from '@/types/payload';
 
 // Typy danych
 export interface WynikZgodnosciMein {
@@ -320,7 +320,7 @@ export async function obliczZgodnoscMein(
         przedmiotNazwa: przedmiot?.nazwa || 'Nieznany przedmiot',
         typSzkolyId: typSzkolyId,
         typSzkolyNazwa: typSzkoly?.nazwa || 'Nieznany typ szkoły',
-        klasaId: klasa.id,
+        klasaId: String(klasa.id),
         klasaNazwa: klasa.nazwa,
         numerKlasy: klasa.numer_klasy,
         wymaganeMein: {
