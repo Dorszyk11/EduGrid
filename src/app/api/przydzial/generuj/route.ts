@@ -1,80 +1,199 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
-import {
-  automatycznyRozdzialGodzin,
-  getDiagnostykaPrzydzialu,
-  type ParametryRozdzialu,
-} from '@/utils/automatycznyRozdzialGodzin';
+import plansData from '@/utils/import/ramowe-plany.json';
+
+type HoursByGrade = Record<string, number>;
+type SubjectRow = {
+  subject?: string;
+  hours_to_choose?: number;
+  total_hours?: number;
+  hours_by_grade?: HoursByGrade;
+};
+type DirectorRow = { director_discretion_hours?: { total_hours: number } };
+type PlanMein = {
+  plan_id?: string;
+  school_type: string;
+  cycle: string;
+  grades?: string[];
+  table_structure?: { grades?: string[] };
+  subjects: (SubjectRow | DirectorRow)[];
+};
+
+const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
+const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
+
+function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
+  const a = (nazwaTypu || '').trim().toLowerCase();
+  const b = (schoolType || '').trim().toLowerCase();
+  if (!a) return false;
+  if (a === b) return true;
+  if (b === 'szkoła podstawowa' && a.startsWith('szkoła podstawowa')) return true;
+  return false;
+}
+
+function isDirectorRow(entry: SubjectRow | DirectorRow): entry is DirectorRow {
+  return 'director_discretion_hours' in entry && !('subject' in entry);
+}
+
+const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
+function isPrzedmiotLaczny(subjectName: string): boolean {
+  return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
+}
+
+function subjectKey(planId: string | undefined, subjectName: string): string {
+  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
+}
 
 /**
- * POST /api/przydzial/generuj - Generuje propozycję przydziału godzin
- * 
- * Body:
- * {
- *   typSzkolyId?: string;
- *   rokSzkolny: string;
- *   wymagajKwalifikacji?: boolean;
- *   maksymalnePrzekroczenie?: number;
- *   preferujKontynuacje?: boolean;
- *   minimalneObciazenie?: number;
- * }
+ * Rozdaje godziny do wyboru po latach (po kolei): 1 godz. na I rok, 1 na II, itd., w kółko.
+ */
+function rozdzielGodzinyPoLatach(grades: string[], hoursToChoose: number): HoursByGrade {
+  const byGrade: HoursByGrade = {};
+  if (grades.length === 0 || hoursToChoose <= 0) return byGrade;
+  for (let i = 0; i < hoursToChoose; i++) {
+    const g = grades[i % grades.length];
+    byGrade[g] = (byGrade[g] ?? 0) + 1;
+  }
+  return byGrade;
+}
+
+/**
+ * POST /api/przydzial/generuj - Przydziela godziny do wyboru do przedmiotów po kolei (po latach).
+ * Body: { klasaId: string, typSzkolyId: string } lub query: ?klasaId=...&typSzkolyId=...
+ * Zapisuje wynik do przydzial-godzin-wybor (pole przydzial).
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      typSzkolyId,
-      rokSzkolny,
-      wymagajKwalifikacji = true,
-      maksymalnePrzekroczenie = 0,
-      preferujKontynuacje = true,
-      minimalneObciazenie = 0,
-    } = body;
+    let klasaId = '';
+    let typSzkolyId = '';
 
-    if (!rokSzkolny) {
+    try {
+      const body = (await request.json()) as Record<string, unknown>;
+      klasaId = (body?.klasaId != null ? String(body.klasaId) : '').trim();
+      typSzkolyId = (body?.typSzkolyId != null ? String(body.typSzkolyId) : '').trim();
+    } catch {
+      // Body pusty lub nie JSON – weź z query
+    }
+
+    const { searchParams } = new URL(request.url);
+    if (!klasaId) klasaId = (searchParams.get('klasaId') ?? '').trim();
+    if (!typSzkolyId) typSzkolyId = (searchParams.get('typSzkolyId') ?? '').trim();
+
+    if (!klasaId || !typSzkolyId) {
       return NextResponse.json(
-        { error: 'rokSzkolny jest wymagany' },
+        { error: 'klasaId i typSzkolyId są wymagane (body JSON lub query)' },
         { status: 400 }
       );
     }
 
     const payload = await getPayload({ config });
-
-    const parametry: ParametryRozdzialu = {
-      rokSzkolny: String(rokSzkolny).trim(),
-      wymagajKwalifikacji,
-      maksymalnePrzekroczenie,
-      preferujKontynuacje,
-      minimalneObciazenie,
-    };
-
-    if (typSzkolyId != null && typSzkolyId !== '') {
-      parametry.typSzkolyId = String(typSzkolyId);
+    const typSzkoly = await payload.findByID({
+      collection: 'typy-szkol',
+      id: typSzkolyId,
+    }).catch(() => null);
+    const nazwaTypuSzkoly = (typSzkoly as { nazwa?: string } | null)?.nazwa?.trim() ?? '';
+    if (!nazwaTypuSzkoly) {
+      return NextResponse.json(
+        { error: 'Nie znaleziono typu szkoły o podanym ID' },
+        { status: 400 }
+      );
     }
 
-    const wynik = await automatycznyRozdzialGodzin(payload, parametry);
+    const plans = allPlans.filter((p) => matchSchoolType(nazwaTypuSzkoly, p.school_type));
+    if (plans.length === 0) {
+      return NextResponse.json(
+        { error: `Brak planu MEiN dla typu „${nazwaTypuSzkoly}”. Sprawdź ramowe-plany.json.` },
+        { status: 400 }
+      );
+    }
 
-    let diagnostyka = null;
-    if (wynik.metryki.lacznieZadan === 0) {
-      try {
-        diagnostyka = await getDiagnostykaPrzydzialu(payload, parametry);
-      } catch (e) {
-        console.error('Diagnostyka przydziału:', e);
+    const przydzialNowy: Record<string, HoursByGrade> = {};
+    const doradztwoNowy: Record<string, HoursByGrade> = {};
+    for (const plan of plans) {
+      const grades = plan.table_structure?.grades ?? plan.grades ?? [];
+      for (const entry of plan.subjects) {
+        if (isDirectorRow(entry)) continue;
+        const row = entry as SubjectRow;
+        const subject = row.subject ?? '';
+        if (isPrzedmiotLaczny(subject)) {
+          // Zajęcia z zakresu doradztwa zawodowego – total_hours rozłożone po latach po kolei
+          const totalHours = row.total_hours ?? 0;
+          if (totalHours <= 0) continue;
+          const key = subjectKey(plan.plan_id, subject);
+          doradztwoNowy[key] = rozdzielGodzinyPoLatach(grades, totalHours);
+          continue;
+        }
+        const hoursToChoose = row.hours_to_choose ?? 0;
+        if (hoursToChoose <= 0) continue;
+        const key = subjectKey(plan.plan_id, subject);
+        przydzialNowy[key] = rozdzielGodzinyPoLatach(grades, hoursToChoose);
       }
     }
 
+    // ID klasy dla relacji – Payload/PostgreSQL może wymagać number
+    const klasaIdForRelation = /^\d+$/.test(klasaId) ? Number(klasaId) : klasaId;
+
+    const existing = await payload.find({
+      collection: 'przydzial-godzin-wybor',
+      where: { klasa: { equals: klasaIdForRelation } },
+      limit: 1,
+    });
+
+    const currentDoc = existing.docs[0] as { id: string; przydzial?: Record<string, HoursByGrade>; doradztwo?: Record<string, HoursByGrade>; dyrektor?: Record<string, HoursByGrade> } | undefined;
+    const currentPrzydzial = currentDoc?.przydzial && typeof currentDoc.przydzial === 'object' ? currentDoc.przydzial : {};
+    const mergedPrzydzial = { ...currentPrzydzial, ...przydzialNowy };
+    const currentDoradztwo = currentDoc?.doradztwo && typeof currentDoc.doradztwo === 'object' ? currentDoc.doradztwo : {};
+    const mergedDoradztwo = { ...currentDoradztwo, ...doradztwoNowy };
+    const dyrektorVal = currentDoc?.dyrektor ?? {};
+
+    if (existing.docs.length > 0) {
+      await payload.update({
+        collection: 'przydzial-godzin-wybor',
+        id: currentDoc!.id,
+        data: {
+          przydzial: mergedPrzydzial,
+          doradztwo: mergedDoradztwo,
+          dyrektor: dyrektorVal,
+        },
+      });
+    } else {
+      // Sprawdź, czy klasa istnieje – walidacja Payload wymaga poprawnej relacji
+      const klasaExists = await payload.findByID({
+        collection: 'klasy',
+        id: klasaIdForRelation,
+      }).catch(() => null);
+      if (!klasaExists) {
+        return NextResponse.json(
+          { error: `Klasa o ID ${klasaId} nie istnieje` },
+          { status: 400 }
+        );
+      }
+      await payload.create({
+        collection: 'przydzial-godzin-wybor',
+        data: {
+          klasa: klasaIdForRelation,
+          przydzial: mergedPrzydzial,
+          doradztwo: mergedDoradztwo,
+          dyrektor: dyrektorVal,
+        },
+      });
+    }
+
+    const liczbaPrzedmiotow = Object.keys(przydzialNowy).length;
+    const liczbaDoradztwo = Object.keys(doradztwoNowy).length;
+    const parts = [`${liczbaPrzedmiotow} przedmiotów (godz. do wyboru)`];
+    if (liczbaDoradztwo > 0) parts.push(`zajęcia z zakresu doradztwa zawodowego (${liczbaDoradztwo})`);
     return NextResponse.json({
       success: true,
-      wynik,
-      diagnostyka,
+      przydzial: mergedPrzydzial,
+      doradztwo: mergedDoradztwo,
+      komunikat: `Przydzielono po latach po kolei: ${parts.join(', ')}.`,
     });
   } catch (error) {
-    console.error('Błąd przy generowaniu przydziału:', error);
+    console.error('Błąd przy generowaniu przydziału godzin do wyboru:', error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
-      },
+      { error: error instanceof Error ? error.message : 'Nieznany błąd' },
       { status: 500 }
     );
   }

@@ -131,12 +131,12 @@ export async function getDiagnostykaPrzydzialu(
       { rok_szkolny: { equals: rok } },
     ],
   };
-  if (typSzkolyId) {
-    const typId =
-      typeof typSzkolyId === 'string' && /^\d+$/.test(typSzkolyId)
-        ? Number(typSzkolyId)
-        : typSzkolyId;
-    warunkiKlas.and.push({ typ_szkoly: { equals: typId } });
+  if (typSzkolyId != null && typSzkolyId !== '') {
+    const typStr = String(typSzkolyId);
+    const typNum = /^\d+$/.test(typStr) ? Number(typStr) : null;
+    const orConditions: any[] = [{ typ_szkoly: { equals: typStr } }];
+    if (typNum != null) orConditions.push({ typ_szkoly: { equals: typNum } });
+    warunkiKlas.and.push({ or: orConditions });
   }
 
   const klasy = await payload.find({
@@ -148,17 +148,7 @@ export async function getDiagnostykaPrzydzialu(
   const today = new Date().toISOString().split('T')[0];
   const siatkiMein = await payload.find({
     collection: 'siatki-godzin-mein',
-    where: {
-      and: [
-        { data_obowiazywania_od: { less_than_equal: today } },
-        {
-          or: [
-            { data_obowiazywania_do: { greater_than_equal: today } },
-            { data_obowiazywania_do: { equals: null } },
-          ],
-        },
-      ],
-    },
+    where: { data_obowiazywania_od: { less_than_equal: today } },
     limit: 1000,
   });
 
@@ -197,21 +187,12 @@ async function pobierzZadania(
     ],
   };
 
-  if (typSzkolyId) {
-    // Payload/Postgres może trzymać relationship jako number lub string – dopasuj oba
-    const typIdNum =
-      typeof typSzkolyId === 'string' && /^\d+$/.test(typSzkolyId)
-        ? Number(typSzkolyId)
-        : typeof typSzkolyId === 'number'
-          ? typSzkolyId
-          : null;
-    const typIdStr = String(typSzkolyId);
-    warunkiKlas.and.push({
-      or: [
-        { typ_szkoly: { equals: typIdStr } },
-        ...(typIdNum != null ? [{ typ_szkoly: { equals: typIdNum } }] : []),
-      ],
-    });
+  if (typSzkolyId != null && typSzkolyId !== '') {
+    const typStr = String(typSzkolyId);
+    const typNum = /^\d+$/.test(typStr) ? Number(typStr) : null;
+    const orConditions: any[] = [{ typ_szkoly: { equals: typStr } }];
+    if (typNum != null) orConditions.push({ typ_szkoly: { equals: typNum } });
+    warunkiKlas.and.push({ or: orConditions });
   }
 
   const klasy = await payload.find({
@@ -220,32 +201,14 @@ async function pobierzZadania(
     depth: 1,
   });
 
-  // Pobierz wymagania MEiN (aby wiedzieć, ile godzin potrzeba)
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD, zgodne z polem date
+  // Pobierz wymagania MEiN – obowiązujące od dziś lub w przeszłości (bez filtra „do”, żeby nie gubić rekordów)
+  const today = new Date().toISOString().split('T')[0];
   const siatkiMein = await payload.find({
     collection: 'siatki-godzin-mein',
     where: {
-      and: [
-        {
-          data_obowiazywania_od: {
-            less_than_equal: today,
-          },
-        },
-        {
-          or: [
-            {
-              data_obowiazywania_do: {
-                greater_than_equal: today,
-              },
-            },
-            {
-              data_obowiazywania_do: {
-                equals: null,
-              },
-            },
-          ],
-        },
-      ],
+      data_obowiazywania_od: {
+        less_than_equal: today,
+      },
     },
     depth: 2,
   });
@@ -274,32 +237,7 @@ async function pobierzZadania(
       return sm.klasa == null || sm.klasa === numerKlasyFilter;
     });
 
-    // Sprawdź, czy są już przypisania dla tej klasy
-    const istniejącePrzypisania = await payload.find({
-      collection: 'rozkład-godzin',
-      where: {
-        and: [
-          {
-            klasa: {
-              equals: klasa.id,
-            },
-          },
-          {
-            rok_szkolny: {
-              equals: rokSzkolny,
-            },
-          },
-          {
-            zablokowane: {
-              not_equals: true, // Pomiń zablokowane przypisania
-            },
-          },
-        ],
-      },
-      depth: 1,
-    });
-
-    // Dla każdego wymagania MEiN utwórz zadanie
+    // Dla każdego wymagania MEiN utwórz zadanie (bez sprawdzania istniejących przypisań – tylko po kolei po latach)
     for (const wymaganie of wymaganiaDlaKlasy) {
       const przedmiot = typeof wymaganie.przedmiot === 'object' 
         ? wymaganie.przedmiot 
@@ -318,34 +256,13 @@ async function pobierzZadania(
         continue;
       }
 
-      // Sprawdź, czy już jest przypisanie
-      const istniejące = istniejącePrzypisania.docs.find(rg => {
-        const rgPrzedmiot = typeof rg.przedmiot === 'object' ? rg.przedmiot.id : rg.przedmiot;
-        const wymPrzedmiot = typeof wymaganie.przedmiot === 'object' ? wymaganie.przedmiot.id : wymaganie.przedmiot;
-        return rgPrzedmiot === wymPrzedmiot;
-      });
+      // Wymagane godziny tygodniowo
+      const godzinyTygodniowo =
+        (wymaganie.godziny_tygodniowo_min != null && wymaganie.godziny_tygodniowo_min > 0)
+          ? wymaganie.godziny_tygodniowo_min
+          : (wymaganie.godziny_w_cyklu / (typSzkoly?.liczba_lat || 4) / 30);
 
-      // Jeśli jest przypisanie, sprawdź czy godziny są zgodne
-      if (istniejące) {
-        const sumaGodzin = istniejącePrzypisania.docs
-          .filter(rg => {
-            const rgPrzedmiot = typeof rg.przedmiot === 'object' ? rg.przedmiot.id : rg.przedmiot;
-            const wymPrzedmiot = typeof wymaganie.przedmiot === 'object' ? wymaganie.przedmiot.id : wymaganie.przedmiot;
-            return rgPrzedmiot === wymPrzedmiot;
-          })
-          .reduce((sum, rg) => sum + (rg.godziny_tyg || 0), 0);
-
-        // Jeśli godziny są zgodne z wymaganiami, pomiń
-        if (sumaGodzin >= (wymaganie.godziny_tygodniowo_min || 0)) {
-          continue;
-        }
-      }
-
-      // Oblicz godziny tygodniowo (jeśli nie podano w wymaganiach, użyj średniej)
-      const godzinyTygodniowo = wymaganie.godziny_tygodniowo_min || 
-        (wymaganie.godziny_w_cyklu / (typSzkoly?.liczba_lat || 4) / 30); // Przybliżenie
-
-      const godzinyRoczne = godzinyTygodniowo * 30; // Przybliżenie (30 tygodni w roku)
+      const godzinyRoczne = godzinyTygodniowo * 30;
 
       const numerKlasy =
         (klasa as { numer_klasy?: number }).numer_klasy ??
@@ -368,7 +285,7 @@ async function pobierzZadania(
     }
   }
 
-  // Sortowanie round-robin: po kolei po jednej od klasy 1 do 5 (lub 1–8) i tak w kółko
+  // Kolejność: po latach od pierwszego do ostatniego (1, 2, 3, … 8) – najpierw wszystkie zadania roku 1, potem roku 2 itd.
   const byClass: Record<number, ZadaniePrzypisania[]> = {};
   for (const z of zadania) {
     const n = z.numerKlasy ?? 0;
@@ -379,14 +296,11 @@ async function pobierzZadania(
   const classNumbers = [...new Set(zadania.map((z) => z.numerKlasy).filter((n): n is number => n != null && n > 0))].sort(
     (a, b) => a - b
   );
-  const maxRounds = Math.max(0, ...Object.values(byClass).map((arr) => arr.length));
   const ordered: ZadaniePrzypisania[] = [];
-  for (let r = 0; r < maxRounds; r++) {
-    for (const k of classNumbers) {
-      if (byClass[k] && byClass[k][r]) ordered.push(byClass[k][r]);
-    }
+  for (const k of classNumbers) {
+    if (byClass[k]) ordered.push(...byClass[k]);
   }
-  // Zadania bez numerKlasy na końcu (zachowaj dotychczasową kolejność)
+  // Zadania bez numerKlasy na końcu
   const bezNumeru = zadania.filter((z) => !z.numerKlasy || z.numerKlasy <= 0);
   return [...ordered, ...bezNumeru];
 }
@@ -492,33 +406,28 @@ export async function automatycznyRozdzialGodzin(
       continue;
     }
 
-    // Znajdź dostępnych nauczycieli
+    // Znajdź dostępnych nauczycieli (bez wymagania kwalifikacji i bez limitu obciążenia)
     const dostepni = await znajdzDostepnychNauczycieli(
       payload,
       zadanie.przedmiotId,
       rokSzkolny,
       {
-        wymagajKwalifikacji,
-        minimalneObciazenie: Math.max(minimalneObciazenie, zadanie.godzinyTygodniowo),
+        wymagajKwalifikacji: false,
+        minimalneObciazenie: 0,
         preferowani: zadanie.preferowaniNauczyciele,
         wykluczeni: zadanie.wykluczeniNauczyciele,
       }
     );
 
-    // Filtruj nauczycieli, którzy nie przekroczą maksimum (z tolerancją)
+    // Użyj wszystkich dostępnych; jeśli nikt nie mieści się w limicie – i tak weź pierwszego (przypisanie po kolei, bez zbędnych sprawdzeń)
     const dostepniZObciazeniem = dostepni.filter(d => {
       const obecneObciazenie = obciazeniaAktualne.get(d.nauczycielId) || 0;
       const noweObciazenie = obecneObciazenie + zadanie.godzinyTygodniowo;
       return noweObciazenie <= (d.maxObciazenie + maksymalnePrzekroczenie);
     });
+    const doWyboru = dostepniZObciazeniem.length > 0 ? dostepniZObciazeniem : dostepni;
 
-    if (dostepniZObciazeniem.length === 0) {
-      // Brak kadrowy
-      const dostepniBezObciazenia = dostepni.filter(d => {
-        const obecneObciazenie = obciazeniaAktualne.get(d.nauczycielId) || 0;
-        return obecneObciazenie < d.maxObciazenie;
-      });
-
+    if (doWyboru.length === 0) {
       brakiKadrowe.push({
         zadanieId: zadanie.id,
         przedmiotId: zadanie.przedmiotId,
@@ -526,23 +435,15 @@ export async function automatycznyRozdzialGodzin(
         klasaId: zadanie.klasaId,
         klasaNazwa: zadanie.klasaNazwa,
         godzinyTygodniowo: zadanie.godzinyTygodniowo,
-        powod: dostepni.length === 0
-          ? 'Brak nauczycieli z kwalifikacjami'
-          : 'Brak nauczycieli z dostępnym obciążeniem',
-        dostepniNauczyciele: dostepniBezObciazenia.length,
-        sugerowaneRozwiazania: [
-          dostepni.length === 0
-            ? 'Dodaj kwalifikacje nauczycielom lub zatrudnij nowego nauczyciela'
-            : 'Zwiększ obciążenie istniejących nauczycieli lub zatrudnij nowego',
-          `Wymagane: ${zadanie.godzinyTygodniowo} godzin tygodniowo`,
-        ],
+        powod: 'Brak aktywnych nauczycieli',
+        dostepniNauczyciele: 0,
+        sugerowaneRozwiazania: ['Dodaj aktywnych nauczycieli'],
       });
       continue;
     }
 
-    // Wybierz najlepszego nauczyciela
-    // Strategia: preferuj nauczycieli z niskim obciążeniem (wyrównanie)
-    dostepniZObciazeniem.sort((a, b) => {
+    // Wybierz pierwszego (kolejność: po obciążeniu, żeby w miarę równo)
+    doWyboru.sort((a, b) => {
       const aObciazenie = obciazeniaAktualne.get(a.nauczycielId) || 0;
       const bObciazenie = obciazeniaAktualne.get(b.nauczycielId) || 0;
       const aProcent = (aObciazenie / a.maxObciazenie) * 100;
@@ -567,7 +468,7 @@ export async function automatycznyRozdzialGodzin(
       return aProcent - bProcent;
     });
 
-    const wybrany = dostepniZObciazeniem[0];
+    const wybrany = doWyboru[0];
     const obecneObciazenie = obciazeniaAktualne.get(wybrany.nauczycielId) || 0;
     const noweObciazenie = obecneObciazenie + zadanie.godzinyTygodniowo;
 

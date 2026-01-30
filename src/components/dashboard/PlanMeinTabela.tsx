@@ -96,6 +96,8 @@ export interface PlanMeinTabelaProps {
   cycleFilter?: string;
   /** ID klasy – gdy podane, każda klasa ma niezależny przydział „godzin do wyboru” i zrealizowane godziny doradztwa (np. klasa A 2 godz., klasa B 3 godz.) */
   klasaId?: string;
+  /** Gdy się zmieni – odświeża dane z API (np. po „Generuj przydział”) */
+  refetchTrigger?: number;
   /** Wywoływane po każdej zmianie przydziału „godzin do wyboru” – np. do odświeżenia kafelków realizacji na dashboardzie */
   onPrzydzialChange?: () => void;
   /** Wywoływane po każdej zmianie zrealizowanych godzin doradztwa zawodowego */
@@ -141,7 +143,7 @@ function kolorOdProcentuGodzinDodatkowych(procent: number): string {
   return 'bg-red-400 text-red-950 ring-red-600 font-bold';
 }
 
-export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
+export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, refetchTrigger, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
   const cycleFilterAuto = cycleFilter ?? cycleFilterZNazwy(nazwaTypuSzkoly);
   const plans = allPlans.filter(
     (p) =>
@@ -163,7 +165,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     }
     let cancelled = false;
     setLadowanieZapis(true);
-    fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}`, { cache: 'no-store' })
+    fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}&_t=${refetchTrigger ?? 0}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
       .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>> }) => {
         if (cancelled) return;
@@ -223,7 +225,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     return () => {
       cancelled = true;
     };
-  }, [klasaId]);
+  }, [klasaId, refetchTrigger]);
 
   const zapiszDoBazy = useCallback(
     (p: Record<string, Record<string, number>>, d: Record<string, Record<string, number>>, dy: Record<string, Record<string, number>>) => {
