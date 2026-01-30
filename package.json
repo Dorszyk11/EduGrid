@@ -10,7 +10,7 @@
     "payload": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload",
     "generate:types": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
     "generate:importmap": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:importmap",
-    "migrate": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload migrate",
+    "migrate": "cross-env PAYLOAD_CONFIG_PATH=payload.config.ts payload migrate",
     "test:db": "node test-db-connection.js",
     "seed": "node scripts/seed-test-data.js"
   },

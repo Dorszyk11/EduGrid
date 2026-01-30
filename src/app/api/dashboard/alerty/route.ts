@@ -177,7 +177,7 @@ export async function GET(request: Request) {
         kategoria: 'kwalifikacje',
         tytul: `⚠️ Brakujące kwalifikacje: ${brakujaceKwalifikacje.length} przypisań`,
         opis: `${brakujaceKwalifikacje.length} przypisań nie ma potwierdzonych kwalifikacji`,
-        link: '/admin/collections/kwalifikacje',
+        link: '/panel-admin',
         priorytet: 7,
       });
     }

@@ -24,7 +24,7 @@ export default function DashboardCTA({ typSzkolyId, rokSzkolny = '2024/2025' }: 
 
         {/* Utwórz/edytuj siatkę szkoły */}
         <Link
-          href="/admin/collections/rozkład-godzin"
+          href="/panel-admin"
           className="flex flex-col items-center justify-center p-6 bg-green-50 hover:bg-green-100 rounded-lg border-2 border-green-200 hover:border-green-400 transition-all cursor-pointer"
         >
           <div className="text-4xl mb-2">📊</div>
@@ -34,7 +34,7 @@ export default function DashboardCTA({ typSzkolyId, rokSzkolny = '2024/2025' }: 
 
         {/* Dodaj klasy/profile */}
         <Link
-          href="/admin/collections/klasy"
+          href="/panel-admin"
           className="flex flex-col items-center justify-center p-6 bg-purple-50 hover:bg-purple-100 rounded-lg border-2 border-purple-200 hover:border-purple-400 transition-all cursor-pointer"
         >
           <div className="text-4xl mb-2">🏫</div>
@@ -44,7 +44,7 @@ export default function DashboardCTA({ typSzkolyId, rokSzkolny = '2024/2025' }: 
 
         {/* Dodaj nauczycieli */}
         <Link
-          href="/admin/collections/nauczyciele"
+          href="/panel-admin"
           className="flex flex-col items-center justify-center p-6 bg-orange-50 hover:bg-orange-100 rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-all cursor-pointer"
         >
           <div className="text-4xl mb-2">👨‍🏫</div>

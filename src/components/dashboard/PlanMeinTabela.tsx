@@ -131,13 +131,13 @@ function canPrzydzielacWKomorce(schoolType: string, grade: string, subjectName: 
   return !PRZEDMIOTY_BLOKOWANE_V_TECHNIKUM.includes((subjectName || '').trim());
 }
 
-/** Kolor komórki podsumowania wg liczby godzin PRZYDZIELONYCH (do wyboru) w tym roku – im więcej, tym cieplejszy; czerwony agresywny. */
-function kolorOdPrzydzielonych(przydzielone: number): string {
-  if (przydzielone === 0) return 'bg-gray-100 text-gray-700 ring-gray-200';
-  if (przydzielone <= 2) return 'bg-emerald-100 text-emerald-800 ring-emerald-300';
-  if (przydzielone <= 4) return 'bg-amber-100 text-amber-800 ring-amber-300';
-  if (przydzielone <= 6) return 'bg-orange-200 text-orange-900 ring-orange-400';
-  return 'bg-red-300 text-red-950 ring-red-500 font-bold';
+/** Kolor komórki "Suma godzin w roku" wg % godzin do rozdysponowania (do wyboru) przydzielonych w tym roku. Doradztwo zawodowe nie wlicza się (jest w przedmiotach łącznych, poza tą tabelą). */
+function kolorOdProcentuGodzinDoRozdysponowania(procent: number): string {
+  if (procent <= 25) return 'bg-emerald-100 text-emerald-800 ring-emerald-300';
+  if (procent <= 35) return 'bg-amber-100 text-amber-800 ring-amber-300';
+  if (procent <= 45) return 'bg-red-100 text-red-800 ring-red-300';
+  if (procent <= 55) return 'bg-red-200 text-red-900 ring-red-400';
+  return 'bg-red-400 text-red-950 ring-red-600 font-bold';
 }
 
 export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
@@ -150,6 +150,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
   const [przydzial, setPrzydzial] = useState<Record<string, Record<string, number>>>({});
   const [zrealizowaneDoradztwo, setZrealizowaneDoradztwo] = useState<Record<string, Record<string, number>>>({});
+  const [ladowanieZapis, setLadowanieZapis] = useState(false);
 
   useEffect(() => {
     if (!klasaId) {
@@ -157,28 +158,54 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
       setZrealizowaneDoradztwo({});
       return;
     }
-    try {
-      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_PREFIX + klasaId) : null;
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, Record<string, number>>;
-        setPrzydzial(parsed);
-      } else {
-        setPrzydzial({});
-      }
-    } catch {
-      setPrzydzial({});
-    }
-    try {
-      const rawD = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_DORADZTWO + klasaId) : null;
-      if (rawD) {
-        const parsed = JSON.parse(rawD) as Record<string, Record<string, number>>;
-        setZrealizowaneDoradztwo(parsed);
-      } else {
-        setZrealizowaneDoradztwo({});
-      }
-    } catch {
-      setZrealizowaneDoradztwo({});
-    }
+    let cancelled = false;
+    setLadowanieZapis(true);
+    fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
+      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>> }) => {
+        if (cancelled) return;
+        const p = data.przydzial && typeof data.przydzial === 'object' ? data.przydzial : {};
+        const d = data.doradztwo && typeof data.doradztwo === 'object' ? data.doradztwo : {};
+        setPrzydzial(p);
+        setZrealizowaneDoradztwo(d);
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(p));
+            localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(d));
+          }
+        } catch (_) {}
+      })
+      .catch(() => {
+        if (cancelled) return;
+        try {
+          const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_PREFIX + klasaId) : null;
+          if (raw) {
+            const parsed = JSON.parse(raw) as Record<string, Record<string, number>>;
+            setPrzydzial(parsed);
+          } else {
+            setPrzydzial({});
+          }
+        } catch {
+          setPrzydzial({});
+        }
+        try {
+          const rawD = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_DORADZTWO + klasaId) : null;
+          if (rawD) {
+            const parsed = JSON.parse(rawD) as Record<string, Record<string, number>>;
+            setZrealizowaneDoradztwo(parsed);
+          } else {
+            setZrealizowaneDoradztwo({});
+          }
+        } catch {
+          setZrealizowaneDoradztwo({});
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLadowanieZapis(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [klasaId]);
 
   const zapiszPrzydzial = useCallback(
@@ -189,8 +216,17 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(next));
       } catch (_) {}
       onPrzydzialChange?.();
+      fetch('/api/przydzial-godzin-wybor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          klasaId,
+          przydzial: next,
+          doradztwo: zrealizowaneDoradztwo,
+        }),
+      }).catch((err) => console.error('Zapis przydziału do bazy:', err));
     },
-    [klasaId, onPrzydzialChange]
+    [klasaId, onPrzydzialChange, zrealizowaneDoradztwo]
   );
 
   const przydzielGodzine = useCallback(
@@ -232,8 +268,17 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(next));
       } catch (_) {}
       onDoradztwoChange?.();
+      fetch('/api/przydzial-godzin-wybor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          klasaId,
+          przydzial,
+          doradztwo: next,
+        }),
+      }).catch((err) => console.error('Zapis doradztwa do bazy:', err));
     },
-    [klasaId, onDoradztwoChange]
+    [klasaId, onDoradztwoChange, przydzial]
   );
 
   const dodajZrealizowanaGodzine = useCallback(
@@ -298,6 +343,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
         const sumByGrade: Record<string, number> = {};
         const assignedSumByGrade: Record<string, number> = {};
+        let totalGodzinyDoRozdysponowania = 0;
         grades.forEach((g) => {
           sumByGrade[g] = 0;
           assignedSumByGrade[g] = 0;
@@ -307,6 +353,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
           const row = entry as SubjectRow;
           const subject = row.subject ?? '–';
           if (isPrzedmiotLaczny(subject)) return;
+          totalGodzinyDoRozdysponowania += row.hours_to_choose ?? 0;
           const subKey = subjectKey(plan.plan_id, subject);
           const assignedByGrade = klasaId ? (przydzial[subKey] ?? {}) : {};
           grades.forEach((g) => {
@@ -325,9 +372,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         return (
           <section
             key={plan.plan_id ?? `${plan.school_type}-${plan.cycle}-${idx}`}
-            className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm w-full"
+            className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm w-full min-w-0"
           >
-            <div className="px-4 py-2.5 border-b border-gray-200">
+            <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-gray-200">
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-sm">
                 {isPodstawowka ? (
                   <>
@@ -364,30 +411,32 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
               )}
             </div>
 
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse text-sm">
+            <div className="overflow-x-auto w-full -mx-2 sm:mx-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <p className="sr-only">Przewiń tabelę w lewo/prawo na małym ekranie</p>
+              <p className="sm:hidden text-xs text-gray-500 px-2 pt-1 pb-0.5">← Przewiń w poziomie, aby zobaczyć wszystkie kolumny</p>
+              <table className="w-full min-w-[480px] text-left border-collapse text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="px-3 py-2 font-semibold text-gray-700 w-12 border-r border-gray-200">
+                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 w-10 sm:w-12 border-r border-gray-200 text-left">
                       Lp.
                     </th>
-                    <th className="px-3 py-2 font-semibold text-gray-700 border-r border-gray-200">
+                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 min-w-[100px] sm:min-w-[120px] border-r border-gray-200">
                       Przedmiot
                     </th>
                     {hasGrades &&
                       grades.map((g) => (
                         <th
                           key={g}
-                          className="px-2 py-2 font-semibold text-gray-700 text-center w-14 border-r border-gray-200"
+                          className="px-1.5 sm:px-2 py-1.5 sm:py-2 font-semibold text-gray-700 text-center w-12 sm:w-14 border-r border-gray-200"
                         >
                           {g}
                         </th>
                       ))}
-                    <th className="px-3 py-2 font-semibold text-gray-700 text-right w-16">
+                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 text-right w-12 sm:w-16">
                       Razem
                     </th>
-                    <th className="px-3 py-2 font-semibold text-gray-700 text-right w-24 border-l border-gray-200">
-                      Godziny do wyboru
+                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 text-right w-20 sm:w-24 border-l border-gray-200 whitespace-nowrap">
+                      Godz. do wyboru
                     </th>
                   </tr>
                 </thead>
@@ -398,15 +447,15 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                       return (
                         <tr key={i} className="border-t-2 border-gray-300 font-medium">
                           <td
-                            className="px-3 py-2 text-gray-700 border-r border-gray-200"
+                            className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-700 border-r border-gray-200 text-sm"
                             colSpan={hasGrades ? 2 + grades.length : 2}
                           >
                             Godziny do dyspozycji dyrektora
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-gray-800 border-r border-gray-100">
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-gray-800 border-r border-gray-100">
                             {tot}
                           </td>
-                          <td className="px-3 py-2 text-right text-gray-400 border-l border-gray-200">
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-gray-400 border-l border-gray-200">
                             –
                           </td>
                         </tr>
@@ -428,10 +477,10 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                         key={i}
                         className="border-b border-gray-100 last:border-0"
                       >
-                        <td className="px-3 py-2 text-gray-500 tabular-nums border-r border-gray-100 w-12">
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-500 tabular-nums border-r border-gray-100 w-10 sm:w-12">
                           {row.lp != null ? row.lp : '–'}
                         </td>
-                        <td className="px-3 py-2 text-gray-800 border-r border-gray-100">
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-800 border-r border-gray-100 min-w-[100px] sm:min-w-0">
                           {subject}
                         </td>
                         {hasGrades &&
@@ -445,7 +494,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                             return (
                               <td
                                 key={g}
-                                className="px-2 py-2 text-center border-r border-gray-100 w-14"
+                                className="px-1.5 sm:px-2 py-1.5 sm:py-2 text-center border-r border-gray-100 w-12 sm:w-14"
                               >
                                 <span className="tabular-nums text-gray-700">{total > 0 ? total : '–'}</span>
                                 {klasaId && hoursToChoose > 0 && (
@@ -483,10 +532,10 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               </td>
                             );
                           })}
-                        <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-800 border-r border-gray-100">
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums font-medium text-gray-800 border-r border-gray-100">
                           {totalDisplay(row)}
                         </td>
-                        <td className="px-3 py-2 text-right border-l border-gray-200 w-24">
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-gray-200 w-20 sm:w-24 text-xs sm:text-sm">
                           {row.hours_to_choose != null ? (
                             klasaId ? (
                               <span className="tabular-nums text-gray-700">
@@ -509,29 +558,33 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-gray-400 bg-gray-50 font-semibold">
-                    <td className="px-3 py-2 border-r border-gray-200 w-12" />
-                    <td className="px-3 py-2 border-r border-gray-200">
+                  <tr className="border-t-2 border-gray-400 bg-gray-50 font-semibold text-xs sm:text-sm">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-gray-200 w-10 sm:w-12" />
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-gray-200">
                       Suma godzin w roku
                     </td>
                     {hasGrades &&
                       grades.map((g) => {
                         const sum = sumByGrade[g] ?? 0;
                         const przydzielone = assignedSumByGrade[g] ?? 0;
+                        const procent =
+                          totalGodzinyDoRozdysponowania > 0
+                            ? (przydzielone / totalGodzinyDoRozdysponowania) * 100
+                            : 0;
                         return (
                           <td
                             key={g}
-                            className={`px-2 py-2 text-center tabular-nums font-bold ring-1 ring-inset ${kolorOdPrzydzielonych(przydzielone)}`}
-                            title={`Razem ${sum} godz. w klasie ${g}${przydzielone > 0 ? ` (w tym ${przydzielone} z puli do wyboru)` : ''}`}
+                            className={`px-1.5 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums font-bold ring-1 ring-inset ${kolorOdProcentuGodzinDoRozdysponowania(procent)}`}
+                            title={`Razem ${sum} godz. w klasie ${g}${przydzielone > 0 ? ` (w tym ${przydzielone} z puli do wyboru, ${procent.toFixed(0)}%)` : ''}`}
                           >
                             {sum}
                           </td>
                         );
                       })}
-                    <td className="px-3 py-2 text-right text-gray-500 border-r border-gray-200">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-gray-500 border-r border-gray-200">
                       –
                     </td>
-                    <td className="px-3 py-2 text-right text-gray-500 border-l border-gray-200">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-gray-500 border-l border-gray-200">
                       –
                     </td>
                   </tr>
@@ -539,9 +592,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
               </table>
             </div>
             {przedmiotyLaczne.length > 0 && hasGrades && (
-              <div className="mx-4 mb-4 rounded-lg border border-gray-200 bg-gray-50/50 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-collapse">
+              <div className="mx-2 sm:mx-4 mb-4 rounded-lg border border-gray-200 bg-gray-50/50 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto -mx-2 sm:mx-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <table className="w-full min-w-[320px] text-xs sm:text-sm border-collapse">
                     <thead>
                       <tr className="border-b-2 border-gray-200 bg-gray-100">
                         <th className="px-4 py-2 text-left font-semibold text-gray-700 text-xs min-w-[180px]">

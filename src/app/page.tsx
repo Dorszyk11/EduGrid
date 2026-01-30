@@ -16,7 +16,7 @@ export default function HomePage() {
               Przejdź do Dashboard
             </Link>
             <Link
-              href="/admin"
+              href="/panel-admin"
               className="inline-block px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
             >
               Panel Administracyjny
