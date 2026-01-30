@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 
 export const metadata: Metadata = {
   title: 'EduGrid - System planowania siatki godzin',
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pl">
-      <body>{children}</body>
+      <body>
+        <DashboardLayout>{children}</DashboardLayout>
+      </body>
     </html>
   )
 }
