@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { buildConfig } from 'payload';
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import { slateEditor } from '@payloadcms/richtext-slate';
@@ -37,6 +38,9 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI,
+      ...(process.env.DATABASE_URI?.includes('supabase') && {
+        ssl: { rejectUnauthorized: false },
+      }),
     },
   }),
   typescript: {

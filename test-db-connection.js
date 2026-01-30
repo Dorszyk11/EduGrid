@@ -3,7 +3,26 @@
  * Uruchom: node test-db-connection.js
  */
 
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const dns = require('dns');
+
+// 🔥 WYMUSZENIE DNS (Node ma ENOTFOUND mimo że nslookup działa)
+dns.setServers(['1.1.1.1', '1.0.0.1']);
+
+// Ładuj .env (bez zewn. zależności)
+try {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    const env = fs.readFileSync(envPath, 'utf8');
+    for (const line of env.split('\n')) {
+      const m = line.match(/^\s*([^#=]+)=(.*)$/);
+      if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+  }
+} catch (e) {}
+try { require('dotenv').config(); } catch (e) {}
+
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URI;
@@ -18,6 +37,7 @@ console.log('📋 Connection string:', connectionString.replace(/:[^:@]+@/, ':**
 
 const pool = new Pool({
   connectionString: connectionString,
+  ...(connectionString.includes('supabase') && { ssl: { rejectUnauthorized: false } }),
 });
 
 pool.query('SELECT NOW() as current_time, current_database() as database_name, current_user as user_name')
@@ -36,24 +56,17 @@ pool.query('SELECT NOW() as current_time, current_database() as database_name, c
     console.error('   Wiadomość:', error.message);
     console.log('🧩 pg config:', pool.options);
 
-    
     if (error.code === '28P01') {
       console.error('\n💡 Problem: Błędne hasło lub użytkownik');
-      console.error('   Rozwiązanie:');
-      console.error('   1. Sprawdź hasło w pliku .env');
-      console.error('   2. Jeśli używasz Dockera, upewnij się, że kontener został utworzony z hasłem "password"');
-      console.error('   3. Jeśli używasz lokalnej instalacji, sprawdź rzeczywiste hasło użytkownika postgres');
     } else if (error.code === 'ECONNREFUSED') {
-      console.error('\n💡 Problem: PostgreSQL nie jest uruchomiony');
-      console.error('   Rozwiązanie:');
-      console.error('   1. Uruchom Docker Desktop i kontener PostgreSQL');
-      console.error('   2. Lub uruchom lokalną instalację PostgreSQL');
+      console.error('\n💡 Problem: PostgreSQL nie jest uruchomiony / port zablokowany');
     } else if (error.code === '3D000') {
       console.error('\n💡 Problem: Baza danych nie istnieje');
-      console.error('   Rozwiązanie:');
-      console.error('   1. Utwórz bazę danych: CREATE DATABASE edugrid;');
+    } else if (error.code === 'ENOTFOUND') {
+      console.error('\n💡 Problem: DNS w Node nie rozwiązuje hosta (mimo że nslookup działa).');
+      console.error('   Rozwiązanie: DNS wymuszony w kodzie / VPN z pełnym tunelowaniem DNS.');
     }
-    
+
     pool.end();
     process.exit(1);
   });
