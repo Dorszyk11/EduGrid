@@ -126,9 +126,16 @@ export async function POST(request: NextRequest) {
             collection: 'users',
             data: { email: email.toLowerCase(), password },
           });
+          const u = loginResult.user as { id: string | number; email?: string; imie?: string; nazwisko?: string };
+          const token = loginResult.token ?? '';
           return {
-            user: loginResult.user,
-            token: loginResult.token,
+            user: {
+              id: u.id,
+              email: u.email ?? email.toLowerCase(),
+              imie: u.imie,
+              nazwisko: u.nazwisko,
+            },
+            token,
           };
         })(),
         PAYLOAD_TIMEOUT_MS,
