@@ -32,6 +32,8 @@ export default function PrzydzialPage() {
   const [trybPrzydzielGodzine, setTrybPrzydzielGodzine] = useState(false);
   const [trybPrzydzielDyrektor, setTrybPrzydzielDyrektor] = useState(false);
   const [trybUsunGodzine, setTrybUsunGodzine] = useState(false);
+  const [trybDodajRozszerzenia, setTrybDodajRozszerzenia] = useState(false);
+  const [trybPrzydzielGodzinyRozszerzen, setTrybPrzydzielGodzinyRozszerzen] = useState(false);
 
   const roczniki = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
   const literki = selectedRocznik
@@ -147,6 +149,9 @@ export default function PrzydzialPage() {
           przydzial: {},
           doradztwo: {},
           dyrektor: {},
+          rozszerzenia: [],
+          rozszerzeniaGodziny: {},
+          rozszerzeniaPrzydzial: {},
         }),
       });
 
@@ -198,6 +203,8 @@ export default function PrzydzialPage() {
                 onClick={() => {
                   setTrybPrzydzielDyrektor(false);
                   setTrybUsunGodzine(false);
+                  setTrybDodajRozszerzenia(false);
+                  setTrybPrzydzielGodzinyRozszerzen(false);
                   setTrybPrzydzielGodzine((v) => !v);
                 }}
                 className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -211,6 +218,8 @@ export default function PrzydzialPage() {
                 onClick={() => {
                   setTrybPrzydzielGodzine(false);
                   setTrybUsunGodzine(false);
+                  setTrybDodajRozszerzenia(false);
+                  setTrybPrzydzielGodzinyRozszerzen(false);
                   setTrybPrzydzielDyrektor((v) => !v);
                 }}
                 className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -224,6 +233,38 @@ export default function PrzydzialPage() {
                 onClick={() => {
                   setTrybPrzydzielGodzine(false);
                   setTrybPrzydzielDyrektor(false);
+                  setTrybUsunGodzine(false);
+                  setTrybPrzydzielGodzinyRozszerzen(false);
+                  setTrybDodajRozszerzenia((v) => !v);
+                }}
+                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybDodajRozszerzenia ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Dodaj rozszerzenia
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTrybPrzydzielGodzine(false);
+                  setTrybPrzydzielDyrektor(false);
+                  setTrybDodajRozszerzenia(false);
+                  setTrybUsunGodzine(false);
+                  setTrybPrzydzielGodzinyRozszerzen((v) => !v);
+                }}
+                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybPrzydzielGodzinyRozszerzen ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Przydziel godziny rozszerzeń
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTrybPrzydzielGodzine(false);
+                  setTrybPrzydzielDyrektor(false);
+                  setTrybDodajRozszerzenia(false);
+                  setTrybPrzydzielGodzinyRozszerzen(false);
                   setTrybUsunGodzine((v) => !v);
                 }}
                 className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -259,7 +300,7 @@ export default function PrzydzialPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Czy na pewno?</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego oraz godziny dyrektorskie.
+              Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego, godziny dyrektorskie, rozszerzenia oraz godziny rozszerzeń.
             </p>
             <div className="flex flex-row gap-3 justify-end pt-2">
               <button
@@ -337,6 +378,8 @@ export default function PrzydzialPage() {
             trybPrzydzielGodzine={trybPrzydzielGodzine}
             trybPrzydzielDyrektor={trybPrzydzielDyrektor}
             trybUsunGodzine={trybUsunGodzine}
+            trybDodajRozszerzenia={trybDodajRozszerzenia}
+            trybPrzydzielGodzinyRozszerzen={trybPrzydzielGodzinyRozszerzen}
           />
         </div>
       )}

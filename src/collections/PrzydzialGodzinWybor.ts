@@ -58,6 +58,33 @@ export const PrzydzialGodzinWybor: CollectionConfig = {
         description: 'Obiekt: klucz = planId_Przedmiot, wartość = { klasa/rok: liczba godzin z puli dyrektorskiej }',
       },
     },
+    {
+      name: 'rozszerzenia',
+      type: 'json',
+      required: false,
+      label: 'Przedmioty z rozszerzeniem',
+      admin: {
+        description: 'Tablica kluczy przedmiotów oznaczonych jako rozszerzenie (planId_Przedmiot)',
+      },
+    },
+    {
+      name: 'rozszerzeniaGodziny',
+      type: 'json',
+      required: false,
+      label: 'Pula godzin rozszerzeń (łącznie)',
+      admin: {
+        description: 'Obiekt: rocznik -> liczba godzin (np. { "I": 1, "II": 1, "III": 2 }) – liczy się we wszystkich przedmiotach rozszerzonych',
+      },
+    },
+    {
+      name: 'rozszerzeniaPrzydzial',
+      type: 'json',
+      required: false,
+      label: 'Godziny rozszerzeń per przedmiot',
+      admin: {
+        description: 'Obiekt: subKey (planId_Przedmiot) -> { rocznik: liczba }. Przy odznaczeniu przedmiotu jego godziny są usuwane z puli.',
+      },
+    },
   ],
   timestamps: true,
 };
