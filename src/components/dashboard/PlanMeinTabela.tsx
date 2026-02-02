@@ -71,12 +71,17 @@ function cellDisplay(row: SubjectRow, grade: string, preferRaw: boolean): React.
 function totalDisplay(row: SubjectRow): React.ReactNode {
   const r = row.raw?.razem;
   const t = row.total_hours;
+  // Wiersz „przedmioty o zakresie rozszerzonym” – w kolumnie Razem domyślnie 0 (nie pokazujemy planowych 8/22)
+  if (row.subject && isPrzedmiotRozszerzony(row.subject)) {
+    if (r !== undefined && r !== '') return <span title="Wartość z tabeli">{r}</span>;
+    return '0';
+  }
   if (r !== undefined && r !== '') return <span title="Wartość z tabeli">{r}</span>;
   if (t !== undefined && t !== null) return String(t);
   if (row.hours_to_choose != null) {
     return <span className="text-gray-500">min. {row.hours_to_choose}</span>;
   }
-  return '–';
+  return '0';
 }
 
 /** Dopasowanie nazwy typu szkoły do school_type z MEiN. Dokładna nazwa; wyjątek: „Szkoła podstawowa, klasy I–III” / „Szkoła podstawowa, klasy IV–VIII” dopasowują się do „Szkoła podstawowa”. */
@@ -768,22 +773,22 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     const canAddDirectorOrPonadprogramowe = klasaId && totalDirectorHours > 0;
                     const maPonadprogramowe = assignedSum > hoursToChoose;
                     const maNadgodzinyDyrektorskie = totalDirectorHours > 0 && assignedDirectorHoursPlan > totalDirectorHours;
-                    /** Suma rzeczywista godzin w wierszu (baza + do wyboru + dyrektorskie + rozszerzenia) – aktualizuje się przy dodawaniu */
+                    /** Suma rzeczywista godzin w wierszu (baza + do wyboru + dyrektorskie + rozszerzenia) – aktualizuje się przy dodawaniu. W wierszu „przedmioty o zakresie rozszerzonym” baza = 0 (tylko przypisane z puli). */
                     const razemRzeczywiste = hasGrades
                       ? grades.reduce(
                           (s, g) =>
                             s +
-                            ((row.hours_by_grade?.[g] ?? 0) as number) +
+                            (czyRozszerzony ? 0 : ((row.hours_by_grade?.[g] ?? 0) as number)) +
                             (assignedByGrade[g] ?? 0) +
                             (directorByGrade[g] ?? 0) +
                             (czyRozszerzony ? (extendedAssignedByGrade[g] ?? 0) : (nazwaPogrubiona ? (rozszerzeniaPrzydzial[subKey]?.[g] ?? 0) : 0)),
                           0
                         )
                       : 0;
-                    /** Liczba planowych godzin z MEiN (Razem w planie) */
-                    const planoweGodziny =
-                      row.total_hours ??
-                      (hasGrades ? grades.reduce((s, g) => s + ((row.hours_by_grade?.[g] ?? 0) as number), 0) : 0);
+                    /** Liczba planowych godzin z MEiN (Razem w planie). W wierszu „przedmioty o zakresie rozszerzonym” = pula (np. 8), nie dodajemy base. */
+                    const planoweGodziny = czyRozszerzony
+                      ? (row.total_hours ?? 0)
+                      : (row.total_hours ?? (hasGrades ? grades.reduce((s, g) => s + ((row.hours_by_grade?.[g] ?? 0) as number), 0) : 0));
 
                     const kafelekNazwaKlikalny = trybDodajRozszerzenia && !tylkoOdczyt && !czyRozszerzony;
                     /** W wierszu „przedmioty o zakresie rozszerzonym”: zrealizowane = suma godzin z puli rozszerzeń (aktualizuje się przy dodawaniu/usuwaniu). Dla przedmiotów oznaczonych jako rozszerzone: zwykłe + pula (np. 2+1=3 z 12). */
