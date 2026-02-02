@@ -29,6 +29,9 @@ export default function PrzydzialPage() {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [komunikat, setKomunikat] = useState<{ typ: 'success' | 'error'; tekst: string } | null>(null);
   const [pokazPotwierdzenieReset, setPokazPotwierdzenieReset] = useState(false);
+  const [trybPrzydzielGodzine, setTrybPrzydzielGodzine] = useState(false);
+  const [trybPrzydzielDyrektor, setTrybPrzydzielDyrektor] = useState(false);
+  const [trybUsunGodzine, setTrybUsunGodzine] = useState(false);
 
   const roczniki = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
   const literki = selectedRocznik
@@ -172,7 +175,7 @@ export default function PrzydzialPage() {
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Przydział</h1>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={generujPrzydzial}
             disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
@@ -187,6 +190,50 @@ export default function PrzydzialPage() {
           >
             {resetowanie ? 'Resetowanie...' : 'Reset'}
           </button>
+          {selectedClass?.id && (
+            <>
+              <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setTrybPrzydzielDyrektor(false);
+                  setTrybUsunGodzine(false);
+                  setTrybPrzydzielGodzine((v) => !v);
+                }}
+                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybPrzydzielGodzine ? 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Przydziel godzinę
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTrybPrzydzielGodzine(false);
+                  setTrybUsunGodzine(false);
+                  setTrybPrzydzielDyrektor((v) => !v);
+                }}
+                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybPrzydzielDyrektor ? 'bg-sky-600 text-white hover:bg-sky-700 ring-2 ring-sky-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Godz. dyrektorskie
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTrybPrzydzielGodzine(false);
+                  setTrybPrzydzielDyrektor(false);
+                  setTrybUsunGodzine((v) => !v);
+                }}
+                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybUsunGodzine ? 'bg-red-600 text-white hover:bg-red-700 ring-2 ring-red-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Usuń godziny
+              </button>
+            </>
+          )}
           <button
             onClick={() => router.push('/dashboard')}
             className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
@@ -287,6 +334,9 @@ export default function PrzydzialPage() {
             nazwaTypuSzkoly={nazwaTypuSzkoly}
             klasaId={selectedClass?.id}
             refetchTrigger={refetchTrigger}
+            trybPrzydzielGodzine={trybPrzydzielGodzine}
+            trybPrzydzielDyrektor={trybPrzydzielDyrektor}
+            trybUsunGodzine={trybUsunGodzine}
           />
         </div>
       )}

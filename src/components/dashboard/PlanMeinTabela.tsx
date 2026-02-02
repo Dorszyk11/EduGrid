@@ -100,6 +100,12 @@ export interface PlanMeinTabelaProps {
   tylkoOdczyt?: boolean;
   /** Gdy się zmieni – odświeża dane z API (np. po „Generuj przydział”) */
   refetchTrigger?: number;
+  /** Tryb „Przydziel godzinę” – sterowany z góry strony (Przydział) */
+  trybPrzydzielGodzine?: boolean;
+  /** Tryb „Dodaj godziny dyrektorskie” – sterowany z góry strony */
+  trybPrzydzielDyrektor?: boolean;
+  /** Tryb „Usuń godziny” – sterowany z góry strony */
+  trybUsunGodzine?: boolean;
   /** Wywoływane po każdej zmianie przydziału „godzin do wyboru” – np. do odświeżenia kafelków realizacji na dashboardzie */
   onPrzydzialChange?: () => void;
   /** Wywoływane po każdej zmianie zrealizowanych godzin doradztwa zawodowego */
@@ -145,7 +151,7 @@ function kolorOdProcentuGodzinDodatkowych(procent: number): string {
   return 'bg-red-400 text-red-950 ring-red-600 font-bold';
 }
 
-export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
+export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
   const cycleFilterAuto = cycleFilter ?? cycleFilterZNazwy(nazwaTypuSzkoly);
   const plans = allPlans.filter(
     (p) =>
@@ -157,6 +163,18 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   const [zrealizowaneDoradztwo, setZrealizowaneDoradztwo] = useState<Record<string, Record<string, number>>>({});
   const [dyrektor, setDyrektor] = useState<Record<string, Record<string, number>>>({});
   const [ladowanieZapis, setLadowanieZapis] = useState(false);
+  /** Modal: czy dodać godzinę ponadprogramową (gdy programowe się skończyły) */
+  const [modalPonadprogramowa, setModalPonadprogramowa] = useState<{
+    subKey: string;
+    grade: string;
+    subjectName: string;
+  } | null>(null);
+  /** Modal: czy dodać godzinę dyrektorską ponad pulę (gdy pula się skończyła) */
+  const [modalDyrektorPonadprogramowa, setModalDyrektorPonadprogramowa] = useState<{
+    subKey: string;
+    grade: string;
+    subjectName: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!klasaId) {
@@ -255,10 +273,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   );
 
   const przydzielGodzine = useCallback(
-    (subKey: string, grade: string, hoursToChoose: number) => {
+    (subKey: string, grade: string, _hoursToChoose?: number) => {
       const bySubject = przydzial[subKey] ?? {};
-      const suma = Object.values(bySubject).reduce((a, b) => a + b, 0);
-      if (suma >= hoursToChoose) return;
       const byGrade = (bySubject[grade] ?? 0) + 1;
       zapiszPrzydzial({
         ...przydzial,
@@ -350,9 +366,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   );
 
   const dodajGodzineDyrektorska = useCallback(
-    (subKey: string, grade: string, totalDirectorHours: number, planId: string | undefined) => {
-      const assigned = assignedDirectorForPlan(planId);
-      if (assigned >= totalDirectorHours) return;
+    (subKey: string, grade: string, _totalDirectorHours?: number, _planId?: string | undefined) => {
       const bySubject = dyrektor[subKey] ?? {};
       const byGrade = (bySubject[grade] ?? 0) + 1;
       zapiszDyrektor({
@@ -360,7 +374,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         [subKey]: { ...bySubject, [grade]: byGrade },
       });
     },
-    [dyrektor, assignedDirectorForPlan, zapiszDyrektor]
+    [dyrektor, zapiszDyrektor]
   );
 
   const usunGodzineDyrektorska = useCallback(
@@ -567,7 +581,13 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     const assignedSum = Object.values(assignedByGrade).reduce((a, b) => a + b, 0);
                     const remaining = hoursToChoose - assignedSum;
                     const canAssign = klasaId && hoursToChoose > 0 && remaining > 0;
+                    /** Klikalne w trybie „Przydziel godzinę” także gdy programowe się skończyły (wtedy pokażemy modal ponadprogramowe) */
+                    const canAssignOrPonadprogramowe = klasaId && hoursToChoose > 0;
                     const canAddDirector = klasaId && totalDirectorHours > 0 && remainingDirectorHours > 0;
+                    /** Klikalne w trybie „Godz. dyrektorskie” także gdy pula się skończyła (wtedy modal ponad pulę) */
+                    const canAddDirectorOrPonadprogramowe = klasaId && totalDirectorHours > 0;
+                    const maPonadprogramowe = assignedSum > hoursToChoose;
+                    const maNadgodzinyDyrektorskie = totalDirectorHours > 0 && assignedDirectorHoursPlan > totalDirectorHours;
 
                     return (
                       <tr
@@ -588,81 +608,107 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                             const total = base + assigned + dirH;
                             const canAssignThis =
                               canAssign && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
-                            const canRemoveThis = klasaId && assigned > 0;
+                            const canAssignOrPonadprogramoweThis =
+                              canAssignOrPonadprogramowe && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
                             const canAddDirectorThis = canAddDirector && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
-                            const canRemoveDirectorThis = klasaId && dirH > 0;
+                            const canAddDirectorOrPonadprogramoweThis = canAddDirectorOrPonadprogramowe && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
+                            const kafelekKlikalnyGodziny = trybPrzydzielGodzine && canAssignOrPonadprogramoweThis;
+                            const kafelekKlikalnyDyrektor = trybPrzydzielDyrektor && canAddDirectorOrPonadprogramoweThis;
+                            const kafelekKlikalnyUsun = trybUsunGodzine && (dirH > 0 || assigned > 0);
+                            const kafelekKlikalny = kafelekKlikalnyGodziny || kafelekKlikalnyDyrektor || kafelekKlikalnyUsun;
+                            const maNadgodzinyDyrektorWKomorce = dirH > 0 && maNadgodzinyDyrektorskie;
+                            const bgPonadprogramowa =
+                              maPonadprogramowe
+                                ? trybUsunGodzine
+                                  ? 'bg-red-200'
+                                  : 'bg-blue-200'
+                                : maNadgodzinyDyrektorWKomorce
+                                  ? trybUsunGodzine
+                                    ? 'bg-red-200'
+                                    : 'bg-sky-200'
+                                  : '';
+                            const bgKlikalny =
+                              kafelekKlikalny
+                                ? kafelekKlikalnyUsun
+                                  ? maPonadprogramowe || maNadgodzinyDyrektorWKomorce
+                                    ? 'cursor-pointer hover:bg-red-300 ring-2 ring-red-400 rounded'
+                                    : 'cursor-pointer bg-red-200 hover:bg-red-300 ring-2 ring-red-400 rounded'
+                                  : kafelekKlikalnyDyrektor
+                                    ? remainingDirectorHours > 0
+                                      ? 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded'
+                                      : 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded'
+                                    : kafelekKlikalnyGodziny
+                                      ? remaining > 0
+                                        ? 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded'
+                                        : 'cursor-pointer bg-blue-200 hover:bg-blue-300 ring-2 ring-blue-400 rounded'
+                                      : ''
+                                : '';
                             return (
                               <td
                                 key={g}
-                                className="px-1.5 sm:px-2 py-1.5 sm:py-2 text-center border-r border-gray-100 w-12 sm:w-14"
+                                className={`px-1.5 sm:px-2 py-1.5 sm:py-2 text-center border-r border-gray-100 w-12 sm:w-14 ${bgPonadprogramowa} ${bgKlikalny}`}
+                                onClick={
+                                  kafelekKlikalnyGodziny
+                                    ? () => {
+                                        if (remaining > 0) {
+                                          przydzielGodzine(subKey, g);
+                                        } else {
+                                          setModalPonadprogramowa({ subKey, grade: g, subjectName: subject });
+                                        }
+                                      }
+                                    : kafelekKlikalnyDyrektor
+                                      ? () => {
+                                          if (remainingDirectorHours > 0) {
+                                            dodajGodzineDyrektorska(subKey, g, totalDirectorHours, plan.plan_id);
+                                          } else {
+                                            setModalDyrektorPonadprogramowa({ subKey, grade: g, subjectName: subject });
+                                          }
+                                        }
+                                      : kafelekKlikalnyUsun
+                                        ? () => {
+                                            if (dirH > 0) usunGodzineDyrektorska(subKey, g);
+                                            else cofnijGodzine(subKey, g);
+                                          }
+                                        : undefined
+                                }
+                                role={kafelekKlikalny ? 'button' : undefined}
+                                title={
+                                  kafelekKlikalnyGodziny
+                                    ? remaining > 0
+                                      ? 'Kliknij, aby dodać 1 godzinę do wyboru'
+                                      : 'Kliknij, aby dodać godzinę ponadprogramową (po potwierdzeniu)'
+                                    : kafelekKlikalnyDyrektor
+                                      ? remainingDirectorHours > 0
+                                        ? 'Kliknij, aby dodać 1 godzinę dyrektorską'
+                                        : 'Kliknij, aby dodać godzinę dyrektorską ponad pulę (po potwierdzeniu)'
+                                      : kafelekKlikalnyUsun
+                                        ? 'Kliknij, aby usunąć 1 godzinę (najpierw dyrektorską, potem do wyboru)'
+                                        : maPonadprogramowe
+                                          ? 'Godziny ponadprogramowe'
+                                          : maNadgodzinyDyrektorWKomorce
+                                            ? 'Nadgodziny dyrektorskie'
+                                            : undefined
+                                }
                               >
-                                <span className="tabular-nums text-gray-700">{total > 0 ? total : '–'}</span>
-                                {!tylkoOdczyt && klasaId && (hoursToChoose > 0 || totalDirectorHours > 0) && (
-                                  <span className="ml-1.5 inline-flex flex-wrap items-center gap-1">
-                                    {hoursToChoose > 0 && (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => canAssignThis && przydzielGodzine(subKey, g, hoursToChoose)}
-                                          disabled={!canAssignThis}
-                                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ${
-                                            canAssignThis
-                                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100'
-                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
-                                          }`}
-                                          title={canAssignThis ? 'Dodaj jedną godzinę do wyboru na ten rok' : 'Brak godzin do przydziału'}
-                                        >
-                                          <span aria-hidden>+</span>
-                                          <span>Dodaj</span>
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => canRemoveThis && cofnijGodzine(subKey, g)}
-                                          disabled={!canRemoveThis}
-                                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ${
-                                            canRemoveThis
-                                              ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100'
-                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
-                                          }`}
-                                          title={canRemoveThis ? 'Usuń przydział jednej godziny' : 'Brak przydzielonych godzin'}
-                                        >
-                                          <span aria-hidden>−</span>
-                                          <span>Usuń</span>
-                                        </button>
-                                      </>
-                                    )}
-                                    {totalDirectorHours > 0 && (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => canAddDirectorThis && dodajGodzineDyrektorska(subKey, g, totalDirectorHours, plan.plan_id)}
-                                          disabled={!canAddDirectorThis}
-                                          className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs font-medium ring-1 ${
-                                            canAddDirectorThis
-                                              ? 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100'
-                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
-                                          }`}
-                                          title={canAddDirectorThis ? 'Dodaj godzinę dyrektorską' : 'Brak godzin dyrektorskich do przydziału'}
-                                        >
-                                          Dyr. +
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => canRemoveDirectorThis && usunGodzineDyrektorska(subKey, g)}
-                                          disabled={!canRemoveDirectorThis}
-                                          className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs font-medium ring-1 ${
-                                            canRemoveDirectorThis
-                                              ? 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100'
-                                              : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
-                                          }`}
-                                          title={canRemoveDirectorThis ? 'Usuń godzinę dyrektorską' : 'Brak godzin dyrektorskich'}
-                                        >
-                                          Dyr. −
-                                        </button>
-                                      </>
-                                    )}
-                                  </span>
-                                )}
+                                <span
+                                  className={`tabular-nums ${
+                                    kafelekKlikalnyUsun
+                                      ? 'font-bold text-red-700'
+                                      : kafelekKlikalnyDyrektor
+                                        ? 'font-bold text-sky-700'
+                                        : kafelekKlikalnyGodziny
+                                          ? remaining > 0
+                                            ? 'font-bold text-green-700'
+                                            : 'font-bold text-blue-700'
+                                          : maPonadprogramowe
+                                            ? 'font-semibold text-blue-800'
+                                            : maNadgodzinyDyrektorWKomorce
+                                              ? 'font-semibold text-sky-800'
+                                              : 'text-gray-700'
+                                  }`}
+                                >
+                                  {total > 0 ? total : '–'}
+                                </span>
                               </td>
                             );
                           })}
@@ -814,6 +860,68 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
           </section>
         );
       })}
+
+      {/* Modal: czy dodać godzinę ponadprogramową */}
+      {modalPonadprogramowa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Godziny ponadprogramowe</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Wszystkie godziny programowe są przydzielone. Czy chcesz dodać godzinę ponadprogramową do przedmiotu „{modalPonadprogramowa.subjectName}"?
+            </p>
+            <div className="flex flex-row gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setModalPonadprogramowa(null)}
+                className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
+              >
+                Nie
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  przydzielGodzine(modalPonadprogramowa.subKey, modalPonadprogramowa.grade);
+                  setModalPonadprogramowa(null);
+                }}
+                className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Tak, dodaj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: czy dodać godzinę dyrektorską ponad pulę */}
+      {modalDyrektorPonadprogramowa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Nadgodziny dyrektorskie</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Wszystkie godziny dyrektorskie są przydzielone. Czy chcesz dodać godzinę dyrektorską ponad pulę do przedmiotu „{modalDyrektorPonadprogramowa.subjectName}"?
+            </p>
+            <div className="flex flex-row gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setModalDyrektorPonadprogramowa(null)}
+                className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
+              >
+                Nie
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  dodajGodzineDyrektorska(modalDyrektorPonadprogramowa.subKey, modalDyrektorPonadprogramowa.grade);
+                  setModalDyrektorPonadprogramowa(null);
+                }}
+                className="px-4 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 font-medium"
+              >
+                Tak, dodaj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
