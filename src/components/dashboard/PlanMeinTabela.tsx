@@ -617,10 +617,10 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         grades.forEach((g) => {
           sumByGrade[g] = (sumByGrade[g] ?? 0) + (extendedAssignedByGrade[g] ?? 0);
         });
-        const extendedPoolSize = getGodzinyRozszerzenia(plan.school_type ?? '');
-        /** Limity godzin rozszerzeń na rok (z wiersza „przedmioty o zakresie rozszerzonym”): I – 1, II – 1, III – 2 itd. */
-        const extendedLimityByGrade: Record<string, number> = {};
+        /** Pula godzin rozszerzeń i limity na rok – z wiersza „przedmioty o zakresie rozszerzonym” w planie (np. liceum 22, technikum 8). */
         const firstRozszerzonyRow = rozszerzonyEntries[0] as SubjectRow | undefined;
+        const extendedPoolSize = firstRozszerzonyRow?.total_hours != null ? (firstRozszerzonyRow.total_hours as number) : getGodzinyRozszerzenia(plan.school_type ?? '');
+        const extendedLimityByGrade: Record<string, number> = {};
         if (firstRozszerzonyRow?.hours_by_grade) {
           grades.forEach((g) => {
             extendedLimityByGrade[g] = (firstRozszerzonyRow.hours_by_grade?.[g] ?? 0) as number;

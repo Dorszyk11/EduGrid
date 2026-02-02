@@ -67,6 +67,29 @@ function isPrzedmiotLaczny(subjectName: string): boolean {
   return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
 }
 
+/** Wiersz „Przedmioty o zakresie rozszerzonym” w planie – pula godzin rozszerzeń. */
+function isRozszerzonyRow(subjectName: string): boolean {
+  return /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/i.test((subjectName || '').trim());
+}
+
+/** Pula godzin rozszerzeń w cyklu (np. liceum/technikum 8). */
+function getGodzinyRozszerzenia(schoolType: string): number {
+  const st = (schoolType || '').trim().toLowerCase();
+  if (st === 'technikum') return 8;
+  if (st.includes('liceum')) return 8;
+  return 0;
+}
+
+function sumRozszerzeniaPrzydzial(rozszerzeniaPrzydzial: Record<string, Record<string, number>>, planId: string | undefined): number {
+  const prefix = (planId ?? 'plan') + '_';
+  let sum = 0;
+  for (const [key, byGrade] of Object.entries(rozszerzeniaPrzydzial)) {
+    if (!key.startsWith(prefix)) continue;
+    for (const v of Object.values(byGrade)) sum += v;
+  }
+  return sum;
+}
+
 export interface DaneRealizacji {
   procentRealizacji: number;
   brakiGodzin: number;
@@ -116,13 +139,23 @@ function assignedDirectorForPlan(dyrektor: Record<string, Record<string, number>
   return sum;
 }
 
+/** Opcjonalne dane z API (przydział dla klasy) – gdy podane, używane zamiast localStorage („dla szkoły”). */
+export interface DanePrzydzialuZApi {
+  przydzial?: Record<string, Record<string, number>>;
+  doradztwo?: Record<string, Record<string, number>>;
+  dyrektor?: Record<string, Record<string, number>>;
+  rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+}
+
 /**
- * Liczy realizację wymagań MEiN na podstawie planu i przypisanych godzin (localStorage).
- * Używane gdy wybrana jest klasa – dane z tabeli „godziny do wyboru” i „doradztwo zawodowe”.
+ * Liczy realizację wymagań MEiN na podstawie planu i przypisanych godzin.
+ * Gdy podane daneZApi – liczy dla szkoły (z API: godziny do wyboru, doradztwo, dyrektor, rozszerzenia).
+ * Bez daneZApi – czyta z localStorage (przydzial, doradztwo, dyrektor; rozszerzenia nie wliczane).
  */
 export function obliczRealizacjaZPrzydzialu(
   nazwaTypuSzkoly: string,
-  klasaId: string
+  klasaId: string,
+  daneZApi?: DanePrzydzialuZApi
 ): DaneRealizacji {
   const cycleFilter = cycleFilterZNazwy(nazwaTypuSzkoly);
   const plans = allPlans.filter(
@@ -131,33 +164,55 @@ export function obliczRealizacjaZPrzydzialu(
       (!cycleFilter || p.cycle === cycleFilter)
   );
 
-  const przydzial = readPrzydzial(klasaId);
-  const doradztwo = readDoradztwo(klasaId);
-  const dyrektor = readDyrektor(klasaId);
+  const przydzial = daneZApi?.przydzial ?? readPrzydzial(klasaId);
+  const doradztwo = daneZApi?.doradztwo ?? readDoradztwo(klasaId);
+  const dyrektor = daneZApi?.dyrektor ?? readDyrektor(klasaId);
+  const rozszerzeniaPrzydzial = daneZApi?.rozszerzeniaPrzydzial ?? {};
 
-  let totalRequired = 0;
-  let totalRealized = 0;
+  /** Suma braków i nadwyżek po pozycjach – żeby np. braki z rozszerzeń i nadwyżki ze zwykłych pokazać obie. */
+  let sumBraki = 0;
+  let sumNadwyzki = 0;
+  /** Do procentu realizacji: tylko godziny do rozdysponowania (do wyboru, dyrektorskie, doradztwo, rozszerzenia). */
+  let requiredDoRozdysponowania = 0;
+  let realizedDoRozdysponowania = 0;
 
   for (const plan of plans) {
     const grades = getGrades(plan);
     const directorRow = plan.subjects.find(isDirectorRow);
     const totalDirectorHours = directorRow?.director_discretion_hours?.total_hours ?? 0;
     if (totalDirectorHours > 0) {
-      totalRequired += totalDirectorHours;
-      totalRealized += assignedDirectorForPlan(dyrektor, plan.plan_id);
+      const real = assignedDirectorForPlan(dyrektor, plan.plan_id);
+      requiredDoRozdysponowania += totalDirectorHours;
+      realizedDoRozdysponowania += real;
+      sumBraki += Math.max(0, totalDirectorHours - real);
+      sumNadwyzki += Math.max(0, real - totalDirectorHours);
     }
     for (const entry of plan.subjects) {
       if (isDirectorRow(entry)) continue;
       const row = entry as SubjectRow;
       const subject = row.subject ?? '';
 
+      if (isRozszerzonyRow(subject)) {
+        const pool = row.total_hours != null ? Number(row.total_hours) : getGodzinyRozszerzenia(plan.school_type ?? '');
+        if (pool > 0) {
+          const real = sumRozszerzeniaPrzydzial(rozszerzeniaPrzydzial, plan.plan_id);
+          requiredDoRozdysponowania += pool;
+          realizedDoRozdysponowania += real;
+          sumBraki += Math.max(0, pool - real);
+          sumNadwyzki += Math.max(0, real - pool);
+        }
+        continue;
+      }
+
       if (isPrzedmiotLaczny(subject)) {
         const req = Number(row.total_hours) || 0;
         const key = subjectKey(plan.plan_id, subject);
         const byGrade = doradztwo[key] ?? {};
         const realized = Object.values(byGrade).reduce((a, b) => a + b, 0);
-        totalRequired += req;
-        totalRealized += realized;
+        requiredDoRozdysponowania += req;
+        realizedDoRozdysponowania += realized;
+        sumBraki += Math.max(0, req - realized);
+        sumNadwyzki += Math.max(0, realized - req);
         continue;
       }
 
@@ -166,23 +221,28 @@ export function obliczRealizacjaZPrzydzialu(
         const key = subjectKey(plan.plan_id, subject);
         const byGrade = przydzial[key] ?? {};
         const realized = Object.values(byGrade).reduce((a, b) => a + b, 0);
-        totalRequired += hoursToChoose;
-        totalRealized += realized;
+        requiredDoRozdysponowania += hoursToChoose;
+        realizedDoRozdysponowania += realized;
+        sumBraki += Math.max(0, hoursToChoose - realized);
+        sumNadwyzki += Math.max(0, realized - hoursToChoose);
         continue;
       }
 
       for (const g of grades) {
         const req = Number(row.hours_by_grade?.[g]) || 0;
-        totalRequired += req;
-        totalRealized += req;
+        sumBraki += Math.max(0, req - req);
+        sumNadwyzki += Math.max(0, req - req);
       }
     }
   }
 
-  const brakiGodzin = Math.max(0, totalRequired - totalRealized);
-  const nadwyzkiGodzin = Math.max(0, totalRealized - totalRequired);
+  const brakiGodzin = sumBraki;
+  const nadwyzkiGodzin = sumNadwyzki;
+  /** Procent realizacji = tylko od godzin do rozdysponowania (np. 15/20 = 75%, nie 95/100). */
   const procentRealizacji =
-    totalRequired > 0 ? Math.min(100, (totalRealized / totalRequired) * 100) : 100;
+    requiredDoRozdysponowania > 0
+      ? Math.min(100, (realizedDoRozdysponowania / requiredDoRozdysponowania) * 100)
+      : 100;
 
   return {
     procentRealizacji,

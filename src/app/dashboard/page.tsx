@@ -111,7 +111,7 @@ export default function DashboardPage() {
     setLadowanie(false);
   }, [typSzkolyId, selectedRocznik, selectedLitera]);
 
-  // Realizacja wymagań: tylko gdy wybrana pełna klasa (typ + rocznik + litera) – z przypisanych godzin
+  // Realizacja wymagań: tylko gdy wybrana pełna klasa – dane z API (dla szkoły: godziny do wyboru, doradztwo, dyrektor, rozszerzenia)
   const nazwaTypuSzkolyDoZgodnosci = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
   useEffect(() => {
     if (!typSzkolyId || !selectedRocznik || !selectedClass?.id || !nazwaTypuSzkolyDoZgodnosci) {
@@ -119,8 +119,27 @@ export default function DashboardPage() {
       setZgodnoscLadowanie(false);
       return;
     }
-    setZgodnoscLadowanie(false);
-    setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypuSzkolyDoZgodnosci, selectedClass.id));
+    setZgodnoscLadowanie(true);
+    let cancelled = false;
+    fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(selectedClass.id)}&_t=${odswiezKafelki}`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
+      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>>; rozszerzeniaPrzydzial?: Record<string, Record<string, number>> }) => {
+        if (cancelled) return;
+        const daneZApi = {
+          przydzial: data.przydzial ?? {},
+          doradztwo: data.doradztwo ?? {},
+          dyrektor: data.dyrektor ?? {},
+          rozszerzeniaPrzydzial: data.rozszerzeniaPrzydzial ?? {},
+        };
+        setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypuSzkolyDoZgodnosci, selectedClass!.id, daneZApi));
+      })
+      .catch(() => {
+        if (!cancelled) setZgodnoscDane(null);
+      })
+      .finally(() => {
+        if (!cancelled) setZgodnoscLadowanie(false);
+      });
+    return () => { cancelled = true; };
   }, [typSzkolyId, selectedRocznik, selectedClass?.id, nazwaTypuSzkolyDoZgodnosci, odswiezKafelki]);
 
   if (ladowanieTypow) {

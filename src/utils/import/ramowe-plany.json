@@ -450,6 +450,12 @@
           "total_hours": 11
         },
         {
+          "lp": 19,
+          "subject": "Przedmioty w zakresie rozszerzonym",
+          "hours_by_grade": { "I": 4, "II": 5, "III": 7, "IV": 6},
+          "total_hours": 22
+        },
+        {
           "director_discretion_hours": {
             "total_hours": 3
           }
@@ -779,6 +785,12 @@
           "subject": "Informatyka",
           "hours_by_grade": { "I": 1, "II": 1, "III": 0, "IV": 0 },
           "total_hours": 2
+        },
+        {
+          "lp": 12,
+          "subject": "Przedmioty w zakresie rozszerzonym",
+          "hours_by_grade": { "I": 1, "II": 2, "III": 3, "IV": 4},
+          "total_hours": 10
         },
         {
           "director_discretion_hours": {

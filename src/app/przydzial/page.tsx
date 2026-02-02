@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
 
 interface TypSzkoly {
@@ -17,12 +16,12 @@ interface KlasaItem {
 }
 
 export default function PrzydzialPage() {
-  const router = useRouter();
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
   const [typSzkolyId, setTypSzkolyId] = useState<string>('');
   const [klasaList, setKlasaList] = useState<KlasaItem[]>([]);
   const [selectedRocznik, setSelectedRocznik] = useState<string>('');
   const [selectedLitera, setSelectedLitera] = useState<string>('');
+  const [ladowanieTypow, setLadowanieTypow] = useState(true);
   const [ladowanieKlas, setLadowanieKlas] = useState(false);
   const [ladowanie, setLadowanie] = useState(false);
   const [resetowanie, setResetowanie] = useState(false);
@@ -43,6 +42,12 @@ export default function PrzydzialPage() {
     (k) => k.rok_szkolny === selectedRocznik && k.nazwa === selectedLitera
   );
   const nazwaTypuSzkoly = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
+  /** Tylko szkoła branżowa i technikum mają „Przydziel godzinę” (godziny do wyboru). */
+  const maGodzinyDoWyboru = /branżowa|technikum/i.test(nazwaTypuSzkoly);
+  /** Liceum i Technikum mają przedmioty w zakresie rozszerzonym (pula godzin rozszerzeń). */
+  const maRozszerzenia = /liceum|technikum/i.test(nazwaTypuSzkoly);
+  /** Szkoła podstawowa 1–3 nie ma przycisku „Generuj przydział”. */
+  const ukryjGenerujPrzydzial = /podstawowa/i.test(nazwaTypuSzkoly) && /1-3|1–3|1—3/.test(nazwaTypuSzkoly);
 
   useEffect(() => {
     pobierzTypySzkol();
@@ -68,6 +73,7 @@ export default function PrzydzialPage() {
   }, [typSzkolyId]);
 
   const pobierzTypySzkol = async () => {
+    setLadowanieTypow(true);
     try {
       const response = await fetch('/api/typy-szkol', { cache: 'no-store' });
       const data = await response.json();
@@ -75,6 +81,8 @@ export default function PrzydzialPage() {
       setTypySzkol(list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' })));
     } catch (error) {
       console.error('Błąd przy pobieraniu typów szkół:', error);
+    } finally {
+      setLadowanieTypow(false);
     }
   };
 
@@ -180,14 +188,16 @@ export default function PrzydzialPage() {
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Przydział</h1>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
-            onClick={generujPrzydzial}
-            disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
-          >
-            {ladowanie ? 'Generowanie...' : 'Generuj przydział'}
-          </button>
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 flex-1 min-w-0">
+          {!ukryjGenerujPrzydzial && (
+            <button
+              onClick={generujPrzydzial}
+              disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+            >
+              {ladowanie ? 'Generowanie...' : 'Generuj przydział'}
+            </button>
+          )}
           <button
             onClick={otworzPotwierdzenieReset}
             disabled={ladowanie || resetowanie || !selectedClass?.id}
@@ -198,21 +208,23 @@ export default function PrzydzialPage() {
           {selectedClass?.id && (
             <>
               <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setTrybPrzydzielDyrektor(false);
-                  setTrybUsunGodzine(false);
-                  setTrybDodajRozszerzenia(false);
-                  setTrybPrzydzielGodzinyRozszerzen(false);
-                  setTrybPrzydzielGodzine((v) => !v);
-                }}
-                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybPrzydzielGodzine ? 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Przydziel godzinę
-              </button>
+              {maGodzinyDoWyboru && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTrybPrzydzielDyrektor(false);
+                    setTrybUsunGodzine(false);
+                    setTrybDodajRozszerzenia(false);
+                    setTrybPrzydzielGodzinyRozszerzen(false);
+                    setTrybPrzydzielGodzine((v) => !v);
+                  }}
+                  className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                    trybPrzydzielGodzine ? 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Przydziel godzinę
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -228,36 +240,42 @@ export default function PrzydzialPage() {
               >
                 Godz. dyrektorskie
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTrybPrzydzielGodzine(false);
-                  setTrybPrzydzielDyrektor(false);
-                  setTrybUsunGodzine(false);
-                  setTrybPrzydzielGodzinyRozszerzen(false);
-                  setTrybDodajRozszerzenia((v) => !v);
-                }}
-                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybDodajRozszerzenia ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Dodaj rozszerzenia
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTrybPrzydzielGodzine(false);
-                  setTrybPrzydzielDyrektor(false);
-                  setTrybDodajRozszerzenia(false);
-                  setTrybUsunGodzine(false);
-                  setTrybPrzydzielGodzinyRozszerzen((v) => !v);
-                }}
-                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybPrzydzielGodzinyRozszerzen ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Przydziel godziny rozszerzeń
-              </button>
+              {maRozszerzenia && (
+                <>
+                  <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTrybPrzydzielGodzine(false);
+                      setTrybPrzydzielDyrektor(false);
+                      setTrybUsunGodzine(false);
+                      setTrybPrzydzielGodzinyRozszerzen(false);
+                      setTrybDodajRozszerzenia((v) => !v);
+                    }}
+                    className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                      trybDodajRozszerzenia ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Dodaj rozszerzenia
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTrybPrzydzielGodzine(false);
+                      setTrybPrzydzielDyrektor(false);
+                      setTrybDodajRozszerzenia(false);
+                      setTrybUsunGodzine(false);
+                      setTrybPrzydzielGodzinyRozszerzen((v) => !v);
+                    }}
+                    className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                      trybPrzydzielGodzinyRozszerzen ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Przydziel godziny rozszerzeń
+                  </button>
+                </>
+              )}
+              <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
               <button
                 type="button"
                 onClick={() => {
@@ -275,12 +293,6 @@ export default function PrzydzialPage() {
               </button>
             </>
           )}
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-          >
-            ← Powrót do dashboardu
-          </button>
         </div>
       </div>
 
@@ -326,9 +338,10 @@ export default function PrzydzialPage() {
         <select
           value={typSzkolyId}
           onChange={(e) => setTypSzkolyId(e.target.value)}
-          className="w-full sm:w-[200px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white"
+          disabled={ladowanieTypow}
+          className="w-full sm:w-[200px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
-          <option value="">Wybierz typ szkoły</option>
+          <option value="">{ladowanieTypow ? 'Ładowanie...' : 'Wybierz typ szkoły'}</option>
           {typySzkol.map((typ) => (
             <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
           ))}
@@ -342,7 +355,7 @@ export default function PrzydzialPage() {
           disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
           className="w-full sm:w-[140px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
-          <option value="">Rocznik</option>
+          <option value="">{ladowanieKlas ? 'Ładowanie...' : 'Rocznik'}</option>
           {roczniki.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
