@@ -9,16 +9,38 @@ export const Klasy: CollectionConfig = {
       "typ_szkoly",
       "rok_szkolny",
       "aktywna",
+      "wlasciciel",
       "updatedAt",
     ],
   },
   access: {
     read: () => true,
     create: () => true,
-    update: () => true,
-    delete: () => true,
+    update: ({ req, data }) => {
+      if (!req.user?.id) return false;
+      const doc = data as { wlasciciel?: string | number | null };
+      if (doc.wlasciciel == null) return true;
+      return String(doc.wlasciciel) === String(req.user.id);
+    },
+    delete: ({ req, data }) => {
+      if (!req.user?.id) return false;
+      const doc = data as { wlasciciel?: string | number | null };
+      if (doc.wlasciciel == null) return true;
+      return String(doc.wlasciciel) === String(req.user.id);
+    },
   },
   fields: [
+    {
+      name: "wlasciciel",
+      type: "relationship",
+      relationTo: "users",
+      required: false,
+      label: "Właściciel (konto twórcy)",
+      admin: {
+        description: "Konto, które utworzyło klasę – tylko ono może ją edytować i usunąć.",
+        readOnly: true,
+      },
+    },
     {
       name: "nazwa",
       type: "text",

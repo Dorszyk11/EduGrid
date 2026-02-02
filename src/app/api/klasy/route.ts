@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@/payload.config";
+import { getCurrentUserId } from "@/utils/auth";
 
 /**
  * GET /api/klasy - Lista klas z opcjonalnymi filtrami
@@ -8,6 +9,7 @@ import config from "@/payload.config";
  */
 export async function GET(request: Request) {
   try {
+    const userId = await getCurrentUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get("typSzkolyId");
     const rokSzkolny = searchParams.get("rokSzkolny");
@@ -31,20 +33,25 @@ export async function GET(request: Request) {
       depth: 1,
     });
 
-    const klasy = result.docs.map((k: any) => ({
-      id: k.id,
-      nazwa: k.nazwa,
-      rok_szkolny: k.rok_szkolny,
-      profil: k.profil ?? null,
-      typ_szkoly: k.typ_szkoly
-        ? {
-            id:
-              typeof k.typ_szkoly === "object" ? k.typ_szkoly.id : k.typ_szkoly,
-            nazwa:
-              typeof k.typ_szkoly === "object" ? k.typ_szkoly.nazwa : undefined,
-          }
-        : null,
-    }));
+    const klasy = result.docs.map((k: any) => {
+      const wlascicielId = k.wlasciciel != null ? String(typeof k.wlasciciel === "object" ? (k.wlasciciel as { id?: string }).id : k.wlasciciel) : null;
+      const can_manage = !wlascicielId || (userId != null && wlascicielId === userId);
+      return {
+        id: k.id,
+        nazwa: k.nazwa,
+        rok_szkolny: k.rok_szkolny,
+        profil: k.profil ?? null,
+        typ_szkoly: k.typ_szkoly
+          ? {
+              id:
+                typeof k.typ_szkoly === "object" ? k.typ_szkoly.id : k.typ_szkoly,
+              nazwa:
+                typeof k.typ_szkoly === "object" ? k.typ_szkoly.nazwa : undefined,
+            }
+          : null,
+        can_manage,
+      };
+    });
 
     return NextResponse.json({ klasy, total: result.totalDocs });
   } catch (error) {
@@ -63,6 +70,14 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
+    const userId = await getCurrentUserId(request);
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Musisz być zalogowany, aby utworzyć klasę." },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const { typ_szkoly_id, rok_poczatku, litera, profil } = body;
 
@@ -127,11 +142,15 @@ export async function POST(request: Request) {
     const rokSzkolnyZakres = `${startYear}-${endYear}`;
     const nazwa = String(litera).trim().toUpperCase();
 
+    // Relacja wlasciciel → users: Payload/Postgres oczekuje liczby (id użytkownika)
+    const wlascicielId = /^\d+$/.test(userId) ? Number(userId) : userId;
+
     const data: Record<string, unknown> = {
       nazwa,
       typ_szkoly: typSzkoly.id,
       rok_szkolny: rokSzkolnyZakres,
       aktywna: true,
+      wlasciciel: wlascicielId,
     };
     if (profil != null && String(profil).trim() !== "") {
       data.profil = String(profil).trim();

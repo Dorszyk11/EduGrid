@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import DashboardLayout from '@/components/layout/DashboardLayout'
+import { AuthProvider } from '@/components/auth/AuthContext'
+import AuthAwareLayout from '@/components/layout/AuthAwareLayout'
 
 export const metadata: Metadata = {
   title: 'EduGrid - System planowania siatki godzin',
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="pl">
       <body>
-        <DashboardLayout>{children}</DashboardLayout>
+        <AuthProvider>
+          <AuthAwareLayout>{children}</AuthAwareLayout>
+        </AuthProvider>
       </body>
     </html>
   )

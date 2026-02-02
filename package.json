@@ -11,6 +11,8 @@
     "generate:types": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
     "generate:importmap": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:importmap",
     "migrate": "cross-env PAYLOAD_CONFIG_PATH=payload.config.ts payload migrate",
+    "test": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts jest --runInBand --forceExit",
+    "test:register:http": "node scripts/test-register-http.js",
     "test:db": "node test-db-connection.js",
     "seed": "node scripts/seed-test-data.js"
   },
@@ -30,6 +32,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
@@ -37,6 +40,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.55.0",
     "eslint-config-next": "^14.0.0",
+    "jest": "^29.7.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "ts-node": "^10.9.2",

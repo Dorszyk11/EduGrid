@@ -25,6 +25,8 @@ interface KlasaAdmin {
   rok_szkolny: string;
   profil: string | null;
   typ_szkoly: { id: string; nazwa?: string } | null;
+  /** true = tylko to konto może edytować/usunąć klasę */
+  can_manage?: boolean;
 }
 
 const TYP_ZAJEC_OPTS = [
@@ -84,7 +86,7 @@ export default function PanelAdminaPage() {
       const [rSzk, rPrz, rKlasy] = await Promise.all([
         fetch('/api/typy-szkol', { cache: 'no-store' }),
         fetch('/api/przedmioty', { cache: 'no-store' }),
-        fetch('/api/klasy', { cache: 'no-store' }),
+        fetch('/api/klasy', { cache: 'no-store', credentials: 'include' }),
       ]);
       const szk = await rSzk.json();
       const prz = await rPrz.json();
@@ -232,6 +234,7 @@ export default function PanelAdminaPage() {
       const res = await fetch('/api/klasy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           typ_szkoly_id: typSzkolyId,
           rok_poczatku: start,
@@ -489,14 +492,18 @@ export default function PanelAdminaPage() {
                         <td className="px-4 py-2 text-gray-600">{k.rok_szkolny}</td>
                         <td className="px-4 py-2 text-gray-600">{k.profil ?? '–'}</td>
                         <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteKlasa(k)}
-                            disabled={deletingKlasaId === String(k.id)}
-                            className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
-                          >
-                            {deletingKlasaId === String(k.id) ? '…' : 'Usuń'}
-                          </button>
+                          {k.can_manage !== false ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteKlasa(k)}
+                              disabled={deletingKlasaId === String(k.id)}
+                              className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
+                            >
+                              {deletingKlasaId === String(k.id) ? '…' : 'Usuń'}
+                            </button>
+                          ) : (
+                            <span className="text-sm text-gray-400" title="Tylko konto twórcy może usunąć tę klasę">–</span>
+                          )}
                         </td>
                       </tr>
                     ))}

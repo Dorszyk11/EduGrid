@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@/payload.config";
+import { getCurrentUserId } from "@/utils/auth";
 
 /**
  * GET /api/klasy/[id] - Pobierz szczegóły klasy z przedmiotami i zgodnością MEiN
@@ -164,6 +165,8 @@ export async function GET(
 
 /**
  * DELETE /api/klasy/[id] - Usuń klasę
+ * Najpierw usuwa powiązane rekordy (przydział godzin wyboru, rozkład godzin),
+ * żeby uniknąć błędu NOT NULL przy klasa_id.
  */
 export async function DELETE(
   _request: NextRequest,
@@ -183,6 +186,47 @@ export async function DELETE(
         { error: "Klasa nie znaleziona" },
         { status: 404 }
       );
+    }
+
+    const userId = await getCurrentUserId(_request);
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Musisz być zalogowany, aby usunąć klasę." },
+        { status: 401 }
+      );
+    }
+    const wlascicielId = (klasa as { wlasciciel?: string | number | null }).wlasciciel;
+    if (wlascicielId != null && String(wlascicielId) !== userId) {
+      return NextResponse.json(
+        { error: "Tylko konto, które utworzyło tę klasę, może ją usunąć." },
+        { status: 403 }
+      );
+    }
+
+    // Usuń rekordy przydziału godzin wyboru powiązane z tą klasą (klasa_id NOT NULL)
+    const przydzialWybor = await payload.find({
+      collection: "przydzial-godzin-wybor",
+      where: { klasa: { equals: klasaId } },
+      limit: 1000,
+    });
+    for (const doc of przydzialWybor.docs) {
+      await payload.delete({
+        collection: "przydzial-godzin-wybor",
+        id: doc.id,
+      });
+    }
+
+    // Usuń rekordy rozkładu godzin powiązane z tą klasą
+    const rozkladGodzin = await payload.find({
+      collection: "rozkład-godzin",
+      where: { klasa: { equals: klasaId } },
+      limit: 5000,
+    });
+    for (const doc of rozkladGodzin.docs) {
+      await payload.delete({
+        collection: "rozkład-godzin",
+        id: doc.id,
+      });
     }
 
     await payload.delete({
