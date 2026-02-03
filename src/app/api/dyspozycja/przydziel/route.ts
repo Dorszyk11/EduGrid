@@ -96,7 +96,7 @@ async function getRozkladTableInfo(client: PoolClient): Promise<TableInfo> {
 }
 
 /** Zwraca sumę przypisanych godzin per (przedmiot_id, rok) dla danej klasy i roku szkolnego. */
-export async function getPrzypisaneGodziny(
+async function getPrzypisaneGodziny(
   client: PoolClient,
   klasaId: string | number,
   rokSzkolny: string
