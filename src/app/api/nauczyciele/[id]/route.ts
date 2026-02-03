@@ -56,6 +56,7 @@ export async function GET(
       const przedmiot = rozklad.przedmiot;
 
       return {
+        id: rozklad.id,
         klasa: {
           id: typeof klasa === "string" ? klasa : klasa.id,
           nazwa: typeof klasa === "string" ? klasa : klasa.nazwa,
@@ -67,6 +68,7 @@ export async function GET(
         godziny_tyg: rozklad.godziny_tyg || 0,
         godziny_roczne: rozklad.godziny_roczne || 0,
         rok_szkolny: rozklad.rok_szkolny,
+        rok: rozklad.rok ?? "",
       };
     });
 
@@ -120,6 +122,32 @@ export async function GET(
     });
   } catch (error) {
     console.error("Błąd przy pobieraniu danych nauczyciela:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Nieznany błąd",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/nauczyciele/[id] - usuń nauczyciela
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const payload = await getPayload({ config });
+    const { id } = await params;
+    await payload.delete({
+      collection: "nauczyciele",
+      id,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Błąd przy usuwaniu nauczyciela:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Nieznany błąd",

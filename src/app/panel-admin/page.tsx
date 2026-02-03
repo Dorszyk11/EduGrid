@@ -29,6 +29,13 @@ interface KlasaAdmin {
   can_manage?: boolean;
 }
 
+interface NauczycielAdmin {
+  id: string | number;
+  imie: string;
+  nazwisko: string;
+  przedmioty: Array<{ id: string | number; nazwa?: string }>;
+}
+
 const TYP_ZAJEC_OPTS = [
   { value: 'ogolnoksztalcace', label: 'Ogólnokształcące' },
   { value: 'zawodowe_teoretyczne', label: 'Zawodowe teoretyczne' },
@@ -57,6 +64,7 @@ export default function PanelAdminaPage() {
   const [szkoly, setSzkoly] = useState<TypSzkoly[]>([]);
   const [przedmioty, setPrzedmioty] = useState<Przedmiot[]>([]);
   const [klasy, setKlasy] = useState<KlasaAdmin[]>([]);
+  const [nauczyciele, setNauczyciele] = useState<NauczycielAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -73,31 +81,42 @@ export default function PanelAdminaPage() {
     rokPoczatku: '',
     profil: '',
   });
+  const [formNauczyciel, setFormNauczyciel] = useState({
+    imie: '',
+    nazwisko: '',
+    przedmiotyIds: [] as string[],
+  });
   const [submittingSzkola, setSubmittingSzkola] = useState(false);
   const [submittingPrzedmiot, setSubmittingPrzedmiot] = useState(false);
   const [submittingKlasa, setSubmittingKlasa] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingPrzedmiotId, setDeletingPrzedmiotId] = useState<string | null>(null);
   const [deletingKlasaId, setDeletingKlasaId] = useState<string | null>(null);
+  const [submittingNauczyciel, setSubmittingNauczyciel] = useState(false);
+  const [deletingNauczycielId, setDeletingNauczycielId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [rSzk, rPrz, rKlasy] = await Promise.all([
+      const [rSzk, rPrz, rKlasy, rNaucz] = await Promise.all([
         fetch('/api/typy-szkol', { cache: 'no-store' }),
         fetch('/api/przedmioty', { cache: 'no-store' }),
         fetch('/api/klasy', { cache: 'no-store', credentials: 'include' }),
+        fetch('/api/nauczyciele', { cache: 'no-store' }),
       ]);
       const szk = await rSzk.json();
       const prz = await rPrz.json();
       const kl = await rKlasy.json();
+      const naucz = await rNaucz.json();
       setSzkoly(Array.isArray(szk) ? szk : []);
       setPrzedmioty(Array.isArray(prz) ? prz : []);
       setKlasy(kl.klasy ?? []);
+      setNauczyciele(Array.isArray(naucz) ? naucz : []);
     } catch {
       setSzkoly([]);
       setPrzedmioty([]);
       setKlasy([]);
+      setNauczyciele([]);
     } finally {
       setLoading(false);
     }
@@ -276,6 +295,55 @@ export default function PanelAdminaPage() {
       setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd usuwania klasy.' });
     } finally {
       setDeletingKlasaId(null);
+    }
+  };
+
+  const handleAddNauczyciel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { imie, nazwisko, przedmiotyIds } = formNauczyciel;
+    if (!imie.trim() || !nazwisko.trim()) {
+      setMsg({ type: 'err', text: 'Wypełnij imię i nazwisko.' });
+      return;
+    }
+    setSubmittingNauczyciel(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/nauczyciele', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imie: imie.trim(),
+          nazwisko: nazwisko.trim(),
+          przedmioty: przedmiotyIds.filter(Boolean),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setMsg({ type: 'ok', text: 'Nauczyciel został dodany.' });
+      setFormNauczyciel({ imie: '', nazwisko: '', przedmiotyIds: [] });
+      fetchAll();
+    } catch (e) {
+      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd dodawania.' });
+    } finally {
+      setSubmittingNauczyciel(false);
+    }
+  };
+
+  const handleDeleteNauczyciel = async (n: NauczycielAdmin) => {
+    if (!confirm(`Usunąć nauczyciela „${n.imie} ${n.nazwisko}"?`)) return;
+    const id = String(n.id);
+    setDeletingNauczycielId(id);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/nauczyciele/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setMsg({ type: 'ok', text: 'Nauczyciel został usunięty.' });
+      fetchAll();
+    } catch (e) {
+      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd usuwania.' });
+    } finally {
+      setDeletingNauczycielId(null);
     }
   };
 
@@ -516,15 +584,133 @@ export default function PanelAdminaPage() {
             </div>
           </section>
 
-          {/* Przedmioty – ukryte (display: none) */}
-          <section className="hidden bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {/* Nauczyciele */}
+          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Przedmioty</h2>
-              <p className="text-sm text-gray-600 mt-0.5">Dodaj nowy przedmiot (nazwa, typ zajęć, poziom).</p>
+              <h2 className="text-lg font-semibold text-gray-900">Nauczyciele</h2>
+              <p className="text-sm text-gray-600 mt-0.5">
+                Dodaj nauczyciela: imię, nazwisko i specjalizację (przedmioty z listy).
+              </p>
             </div>
             <div className="p-5 space-y-5">
-              <div className="hidden">
-                <form onSubmit={handleAddPrzedmiot} className="flex flex-wrap gap-3 items-end">
+              <form onSubmit={handleAddNauczyciel} className="flex flex-wrap gap-4 items-end">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-gray-700">Imię</span>
+                  <input
+                    type="text"
+                    value={formNauczyciel.imie}
+                    onChange={(e) => setFormNauczyciel((s) => ({ ...s, imie: e.target.value }))}
+                    placeholder="np. Jan"
+                    className="rounded-lg border border-gray-300 px-3 py-2 w-40"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-gray-700">Nazwisko</span>
+                  <input
+                    type="text"
+                    value={formNauczyciel.nazwisko}
+                    onChange={(e) => setFormNauczyciel((s) => ({ ...s, nazwisko: e.target.value }))}
+                    placeholder="np. Kowalski"
+                    className="rounded-lg border border-gray-300 px-3 py-2 w-44"
+                  />
+                </label>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-gray-700">Specjalizacja (przedmioty)</span>
+                  {przedmioty.length === 0 ? (
+                    <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200 w-64">
+                      Brak przedmiotów w bazie. Dodaj przedmioty w sekcji „Przedmioty” poniżej – wtedy pojawią się tutaj do wyboru.
+                    </p>
+                  ) : (
+                    <div className="rounded-lg border border-gray-300 bg-gray-50/50 w-64 max-h-48 overflow-y-auto">
+                      <div className="p-2 flex flex-wrap gap-x-3 gap-y-1">
+                        {przedmioty.map((p) => (
+                          <label
+                            key={String(p.id)}
+                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-100 cursor-pointer text-sm text-gray-800"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formNauczyciel.przedmiotyIds.includes(String(p.id))}
+                              onChange={(e) => {
+                                const id = String(p.id);
+                                setFormNauczyciel((s) => ({
+                                  ...s,
+                                  przedmiotyIds: e.target.checked
+                                    ? [...s.przedmiotyIds, id]
+                                    : s.przedmiotyIds.filter((x) => x !== id),
+                                }));
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>{p.nazwa}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {formNauczyciel.przedmiotyIds.length > 0 && (
+                        <p className="text-xs text-gray-500 px-2 pb-2 pt-0 border-t border-gray-200 mt-1 pt-2">
+                          Wybrano: {formNauczyciel.przedmiotyIds.length}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={submittingNauczyciel}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                >
+                  {submittingNauczyciel ? 'Dodawanie…' : 'Dodaj nauczyciela'}
+                </button>
+              </form>
+              <div className="overflow-x-auto mt-6">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50/80">
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Imię</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwisko</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Specjalizacja</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nauczyciele.map((n) => (
+                      <tr key={String(n.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                        <td className="px-4 py-2 font-medium text-gray-900">{n.imie}</td>
+                        <td className="px-4 py-2 font-medium text-gray-900">{n.nazwisko}</td>
+                        <td className="px-4 py-2 text-gray-600">
+                          {n.przedmioty?.length
+                            ? n.przedmioty.map((p) => p.nazwa ?? p.id).join(', ')
+                            : '–'}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNauczyciel(n)}
+                            disabled={deletingNauczycielId === String(n.id)}
+                            className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
+                          >
+                            {deletingNauczycielId === String(n.id) ? '…' : 'Usuń'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {nauczyciele.length === 0 && (
+                  <p className="py-6 text-center text-gray-500 text-sm">Brak nauczycieli. Dodaj pierwszego powyżej.</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Przedmioty – potrzebne do wyboru specjalizacji przy nauczycielach */}
+          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Przedmioty</h2>
+              <p className="text-sm text-gray-600 mt-0.5">Dodaj przedmioty – będą dostępne jako „Specjalizacja” przy dodawaniu nauczycieli.</p>
+            </div>
+            <div className="p-5 space-y-5">
+              <form onSubmit={handleAddPrzedmiot} className="flex flex-wrap gap-3 items-end">
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-gray-700">Nazwa</span>
                     <input
@@ -577,7 +763,6 @@ export default function PanelAdminaPage() {
                     {submittingPrzedmiot ? 'Dodawanie…' : 'Dodaj przedmiot'}
                   </button>
                 </form>
-              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>

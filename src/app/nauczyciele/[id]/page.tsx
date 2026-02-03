@@ -12,6 +12,7 @@ export default function NauczycielPage() {
   const [dane, setDane] = useState<any>(null);
   const [ladowanie, setLadowanie] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usuwanieId, setUsuwanieId] = useState<string | number | null>(null);
 
   useEffect(() => {
     if (nauczycielId) {
@@ -37,6 +38,21 @@ export default function NauczycielPage() {
       setError(err instanceof Error ? err.message : 'Nieznany błąd');
     } finally {
       setLadowanie(false);
+    }
+  };
+
+  const usunPrzypisanie = async (rozkładId: string | number) => {
+    setUsuwanieId(rozkładId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/nauczyciele/obciazenie/${rozkładId}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Błąd usuwania');
+      await pobierzDane();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Błąd usuwania');
+    } finally {
+      setUsuwanieId(null);
     }
   };
 
@@ -126,14 +142,10 @@ export default function NauczycielPage() {
       {/* Podsumowanie obciążenia */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Podsumowanie obciążenia</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-blue-50 p-4 rounded">
             <p className="text-sm text-gray-600">Godziny tygodniowo</p>
             <p className="text-2xl font-bold">{dane.podsumowanie.suma_godzin_tyg}</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Godziny rocznie</p>
-            <p className="text-2xl font-bold">{dane.podsumowanie.suma_godzin_rocznie}</p>
           </div>
           <div className="bg-purple-50 p-4 rounded">
             <p className="text-sm text-gray-600">Procent obciążenia</p>
@@ -196,13 +208,16 @@ export default function NauczycielPage() {
                   Przedmiot
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Rok
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Godz./tyg
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Godz./rok
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Rok szkolny
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  {' '}
                 </th>
               </tr>
             </thead>
@@ -225,14 +240,26 @@ export default function NauczycielPage() {
                       {obc.przedmiot.nazwa}
                     </Link>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-gray-700">
+                    {obc.rok ? obc.rok : '—'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     {obc.godziny_tyg}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {obc.godziny_roczne}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
                     {obc.rok_szkolny}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    {obc.id != null ? (
+                      <button
+                        type="button"
+                        onClick={() => usunPrzypisanie(obc.id)}
+                        disabled={usuwanieId === obc.id}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                      >
+                        {usuwanieId === obc.id ? '…' : 'Usuń'}
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               ))}

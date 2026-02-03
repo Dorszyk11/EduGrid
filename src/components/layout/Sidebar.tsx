@@ -19,7 +19,8 @@ const navigation: NavItem[] = [
   { name: 'Raporty', href: '/raporty', icon: '📈' },
   { name: 'Panel admina', href: '/panel-admin', icon: '⚙️' },
   { name: 'Klasy', href: '/klasy', icon: '👥' },
-  { name: 'Nauczyciele', href: '/admin/collections/nauczyciele', icon: '👨‍🏫' },
+  { name: 'Nauczyciele', href: '/nauczyciele', icon: '👨‍🏫' },
+  { name: 'Dyspozycja', href: '/dyspozycja', icon: '📋' },
 ];
 
 interface SidebarProps {

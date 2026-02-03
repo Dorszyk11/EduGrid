@@ -8,7 +8,7 @@ export const Przedmioty: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: () => false,
+    create: () => true,
     update: () => true,
     delete: () => true,
   },

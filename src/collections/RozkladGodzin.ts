@@ -71,6 +71,14 @@ export const RozkladGodzin: CollectionConfig = {
       },
     },
     {
+      name: "rok",
+      type: "text",
+      label: "Rok (klasa w cyklu)",
+      admin: {
+        description: "Np. I, II, III – który rok w cyklu (do rozliczania „do przydzielenia” w Dyspozycji)",
+      },
+    },
+    {
       name: "godziny_roczne",
       type: "number",
       required: true,

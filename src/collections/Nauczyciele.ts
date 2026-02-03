@@ -7,6 +7,7 @@ export const Nauczyciele: CollectionConfig = {
     defaultColumns: [
       "imie",
       "nazwisko",
+      "przedmioty",
       "email",
       "max_obciazenie",
       "etat",
@@ -37,6 +38,16 @@ export const Nauczyciele: CollectionConfig = {
       label: "Nazwisko",
       admin: {
         description: "Nazwisko nauczyciela",
+      },
+    },
+    {
+      name: "przedmioty",
+      type: "relationship",
+      relationTo: "przedmioty",
+      hasMany: true,
+      label: "Specjalizacja",
+      admin: {
+        description: "Przedmioty, których uczy nauczyciel (z listy przedmiotów)",
       },
     },
     {
