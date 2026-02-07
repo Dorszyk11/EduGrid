@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import plansData from '@/utils/import/ramowe-plany.json';
 
 type HoursByGrade = Record<string, number>;
@@ -79,6 +80,14 @@ function totalDisplay(row: SubjectRow): React.ReactNode {
 export default function PlanyMeinPage() {
   return (
     <div className="p-6 md:p-8 max-w-6xl">
+      <div className="mb-6">
+        <Link
+          href="/przydzial"
+          className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900 font-medium"
+        >
+          ← Powrót do Przydziału
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Plany MEiN</h1>
       <p className="text-gray-600 mb-8">
         Ramowe plany nauczania – szkoły, przedmioty i godziny (tygodniowo w klasach oraz razem w cyklu).

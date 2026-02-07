@@ -85,6 +85,33 @@ export const PrzydzialGodzinWybor: CollectionConfig = {
         description: 'Obiekt: subKey (planId_Przedmiot) -> { rocznik: liczba }. Przy odznaczeniu przedmiotu jego godziny są usuwane z puli.',
       },
     },
+    {
+      name: 'realizacja',
+      type: 'json',
+      required: false,
+      label: 'Realizacja godzin (moduł Realizacja)',
+      admin: {
+        description: 'Obiekt: planId_Przedmiot -> { rok (I, II, …): zrealizowane godziny }. Zapis z zakładki Realizacja.',
+      },
+    },
+    {
+      name: 'podzial_na_grupy',
+      type: 'json',
+      required: false,
+      label: 'Podział na grupy (grupa 1 i 2)',
+      admin: {
+        description: 'Obiekt: planId_Przedmiot -> { rocznik: true }. Komórki z true wyświetlane jako połowa | połowa.',
+      },
+    },
+    {
+      name: 'przydzial_grupy',
+      type: 'json',
+      required: false,
+      label: 'Przydział godzin per grupa (gdy podział włączony)',
+      admin: {
+        description: 'Obiekt: planId_Przedmiot -> { rocznik: { "1": godz. grupa 1, "2": godz. grupa 2 } }. Tylko dla roczników z włączonym podziałem.',
+      },
+    },
   ],
   timestamps: true,
 };

@@ -8,6 +8,8 @@ const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
 const STORAGE_DYREKTOR = 'dyrektor-godziny-';
 
 type HoursByGrade = Record<string, number>;
+/** Dla rocznika z podziałem na grupy: godziny grupy 1 i 2 osobno */
+type PrzydzialGrupyByGrade = Record<string, { 1: number; 2: number }>;
 type RawByGrade = Record<string, string>;
 
 type SubjectRow = {
@@ -115,6 +117,8 @@ export interface PlanMeinTabelaProps {
   trybDodajRozszerzenia?: boolean;
   /** Tryb „Przydziel godziny rozszerzeń” – jak „Przydziel godzinę”, ale tylko w przedmiotach oznaczonych jako rozszerzone (klik dodaje 1 h do puli) */
   trybPrzydzielGodzinyRozszerzen?: boolean;
+  /** Tryb „Podziel na grupy (1 i 2)” – klik w komórkę przełącza podział na pół (wyświetlanie jako grupa 1 | grupa 2) */
+  trybPodzielNaGrupy?: boolean;
   /** Wywoływane po każdej zmianie przydziału „godzin do wyboru” – np. do odświeżenia kafelków realizacji na dashboardzie */
   onPrzydzialChange?: () => void;
   /** Wywoływane po każdej zmianie zrealizowanych godzin doradztwa zawodowego */
@@ -175,7 +179,7 @@ function kolorOdProcentuGodzinDodatkowych(procent: number): string {
   return 'bg-red-400 text-red-950 ring-red-600 font-bold';
 }
 
-export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, trybDodajRozszerzenia = false, trybPrzydzielGodzinyRozszerzen = false, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
+export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, trybDodajRozszerzenia = false, trybPrzydzielGodzinyRozszerzen = false, trybPodzielNaGrupy = false, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
   const cycleFilterAuto = cycleFilter ?? cycleFilterZNazwy(nazwaTypuSzkoly);
   const plans = allPlans.filter(
     (p) =>
@@ -186,6 +190,10 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   const [przydzial, setPrzydzial] = useState<Record<string, Record<string, number>>>({});
   const [zrealizowaneDoradztwo, setZrealizowaneDoradztwo] = useState<Record<string, Record<string, number>>>({});
   const [dyrektor, setDyrektor] = useState<Record<string, Record<string, number>>>({});
+  /** Podział na grupy: subKey -> grade -> true = komórka wyświetlana jako połowa | połowa */
+  const [podzialNaGrupy, setPodzialNaGrupy] = useState<Record<string, Record<string, boolean>>>({});
+  /** Przydział godzin per grupa (1/2) – tylko dla roczników z włączonym podziałem na grupy */
+  const [przydzialGrupy, setPrzydzialGrupy] = useState<Record<string, PrzydzialGrupyByGrade>>({});
   const [ladowanieZapis, setLadowanieZapis] = useState(false);
   /** Modal: czy dodać godzinę ponadprogramową (gdy programowe się skończyły) */
   const [modalPonadprogramowa, setModalPonadprogramowa] = useState<{
@@ -223,7 +231,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     setLadowanieZapis(true);
     fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}&_t=${refetchTrigger ?? 0}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
-      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>>; rozszerzenia?: string[]; rozszerzeniaGodziny?: Record<string, number>; rozszerzeniaPrzydzial?: Record<string, Record<string, number>> }) => {
+      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>>; rozszerzenia?: string[]; rozszerzeniaGodziny?: Record<string, number>; rozszerzeniaPrzydzial?: Record<string, Record<string, number>>; podzialNaGrupy?: Record<string, Record<string, boolean>>; przydzialGrupy?: Record<string, Record<string, { 1: number; 2: number }>> }) => {
         if (cancelled) return;
         const p = data.przydzial && typeof data.przydzial === 'object' ? data.przydzial : {};
         const d = data.doradztwo && typeof data.doradztwo === 'object' ? data.doradztwo : {};
@@ -231,6 +239,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         const rozszerzeniaArr = Array.isArray(data.rozszerzenia) ? data.rozszerzenia : [];
         const rozszPrzydzial = data.rozszerzeniaPrzydzial && typeof data.rozszerzeniaPrzydzial === 'object' ? data.rozszerzeniaPrzydzial : {};
         const rozszGodz = data.rozszerzeniaGodziny && typeof data.rozszerzeniaGodziny === 'object' ? data.rozszerzeniaGodziny : {};
+        const podzial = data.podzialNaGrupy && typeof data.podzialNaGrupy === 'object' ? data.podzialNaGrupy : {};
+        const pg = data.przydzialGrupy && typeof data.przydzialGrupy === 'object' ? data.przydzialGrupy : {};
         setPrzydzial(p);
         setZrealizowaneDoradztwo(d);
         setDyrektor(dy);
@@ -238,6 +248,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         setRozszerzeniaPrzydzial(rozszPrzydzial);
         setExtendedPoolByGradeLegacy(rozszGodz);
         setExtendedCellsAdded(new Set());
+        setPodzialNaGrupy(podzial);
+        setPrzydzialGrupy(pg);
         try {
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(p));
@@ -291,15 +303,17 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   }, [klasaId, refetchTrigger]);
 
   const zapiszDoBazy = useCallback(
-    (p: Record<string, Record<string, number>>, d: Record<string, Record<string, number>>, dy: Record<string, Record<string, number>>, rozszPrzydzial?: Record<string, Record<string, number>>) => {
+    (p: Record<string, Record<string, number>>, d: Record<string, Record<string, number>>, dy: Record<string, Record<string, number>>, rozszPrzydzial?: Record<string, Record<string, number>>, pg?: Record<string, PrzydzialGrupyByGrade>, podzial?: Record<string, Record<string, boolean>>) => {
       if (!klasaId) return;
-      const body: { klasaId: string; przydzial: Record<string, Record<string, number>>; doradztwo: Record<string, Record<string, number>>; dyrektor: Record<string, Record<string, number>>; rozszerzeniaPrzydzial?: Record<string, Record<string, number>> } = {
+      const body: { klasaId: string; przydzial: Record<string, Record<string, number>>; doradztwo: Record<string, Record<string, number>>; dyrektor: Record<string, Record<string, number>>; rozszerzeniaPrzydzial?: Record<string, Record<string, number>>; przydzialGrupy?: Record<string, PrzydzialGrupyByGrade>; podzialNaGrupy?: Record<string, Record<string, boolean>> } = {
         klasaId,
         przydzial: p,
         doradztwo: d,
         dyrektor: dy,
       };
       if (rozszPrzydzial !== undefined) body.rozszerzeniaPrzydzial = rozszPrzydzial;
+      if (pg !== undefined) body.przydzialGrupy = pg;
+      if (podzial !== undefined) body.podzialNaGrupy = podzial;
       fetch('/api/przydzial-godzin-wybor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -330,6 +344,48 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     [klasaId, przydzial, zrealizowaneDoradztwo, dyrektor, rozszerzeniaPrzydzial]
   );
 
+  /** Przełącza podział na grupy (połowa | połowa) w komórce i zapisuje do bazy. Przy włączeniu migruje godziny z przydzial do przydzialGrupy; przy wyłączeniu sumuje grupy z powrotem do przydzial. */
+  const togglePodzialNaGrupy = useCallback(
+    (subKey: string, grade: string) => {
+      if (!klasaId) return;
+      const bySub = podzialNaGrupy[subKey] ?? {};
+      const enabling = !bySub[grade];
+      const nextPodzial = { ...podzialNaGrupy, [subKey]: { ...bySub, [grade]: enabling } };
+      setPodzialNaGrupy(nextPodzial);
+
+      let nextPrzydzial = przydzial;
+      let nextPrzydzialGrupy = przydzialGrupy;
+
+      if (enabling) {
+        const current = (przydzial[subKey] ?? {})[grade] ?? 0;
+        const h1 = Math.floor(current / 2);
+        const h2 = current - h1;
+        const bySubG = przydzialGrupy[subKey] ?? {};
+        nextPrzydzialGrupy = { ...przydzialGrupy, [subKey]: { ...bySubG, [grade]: { 1: h1, 2: h2 } } };
+        setPrzydzialGrupy(nextPrzydzialGrupy);
+        const bySubject = przydzial[subKey] ?? {};
+        const { [grade]: _rem, ...rest } = bySubject;
+        nextPrzydzial = { ...przydzial, [subKey]: rest };
+        if (current > 0) setPrzydzial(nextPrzydzial);
+      } else {
+        const gr = przydzialGrupy[subKey]?.[grade];
+        const sum = (gr?.[1] ?? 0) + (gr?.[2] ?? 0);
+        const bySubG = przydzialGrupy[subKey] ?? {};
+        const { [grade]: _rem, ...restByGrade } = bySubG;
+        nextPrzydzialGrupy = Object.keys(restByGrade).length === 0 ? (() => { const o = { ...przydzialGrupy }; delete o[subKey]; return o; })() : { ...przydzialGrupy, [subKey]: restByGrade };
+        setPrzydzialGrupy(nextPrzydzialGrupy);
+        if (sum > 0) {
+          nextPrzydzial = { ...przydzial, [subKey]: { ...(przydzial[subKey] ?? {}), [grade]: sum } };
+          setPrzydzial(nextPrzydzial);
+        }
+      }
+
+      onPrzydzialChange?.();
+      zapiszDoBazy(nextPrzydzial, zrealizowaneDoradztwo, dyrektor, undefined, nextPrzydzialGrupy, nextPodzial);
+    },
+    [klasaId, podzialNaGrupy, przydzial, przydzialGrupy, zrealizowaneDoradztwo, dyrektor, zapiszDoBazy, onPrzydzialChange]
+  );
+
   const zapiszPrzydzial = useCallback(
     (next: Record<string, Record<string, number>>) => {
       if (!klasaId) return;
@@ -338,13 +394,25 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(next));
       } catch (_) {}
       onPrzydzialChange?.();
-      zapiszDoBazy(next, zrealizowaneDoradztwo, dyrektor);
+      zapiszDoBazy(next, zrealizowaneDoradztwo, dyrektor, undefined, przydzialGrupy);
     },
-    [klasaId, onPrzydzialChange, zrealizowaneDoradztwo, dyrektor, zapiszDoBazy]
+    [klasaId, onPrzydzialChange, zrealizowaneDoradztwo, dyrektor, zapiszDoBazy, przydzialGrupy]
   );
 
   const przydzielGodzine = useCallback(
-    (subKey: string, grade: string, _hoursToChoose?: number) => {
+    (subKey: string, grade: string, _hoursToChoose?: number, group?: 1 | 2) => {
+      if (group === 1 || group === 2) {
+        if (podzialNaGrupy[subKey]?.[grade]) {
+          const bySub = przydzialGrupy[subKey] ?? {};
+          const byGrade = bySub[grade] ?? { 1: 0, 2: 0 };
+          const nextByGrade = { ...byGrade, [group]: (byGrade[group] ?? 0) + 1 };
+          const next = { ...przydzialGrupy, [subKey]: { ...bySub, [grade]: nextByGrade } };
+          setPrzydzialGrupy(next);
+          onPrzydzialChange?.();
+          zapiszDoBazy(przydzial, zrealizowaneDoradztwo, dyrektor, undefined, next);
+          return;
+        }
+      }
       const bySubject = przydzial[subKey] ?? {};
       const byGrade = (bySubject[grade] ?? 0) + 1;
       zapiszPrzydzial({
@@ -352,11 +420,40 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         [subKey]: { ...bySubject, [grade]: byGrade },
       });
     },
-    [przydzial, zapiszPrzydzial]
+    [przydzial, przydzialGrupy, podzialNaGrupy, zapiszPrzydzial, zapiszDoBazy, zrealizowaneDoradztwo, dyrektor, onPrzydzialChange]
   );
 
   const cofnijGodzine = useCallback(
-    (subKey: string, grade: string) => {
+    (subKey: string, grade: string, group?: 1 | 2) => {
+      if (group === 1 || group === 2) {
+        if (podzialNaGrupy[subKey]?.[grade]) {
+          const bySub = przydzialGrupy[subKey] ?? {};
+          const byGrade = bySub[grade] ?? { 1: 0, 2: 0 };
+          const current = byGrade[group] ?? 0;
+          if (current <= 0) {
+            /** Gdy w przydzialGrupy jeszcze brak godzin (dopiero włączono podział), a w przydzial jest stara przypisana godzina – usuń z przydzial. */
+            const oldAssigned = przydzial[subKey]?.[grade] ?? 0;
+            if (oldAssigned > 0) {
+              const bySubject = przydzial[subKey] ?? {};
+              const nextVal = oldAssigned - 1;
+              const nextBySubject = nextVal === 0 ? (() => { const o = { ...bySubject }; delete o[grade]; return o; })() : { ...bySubject, [grade]: nextVal };
+              const cleaned = Object.fromEntries(Object.entries(nextBySubject).filter(([, v]) => v != null && v > 0)) as Record<string, number>;
+              zapiszPrzydzial({ ...przydzial, [subKey]: cleaned });
+              onPrzydzialChange?.();
+              zapiszDoBazy({ ...przydzial, [subKey]: cleaned }, zrealizowaneDoradztwo, dyrektor, undefined, przydzialGrupy);
+            }
+            return;
+          }
+          const nextByGrade = { ...byGrade, [group]: current - 1 };
+          const sum = (nextByGrade[1] ?? 0) + (nextByGrade[2] ?? 0);
+          const nextBySub = sum === 0 ? (() => { const o = { ...bySub }; delete o[grade]; return o; })() : { ...bySub, [grade]: nextByGrade };
+          const next = Object.keys(nextBySub).length === 0 ? (() => { const o = { ...przydzialGrupy }; delete o[subKey]; return o; })() : { ...przydzialGrupy, [subKey]: nextBySub };
+          setPrzydzialGrupy(next);
+          onPrzydzialChange?.();
+          zapiszDoBazy(przydzial, zrealizowaneDoradztwo, dyrektor, undefined, next);
+          return;
+        }
+      }
       const bySubject = przydzial[subKey] ?? {};
       const current = bySubject[grade] ?? 0;
       if (current <= 0) return;
@@ -365,7 +462,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
       const cleaned = Object.fromEntries(Object.entries(nextBySubject).filter(([, v]) => v != null && v > 0)) as Record<string, number>;
       zapiszPrzydzial({ ...przydzial, [subKey]: cleaned });
     },
-    [przydzial, zapiszPrzydzial]
+    [przydzial, przydzialGrupy, podzialNaGrupy, zapiszPrzydzial, zapiszDoBazy, zrealizowaneDoradztwo, dyrektor, onPrzydzialChange]
   );
 
   const doradztwoKey = useCallback((planId: string | undefined, subject: string) => {
@@ -680,25 +777,25 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
               <table className="w-full min-w-[480px] text-left border-collapse text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 w-10 sm:w-12 border-r border-gray-200 text-left">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 w-10 sm:w-12 border-r border-gray-200 text-left">
                       Lp.
                     </th>
-                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 min-w-[100px] sm:min-w-[120px] border-r border-gray-200">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 min-w-[100px] sm:min-w-[120px] border-r border-gray-200">
                       Przedmiot
                     </th>
                     {hasGrades &&
                       grades.map((g) => (
                         <th
                           key={g}
-                          className="px-1.5 sm:px-2 py-1.5 sm:py-2 font-semibold text-gray-700 text-center w-12 sm:w-14 border-r border-gray-200"
+                          className="px-1.5 sm:px-2 py-2.5 sm:py-3 font-semibold text-gray-700 text-center w-12 sm:w-14 border-r border-gray-200"
                         >
                           {g}
                         </th>
                       ))}
-                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 text-right min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 text-right min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
                       Razem
                     </th>
-                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-gray-700 text-right w-20 sm:w-24 border-l border-gray-200 whitespace-nowrap">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 text-right w-20 sm:w-24 border-l border-gray-200 whitespace-nowrap">
                       Zrealizowane godziny
                     </th>
                   </tr>
@@ -756,7 +853,22 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     if (isPrzedmiotLaczny(subject)) return null;
                     const subKey = subjectKey(plan.plan_id, subject);
                     const hoursToChoose = row.hours_to_choose ?? 0;
-                    const assignedByGrade = klasaId ? (przydzial[subKey] ?? {}) : {};
+                    /** Dla roczników z podziałem na grupy bierzemy sumę grup z przydzialGrupy; dla pozostałych z przydzial. */
+                    const assignedByGrade = klasaId
+                      ? (() => {
+                          const fromPrzydzial = przydzial[subKey] ?? {};
+                          const byGrade: Record<string, number> = {};
+                          for (const g of grades) {
+                            if (podzialNaGrupy[subKey]?.[g]) {
+                              const gr = przydzialGrupy[subKey]?.[g];
+                              byGrade[g] = (gr?.[1] ?? 0) + (gr?.[2] ?? 0);
+                            } else {
+                              byGrade[g] = fromPrzydzial[g] ?? 0;
+                            }
+                          }
+                          return byGrade;
+                        })()
+                      : {};
                     const directorByGrade = klasaId ? (dyrektor[subKey] ?? {}) : {};
                     const assignedSum = Object.values(assignedByGrade).reduce((a, b) => a + b, 0);
                     const remaining = hoursToChoose - assignedSum;
@@ -803,16 +915,50 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                         ? hoursToChoose + extendedPoolSize
                         : hoursToChoose + godzinyRozszerzenia;
                     const displayedRemaining = displayedTotal - displayedAssigned;
+                    /** Dla podziału na grupy: wartości per rocznik (do jednej linii wzdłuż lat + Razem). */
+                    const gradeTotals = hasGrades && !czyRozszerzony
+                      ? grades.map((g) => {
+                          const base = (row.hours_by_grade?.[g] ?? 0) as number;
+                          const assigned = assignedByGrade[g] ?? 0;
+                          const dirH = directorByGrade[g] ?? 0;
+                          const total = nazwaPogrubiona && !czyRozszerzony
+                            ? base + assigned + (extendedAssignedByGrade[g] ?? 0) + dirH
+                            : base + assigned + dirH;
+                          return { g, total };
+                        })
+                      : [];
+                    const rowHasPodzial = gradeTotals.length > 0 && gradeTotals.some(({ g }) => podzialNaGrupy[subKey]?.[g] === true);
+                    /** Przy podziale każda grupa ma pełną liczbę godzin. Roczniki bez podziału wliczają się do obu grup (sumH1 i sumH2). */
+                    const sumH1 = gradeTotals.reduce((s, { total }) => s + total, 0);
+                    const sumH2 = sumH1;
+                    /** Przypisane: roczniki z podziałem → grupa 1/2 z przydzialGrupy; gdy brak wpisu w przydzialGrupy, używamy starego przydzial (ta sama liczba u góry i na dole). Roczniki bez podziału → ich godziny do obu grup. */
+                    const assignedG1 = gradeTotals.reduce((s, { g }) => {
+                      if (podzialNaGrupy[subKey]?.[g] !== true) return s + ((assignedByGrade[g] ?? 0) + (directorByGrade[g] ?? 0));
+                      const gr1 = przydzialGrupy[subKey]?.[g]?.[1] ?? 0;
+                      const gr2 = przydzialGrupy[subKey]?.[g]?.[2] ?? 0;
+                      const oldAssigned = przydzial[subKey]?.[g] ?? 0;
+                      const fromGrupy = (gr1 + gr2) > 0 ? gr1 : oldAssigned;
+                      return s + fromGrupy;
+                    }, 0);
+                    const assignedG2 = gradeTotals.reduce((s, { g }) => {
+                      if (podzialNaGrupy[subKey]?.[g] !== true) return s + ((assignedByGrade[g] ?? 0) + (directorByGrade[g] ?? 0));
+                      const gr1 = przydzialGrupy[subKey]?.[g]?.[1] ?? 0;
+                      const gr2 = przydzialGrupy[subKey]?.[g]?.[2] ?? 0;
+                      const oldAssigned = przydzial[subKey]?.[g] ?? 0;
+                      const fromGrupy = (gr1 + gr2) > 0 ? gr2 : oldAssigned;
+                      return s + fromGrupy;
+                    }, 0);
+
+                    const cellPodzialClass = trybPodzielNaGrupy && !tylkoOdczyt ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded' : '';
+                    const cellTallClass = 'py-2.5 sm:py-3 min-h-[3.25rem]';
                     return (
-                      <tr
-                        key={i}
-                        className={`border-b border-gray-100 last:border-0 ${czyRozszerzony ? 'bg-gray-50/50' : ''}`}
-                      >
-                        <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-gray-500 tabular-nums border-r border-gray-100 w-10 sm:w-12 ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-l-2 border-l-gray-400' : ''}`}>
-                          {czyRozszerzony ? 'roz.' : row.lp != null ? row.lp : '–'}
-                        </td>
-                        <td
-                          className={`px-2 sm:px-3 py-1.5 sm:py-2 border-r border-gray-100 min-w-[100px] sm:min-w-0 ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-gray-900' : 'text-gray-800'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded' : ''}`}
+                      <Fragment key={i}>
+                        <tr className={czyRozszerzony ? 'bg-gray-50/50' : ''}>
+                            <td className={`px-2 sm:px-3 ${cellTallClass} text-gray-500 tabular-nums border-r border-gray-100 w-10 sm:w-12 align-top ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-l-2 border-l-gray-400' : ''}`}>
+                              {czyRozszerzony ? 'roz.' : row.lp != null ? row.lp : '–'}
+                            </td>
+                            <td
+                              className={`px-2 sm:px-3 ${cellTallClass} border-r border-gray-100 min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-gray-900' : 'text-gray-800'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded' : ''}`}
                           onClick={
                             kafelekNazwaKlikalny
                               ? () => {
@@ -881,7 +1027,72 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               trybPrzydzielGodzine && !trybPrzydzielGodzinyRozszerzen && canAssignOrPonadprogramoweThis && hoursToChoose > 0;
                             const kafelekKlikalnyDyrektor = trybPrzydzielDyrektor && canAddDirectorOrPonadprogramoweThis;
                             const kafelekKlikalnyUsun = trybUsunGodzine && (dirH > 0 || assigned > 0 || (nazwaPogrubiona && (rozszerzeniaPrzydzial[subKey]?.[g] ?? 0) > 0) || (czyRozszerzony && (extendedAssignedByGrade[g] ?? 0) > 0));
-                            const kafelekKlikalny = kafelekKlikalnyGodziny || kafelekKlikalnyDyrektor || kafelekKlikalnyUsun;
+                            const kafelekKlikalnyPodzial = trybPodzielNaGrupy && !tylkoOdczyt && !czyRozszerzony;
+                            const kafelekKlikalny = kafelekKlikalnyPodzial || kafelekKlikalnyGodziny || kafelekKlikalnyDyrektor || kafelekKlikalnyUsun;
+                            const podzialWlaczony = !czyRozszerzony && (podzialNaGrupy[subKey]?.[g] === true);
+                            if (podzialWlaczony) {
+                              /** Każda grupa ma pełną liczbę godzin (np. 4h w klasie → obie grupy po 4h). Gdy przed podziałem była przypisana godzina – u góry i na dole pokazujemy tę samą liczbę (z przydzial), dopóki nie ma wpisu w przydzialGrupy. */
+                              const planH1 = total;
+                              const planH2 = total;
+                              const gr1 = przydzialGrupy[subKey]?.[g]?.[1] ?? 0;
+                              const gr2 = przydzialGrupy[subKey]?.[g]?.[2] ?? 0;
+                              const oldAssigned = przydzial[subKey]?.[g] ?? 0;
+                              const hasGroupAssignment = (gr1 + gr2) > 0;
+                              const assignedG1Cell = hasGroupAssignment ? gr1 : oldAssigned;
+                              const assignedG2Cell = hasGroupAssignment ? gr2 : oldAssigned;
+                              const remainingG1 = sumH1 - assignedG1;
+                              const remainingG2 = sumH2 - assignedG2;
+                              /** W podzielonej komórce można przydzielać godziny do grupy 1/2 (do limitu planu), także gdy wiersz ma 0 godzin do wyboru. */
+                              const klikPrzydzielG1 = trybPrzydzielGodzine && !trybPrzydzielGodzinyRozszerzen && klasaId && remainingG1 > 0 && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
+                              const klikPrzydzielG2 = trybPrzydzielGodzine && !trybPrzydzielGodzinyRozszerzen && klasaId && remainingG2 > 0 && canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
+                              const klikUsunG1 = trybUsunGodzine && assignedG1Cell > 0;
+                              const klikUsunG2 = trybUsunGodzine && assignedG2Cell > 0;
+                              const subCellBase = 'flex-1 min-h-[1.5rem] flex items-center justify-center px-1 py-1.5 text-xs tabular-nums box-border border border-gray-200 transition-colors';
+                              const subCellHover = (klik: boolean, usun: boolean) => (klik ? 'cursor-pointer hover:bg-amber-50' : usun ? 'cursor-pointer hover:bg-red-50' : kafelekKlikalnyPodzial ? 'cursor-pointer hover:bg-amber-50' : '');
+                              return (
+                                <td
+                                  key={g}
+                                  className={`${cellTallClass} border-r border-gray-100 w-12 sm:w-14 align-top p-0 ${cellPodzialClass}`}
+                                  onContextMenu={(e) => { e.preventDefault(); togglePodzialNaGrupy(subKey, g); }}
+                                  style={{ minHeight: '3.25rem' }}
+                                >
+                                  <div className="flex flex-col h-full min-h-[3.25rem]" style={{ height: '100%' }}>
+                                    <div
+                                      className={`${subCellBase} border-b-2 border-gray-300 ${subCellHover(!!klikPrzydzielG1, !!klikUsunG1)}`}
+                                      style={{ flex: '1 1 50%' }}
+                                      onClick={klikPrzydzielG1 ? () => przydzielGodzine(subKey, g, undefined, 1) : klikUsunG1 ? () => cofnijGodzine(subKey, g, 1) : kafelekKlikalnyPodzial ? () => togglePodzialNaGrupy(subKey, g) : undefined}
+                                      onContextMenu={(e) => {
+                                        if (trybPrzydzielGodzine && assignedG1Cell > 0) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          cofnijGodzine(subKey, g, 1);
+                                        }
+                                      }}
+                                      role={klikPrzydzielG1 || klikUsunG1 || kafelekKlikalnyPodzial ? 'button' : undefined}
+                                      title={kafelekKlikalnyPodzial ? 'Wyłącz podział (prawy przycisk)' : klikPrzydzielG1 ? 'Dodaj 1 h (gr. 1); prawy: usuń' : klikUsunG1 ? 'Usuń 1 h (gr. 1)' : assignedG1Cell > 0 ? 'Prawy przycisk: usuń 1 h (gr. 1)' : undefined}
+                                    >
+                                      {klasaId ? (assignedG1Cell > 0 ? (planH1 > 0 ? (assignedG1Cell === planH1 ? String(assignedG1Cell) : `${assignedG1Cell} z ${planH1}`) : String(assignedG1Cell)) : (planH1 > 0 ? String(planH1) : '–')) : planH1 > 0 ? String(planH1) : '–'}
+                                    </div>
+                                    <div
+                                      className={`${subCellBase} border-t-0 ${subCellHover(!!klikPrzydzielG2, !!klikUsunG2)}`}
+                                      style={{ flex: '1 1 50%' }}
+                                      onClick={klikPrzydzielG2 ? () => przydzielGodzine(subKey, g, undefined, 2) : klikUsunG2 ? () => cofnijGodzine(subKey, g, 2) : kafelekKlikalnyPodzial ? () => togglePodzialNaGrupy(subKey, g) : undefined}
+                                      onContextMenu={(e) => {
+                                        if (trybPrzydzielGodzine && assignedG2Cell > 0) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          cofnijGodzine(subKey, g, 2);
+                                        }
+                                      }}
+                                      role={klikPrzydzielG2 || klikUsunG2 || kafelekKlikalnyPodzial ? 'button' : undefined}
+                                      title={kafelekKlikalnyPodzial ? 'Wyłącz podział (prawy przycisk)' : klikPrzydzielG2 ? 'Dodaj 1 h (gr. 2); prawy: usuń' : klikUsunG2 ? 'Usuń 1 h (gr. 2)' : assignedG2Cell > 0 ? 'Prawy przycisk: usuń 1 h (gr. 2)' : undefined}
+                                    >
+                                      {klasaId ? (assignedG2Cell > 0 ? (planH2 > 0 ? (assignedG2Cell === planH2 ? String(assignedG2Cell) : `${assignedG2Cell} z ${planH2}`) : String(assignedG2Cell)) : (planH2 > 0 ? String(planH2) : '–')) : planH2 > 0 ? String(planH2) : '–'}
+                                    </div>
+                                  </div>
+                                </td>
+                              );
+                            }
                             const maNadgodzinyDyrektorWKomorce = dirH > 0 && maNadgodzinyDyrektorskie;
                             const maGodzinyDyrektorskie = dirH > 0;
                             /** Tło tylko w komórce z przypisaną godziną: fioletowe – godziny rozszerzeń, sky – ponadgodziny zwykłe i nadgodziny dyrektorskie, czerwone – tryb usuwania. W trybie „Przydziel godzinę” nie kładziemy fioletu – ma być zielone. */
@@ -944,12 +1155,29 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                       ? 'text-amber-900 font-semibold'
                                       : 'text-red-900 font-semibold'
                                 : '';
+                            const trybDodawaniaGodzin = trybPrzydzielGodzine || trybPrzydzielDyrektor || trybPrzydzielGodzinyRozszerzen;
+                            const maCoUsunac = (czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0 || dirH > 0 || assigned > 0;
+                            const onContextMenuUsun = trybDodawaniaGodzin && !tylkoOdczyt && maCoUsunac
+                              ? (e: React.MouseEvent) => {
+                                  e.preventDefault();
+                                  if ((czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0) {
+                                    cofnijGodzineRozszerzen(g, planIdPrefix, nazwaPogrubiona ? subKey : undefined);
+                                  } else if (dirH > 0) {
+                                    usunGodzineDyrektorska(subKey, g);
+                                  } else {
+                                    cofnijGodzine(subKey, g);
+                                  }
+                                }
+                              : undefined;
                             return (
                               <td
                                 key={g}
-                                className={`px-1.5 sm:px-2 py-1.5 sm:py-2 text-center border-r border-gray-100 w-12 sm:w-14 ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${bgKlikalny} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
+                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-gray-100 w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded' : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
+                                onContextMenu={onContextMenuUsun}
                                 onClick={
-                                  kafelekKlikalnyGodziny
+                                  kafelekKlikalnyPodzial
+                                    ? () => togglePodzialNaGrupy(subKey, g)
+                                    : kafelekKlikalnyGodziny
                                     ? () => {
                                         if (trybPrzydzielGodzinyRozszerzen && klikalneRozszerzeniaThis) {
                                           setExtendedCellsAdded((prev) => new Set(prev).add(`${subKey}_${g}`));
@@ -979,18 +1207,22 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                 }
                                 role={kafelekKlikalny ? 'button' : undefined}
                                 title={
-                                  kafelekKlikalnyGodziny
+                                  kafelekKlikalnyPodzial
+                                    ? podzialNaGrupy[subKey]?.[g] ? 'Kliknij, aby wyłączyć podział na grupy' : 'Kliknij, aby podzielić na grupy 1 i 2 (połowa | połowa)'
+                                    : kafelekKlikalnyGodziny
                                     ? trybPrzydzielGodzinyRozszerzen && klikalneRozszerzeniaThis
-                                      ? 'Kliknij, aby dodać 1 godzinę rozszerzeń'
+                                      ? 'Kliknij, aby dodać 1 godzinę rozszerzeń (prawy przycisk: usuń)'
                                       : remaining > 0
-                                        ? 'Kliknij, aby dodać 1 godzinę do wyboru'
+                                        ? 'Kliknij, aby dodać 1 godzinę do wyboru (prawy przycisk: usuń)'
                                         : 'Kliknij, aby dodać godzinę ponadprogramową (po potwierdzeniu)'
                                     : kafelekKlikalnyDyrektor
                                       ? remainingDirectorHours > 0
-                                        ? 'Kliknij, aby dodać 1 godzinę dyrektorską'
+                                        ? 'Kliknij, aby dodać 1 godzinę dyrektorską (prawy przycisk: usuń)'
                                         : 'Kliknij, aby dodać godzinę dyrektorską ponad pulę (po potwierdzeniu)'
                                       : kafelekKlikalnyUsun
                                         ? 'Kliknij, aby usunąć 1 godzinę (najpierw dyrektorską, potem do wyboru)'
+                                        : maCoUsunac && trybDodawaniaGodzin
+                                          ? 'Prawy przycisk: usuń 1 godzinę'
                                         : maPonadprogramowe
                                           ? 'Godziny ponadprogramowe'
                                           : maNadgodzinyDyrektorWKomorce
@@ -1034,13 +1266,26 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                           )}
                                         </>
                                       ) : '–')
-                                    : (cellDisplayTotal > 0 ? cellDisplayTotal : '–')}
+                                    : cellDisplayTotal > 0
+                                      ? podzialWlaczony
+                                        ? (() => {
+                                            const h1 = Math.floor(cellDisplayTotal / 2);
+                                            const h2 = cellDisplayTotal - h1;
+                                            return <>{h1} | {h2}</>;
+                                          })()
+                                        : cellDisplayTotal
+                                      : '–'}
                                 </span>
                               </td>
                             );
                           })}
-                        <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums font-medium text-gray-800 border-r border-gray-100 min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28 ${obramowanieRozszerzony}`}>
-                          {klasaId && hasGrades ? (
+                        <td className={`px-2 sm:px-3 ${cellTallClass} text-right tabular-nums font-medium text-gray-800 border-r border-gray-100 min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28 align-top ${obramowanieRozszerzony}`}>
+                          {rowHasPodzial ? (
+                            <span className="block text-xs">
+                              <span className="block">{sumH1}</span>
+                              <span className="block border-t border-gray-200 mt-0.5 pt-0.5">{sumH2}</span>
+                            </span>
+                          ) : klasaId && hasGrades ? (
                             <>
                               <span className="tabular-nums">{razemRzeczywiste}</span>
                               {razemRzeczywiste !== planoweGodziny && (
@@ -1054,21 +1299,39 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           )}
                         </td>
                         <td
-                          className={`px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-gray-200 w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
-                            klasaId && (row.hours_to_choose != null && row.hours_to_choose > 0 || godzinyRozszerzenia > 0 || (czyRozszerzony && planoweGodziny > 0))
-                              ? displayedAssigned > displayedTotal
-                                ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
-                                : displayedAssigned === displayedTotal
-                                  ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded'
-                                  : displayedRemaining === 1
-                                    ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded'
-                                    : displayedRemaining > 0
-                                      ? 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded'
-                                      : ''
-                              : ''
+                          className={`px-2 sm:px-3 ${cellTallClass} text-right border-l border-gray-200 w-20 sm:w-24 text-xs sm:text-sm align-top ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
+                            rowHasPodzial
+                              ? ''
+                              : klasaId && (row.hours_to_choose != null && row.hours_to_choose > 0 || godzinyRozszerzenia > 0 || (czyRozszerzony && planoweGodziny > 0))
+                                ? displayedAssigned > displayedTotal
+                                  ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
+                                  : displayedAssigned === displayedTotal
+                                    ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded'
+                                    : displayedRemaining === 1
+                                      ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded'
+                                      : displayedRemaining > 0
+                                        ? 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded'
+                                        : ''
+                                : ''
                           }`}
                         >
-                          {row.hours_to_choose != null || godzinyRozszerzenia > 0 || (czyRozszerzony && planoweGodziny > 0) ? (
+                          {rowHasPodzial ? (
+                            (() => {
+                              /** Przy podziale: górna/dolna linia tylko gdy przedmiot ma „godziny do zrealizowania” (do wyboru lub rozszerzenia). Gdy nie ma (np. polski) – zostaje „–”. */
+                              const zrealizowaneTotal = sumH1;
+                              const fmt = (a: number, tot: number) => (tot > 0 && a === tot ? String(a) : `${a} z ${tot}`);
+                              return (
+                                <span className="block text-xs tabular-nums">
+                                  <span className={`block py-0.5 ${assignedG1 > zrealizowaneTotal ? 'text-blue-900 font-semibold' : assignedG1 === zrealizowaneTotal ? 'text-green-900 font-semibold' : zrealizowaneTotal - assignedG1 === 1 ? 'text-amber-900 font-semibold' : zrealizowaneTotal - assignedG1 > 0 ? 'text-red-900 font-semibold' : ''}`}>
+                                    {fmt(assignedG1, zrealizowaneTotal)}
+                                  </span>
+                                  <span className={`block border-t border-gray-200 py-0.5 mt-0.5 ${assignedG2 > zrealizowaneTotal ? 'text-blue-900 font-semibold' : assignedG2 === zrealizowaneTotal ? 'text-green-900 font-semibold' : zrealizowaneTotal - assignedG2 === 1 ? 'text-amber-900 font-semibold' : zrealizowaneTotal - assignedG2 > 0 ? 'text-red-900 font-semibold' : ''}`}>
+                                    {fmt(assignedG2, zrealizowaneTotal)}
+                                  </span>
+                                </span>
+                              );
+                            })()
+                          ) : row.hours_to_choose != null || godzinyRozszerzenia > 0 || (czyRozszerzony && planoweGodziny > 0) ? (
                             klasaId ? (
                               <span className="tabular-nums">
                                 {displayedAssigned} z {displayedTotal}
@@ -1089,6 +1352,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           )}
                         </td>
                       </tr>
+                    </Fragment>
                     );
                   })}
                 </tbody>

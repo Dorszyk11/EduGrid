@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
 
 interface TypSzkoly {
@@ -33,6 +34,7 @@ export default function PrzydzialPage() {
   const [trybUsunGodzine, setTrybUsunGodzine] = useState(false);
   const [trybDodajRozszerzenia, setTrybDodajRozszerzenia] = useState(false);
   const [trybPrzydzielGodzinyRozszerzen, setTrybPrzydzielGodzinyRozszerzen] = useState(false);
+  const [trybPodzielNaGrupy, setTrybPodzielNaGrupy] = useState(false);
 
   const roczniki = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
   const literki = selectedRocznik
@@ -160,6 +162,8 @@ export default function PrzydzialPage() {
           rozszerzenia: [],
           rozszerzeniaGodziny: {},
           rozszerzeniaPrzydzial: {},
+          podzialNaGrupy: {},
+          przydzialGrupy: {},
         }),
       });
 
@@ -189,6 +193,12 @@ export default function PrzydzialPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Przydział</h1>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 flex-1 min-w-0">
+          <Link
+            href="/plany-mein"
+            className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium border border-gray-300"
+          >
+            Zobacz plany MEiN
+          </Link>
           {!ukryjGenerujPrzydzial && (
             <button
               onClick={generujPrzydzial}
@@ -216,6 +226,7 @@ export default function PrzydzialPage() {
                     setTrybUsunGodzine(false);
                     setTrybDodajRozszerzenia(false);
                     setTrybPrzydzielGodzinyRozszerzen(false);
+                    setTrybPodzielNaGrupy(false);
                     setTrybPrzydzielGodzine((v) => !v);
                   }}
                   className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -227,13 +238,14 @@ export default function PrzydzialPage() {
               )}
               <button
                 type="button"
-                onClick={() => {
-                  setTrybPrzydzielGodzine(false);
-                  setTrybUsunGodzine(false);
-                  setTrybDodajRozszerzenia(false);
-                  setTrybPrzydzielGodzinyRozszerzen(false);
-                  setTrybPrzydzielDyrektor((v) => !v);
-                }}
+                  onClick={() => {
+                    setTrybPrzydzielGodzine(false);
+                    setTrybUsunGodzine(false);
+                    setTrybDodajRozszerzenia(false);
+                    setTrybPrzydzielGodzinyRozszerzen(false);
+                    setTrybPodzielNaGrupy(false);
+                    setTrybPrzydzielDyrektor((v) => !v);
+                  }}
                 className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
                   trybPrzydzielDyrektor ? 'bg-sky-600 text-white hover:bg-sky-700 ring-2 ring-sky-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
@@ -250,6 +262,7 @@ export default function PrzydzialPage() {
                       setTrybPrzydzielDyrektor(false);
                       setTrybUsunGodzine(false);
                       setTrybPrzydzielGodzinyRozszerzen(false);
+                      setTrybPodzielNaGrupy(false);
                       setTrybDodajRozszerzenia((v) => !v);
                     }}
                     className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -265,6 +278,7 @@ export default function PrzydzialPage() {
                       setTrybPrzydzielDyrektor(false);
                       setTrybDodajRozszerzenia(false);
                       setTrybUsunGodzine(false);
+                      setTrybPodzielNaGrupy(false);
                       setTrybPrzydzielGodzinyRozszerzen((v) => !v);
                     }}
                     className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -283,6 +297,23 @@ export default function PrzydzialPage() {
                   setTrybPrzydzielDyrektor(false);
                   setTrybDodajRozszerzenia(false);
                   setTrybPrzydzielGodzinyRozszerzen(false);
+                  setTrybUsunGodzine(false);
+                  setTrybPodzielNaGrupy((v) => !v);
+                }}
+                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybPodzielNaGrupy ? 'bg-amber-600 text-white hover:bg-amber-700 ring-2 ring-amber-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Podziel na grupy (1 i 2)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTrybPrzydzielGodzine(false);
+                  setTrybPrzydzielDyrektor(false);
+                  setTrybDodajRozszerzenia(false);
+                  setTrybPrzydzielGodzinyRozszerzen(false);
+                  setTrybPodzielNaGrupy(false);
                   setTrybUsunGodzine((v) => !v);
                 }}
                 className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
@@ -312,7 +343,7 @@ export default function PrzydzialPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Czy na pewno?</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego, godziny dyrektorskie, rozszerzenia oraz godziny rozszerzeń.
+              Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego, godziny dyrektorskie, rozszerzenia, godziny rozszerzeń oraz podziały na grupy.
             </p>
             <div className="flex flex-row gap-3 justify-end pt-2">
               <button
@@ -393,6 +424,7 @@ export default function PrzydzialPage() {
             trybUsunGodzine={trybUsunGodzine}
             trybDodajRozszerzenia={trybDodajRozszerzenia}
             trybPrzydzielGodzinyRozszerzen={trybPrzydzielGodzinyRozszerzen}
+            trybPodzielNaGrupy={trybPodzielNaGrupy}
           />
         </div>
       )}

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     const doc = result.docs[0] as any;
     if (!doc) {
-      return NextResponse.json({ przydzial: {}, doradztwo: {}, dyrektor: {}, rozszerzenia: [], rozszerzeniaGodziny: {}, rozszerzeniaPrzydzial: {} });
+      return NextResponse.json({ przydzial: {}, doradztwo: {}, dyrektor: {}, rozszerzenia: [], rozszerzeniaGodziny: {}, rozszerzeniaPrzydzial: {}, realizacja: {}, podzialNaGrupy: {}, przydzialGrupy: {} });
     }
 
     const rozszerzenia = doc.rozszerzenia;
@@ -44,6 +44,9 @@ export async function GET(request: Request) {
     }
     const rozszerzeniaGodziny = Object.keys(byGrade).length > 0 ? byGrade : rozszerzeniaGodzinyRaw;
 
+    const realizacja = doc.realizacja && typeof doc.realizacja === 'object' ? doc.realizacja : {};
+    const podzialNaGrupy = doc.podzial_na_grupy && typeof doc.podzial_na_grupy === 'object' ? doc.podzial_na_grupy : {};
+    const przydzialGrupy = doc.przydzial_grupy && typeof doc.przydzial_grupy === 'object' ? doc.przydzial_grupy : {};
     return NextResponse.json({
       przydzial: doc.przydzial ?? {},
       doradztwo: doc.doradztwo ?? {},
@@ -51,6 +54,9 @@ export async function GET(request: Request) {
       rozszerzenia: rozszerzeniaArr,
       rozszerzeniaGodziny: rozszerzeniaGodziny,
       rozszerzeniaPrzydzial: rozszerzeniaPrzydzial,
+      realizacja,
+      podzialNaGrupy,
+      przydzialGrupy,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Nieznany błąd';
@@ -61,13 +67,13 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/przydzial-godzin-wybor
- * Body: { klasaId: string, przydzial?, doradztwo?, dyrektor?, rozszerzenia?, rozszerzeniaGodziny?, rozszerzeniaPrzydzial? }
+ * Body: { klasaId: string, przydzial?, doradztwo?, dyrektor?, rozszerzenia?, rozszerzeniaGodziny?, rozszerzeniaPrzydzial?, realizacja?, podzialNaGrupy? }
  * Tworzy lub aktualizuje zapis dla klasy (upsert). Gdy podane rozszerzenia – rozszerzeniaPrzydzial jest filtrowane do kluczy z listy (godziny odznaczonego przedmiotu znikają z puli).
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial } = body;
+    const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial, realizacja, podzialNaGrupy, przydzialGrupy } = body;
     if (!klasaId) {
       return NextResponse.json({ error: 'klasaId jest wymagane' }, { status: 400 });
     }
@@ -113,6 +119,9 @@ export async function POST(request: NextRequest) {
           }
           return byGrade;
         })();
+      const realizacjaVal = realizacja !== undefined && realizacja !== null && typeof realizacja === 'object' ? realizacja : (doc.realizacja && typeof doc.realizacja === 'object' ? doc.realizacja : {});
+      const podzialNaGrupyVal = podzialNaGrupy !== undefined && podzialNaGrupy !== null && typeof podzialNaGrupy === 'object' ? podzialNaGrupy : (doc.podzial_na_grupy && typeof doc.podzial_na_grupy === 'object' ? doc.podzial_na_grupy : {});
+      const przydzialGrupyVal = przydzialGrupy !== undefined && przydzialGrupy !== null && typeof przydzialGrupy === 'object' ? przydzialGrupy : (doc.przydzial_grupy && typeof doc.przydzial_grupy === 'object' ? doc.przydzial_grupy : {});
       await payload.update({
         collection: 'przydzial-godzin-wybor',
         id: doc.id,
@@ -123,6 +132,9 @@ export async function POST(request: NextRequest) {
           rozszerzenia: rozszerzeniaVal,
           rozszerzeniaGodziny: rozszerzeniaGodzinyFinal,
           rozszerzeniaPrzydzial: rozszerzeniaPrzydzialFinal,
+          realizacja: realizacjaVal,
+          podzial_na_grupy: podzialNaGrupyVal,
+          przydzial_grupy: przydzialGrupyVal,
         },
       });
       return NextResponse.json({ ok: true, updated: true });
@@ -147,6 +159,9 @@ export async function POST(request: NextRequest) {
         }
         return byGrade;
       })();
+    const realizacjaCreate = realizacja !== undefined && realizacja !== null && typeof realizacja === 'object' ? realizacja : {};
+    const podzialNaGrupyCreate = podzialNaGrupy !== undefined && podzialNaGrupy !== null && typeof podzialNaGrupy === 'object' ? podzialNaGrupy : {};
+    const przydzialGrupyCreate = przydzialGrupy !== undefined && przydzialGrupy !== null && typeof przydzialGrupy === 'object' ? przydzialGrupy : {};
     await payload.create({
       collection: 'przydzial-godzin-wybor',
       data: {
@@ -157,6 +172,9 @@ export async function POST(request: NextRequest) {
         rozszerzenia: rozszerzeniaArr,
         rozszerzeniaGodziny: rozszerzeniaGodzinyCreate,
         rozszerzeniaPrzydzial: rozszerzeniaPrzydzialCreate,
+        realizacja: realizacjaCreate,
+        podzial_na_grupy: podzialNaGrupyCreate,
+        przydzial_grupy: przydzialGrupyCreate,
       },
     });
     return NextResponse.json({ ok: true, created: true });

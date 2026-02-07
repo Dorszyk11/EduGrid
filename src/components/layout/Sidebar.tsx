@@ -14,13 +14,12 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
   { name: 'Przydział', href: '/przydzial', icon: '⚙️' },
-  { name: 'Plany MEiN', href: '/plany-mein', icon: '🏫' },
-  { name: 'Import MEiN', href: '/import/mein-pdf', icon: '📥' },
-  { name: 'Raporty', href: '/raporty', icon: '📈' },
-  { name: 'Panel admina', href: '/panel-admin', icon: '⚙️' },
+  { name: 'Realizacja', href: '/realizacja', icon: '📅' },
+  { name: 'Dyspozycja', href: '/dyspozycja', icon: '📋' },
   { name: 'Klasy', href: '/klasy', icon: '👥' },
   { name: 'Nauczyciele', href: '/nauczyciele', icon: '👨‍🏫' },
-  { name: 'Dyspozycja', href: '/dyspozycja', icon: '📋' },
+  { name: 'Raporty', href: '/raporty', icon: '📈' },
+  { name: 'Panel admina', href: '/panel-admin', icon: '⚙️' },
 ];
 
 interface SidebarProps {
