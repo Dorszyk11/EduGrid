@@ -83,6 +83,9 @@ export default function RealizacjaPage() {
     doradztwo: Record<string, Record<string, number>>;
     rozszerzenia: string[];
     rozszerzeniaPrzydzial: Record<string, Record<string, number>>;
+    podzialNaGrupy?: Record<string, Record<string, boolean>>;
+    przydzialGrupy?: Record<string, Record<string, { 1: number; 2: number }>>;
+    dyrektorGrupy?: Record<string, Record<string, { 1: number; 2: number }>>;
   } | null>(null);
   const [ladowaniePlanu, setLadowaniePlanu] = useState(false);
   /** Tryb „Dodaj realizację” — klik w komórkę dodaje zrealizowaną godzinę. */
@@ -114,6 +117,8 @@ export default function RealizacjaPage() {
     doradztwo: {},
     rozszerzenia: [],
     rozszerzeniaPrzydzial: {},
+    podzialNaGrupy: {},
+    przydzialGrupy: {},
   };
   const planRzeczywisty: PlanRow[] =
     plan
@@ -138,7 +143,12 @@ export default function RealizacjaPage() {
                   .reduce((s, k) => s + (danePrzydzialu.rozszerzeniaPrzydzial?.[k]?.[rok] ?? 0), 0);
               } else {
                 const rozsz = danePrzydzialu.rozszerzenia?.includes(subKey) ? (danePrzydzialu.rozszerzeniaPrzydzial?.[subKey]?.[rok] ?? 0) : 0;
-                godziny = base + p + d + rozsz;
+                const podzial = danePrzydzialu.podzialNaGrupy?.[subKey]?.[rok];
+                const gr = danePrzydzialu.przydzialGrupy?.[subKey]?.[rok];
+                const pVal = podzial && gr ? ((gr[1] ?? 0) + (gr[2] ?? 0)) : p;
+                const dr = danePrzydzialu.dyrektorGrupy?.[subKey]?.[rok];
+                const dVal = podzial && dr ? ((dr[1] ?? 0) + (dr[2] ?? 0)) : d;
+                godziny = base + pVal + dVal + rozsz;
               }
               godzinyByGrade[rok] = godziny;
             }
@@ -206,6 +216,9 @@ export default function RealizacjaPage() {
           doradztwo: data.doradztwo ?? {},
           rozszerzenia: Array.isArray(data.rozszerzenia) ? data.rozszerzenia : [],
           rozszerzeniaPrzydzial: data.rozszerzeniaPrzydzial && typeof data.rozszerzeniaPrzydzial === 'object' ? data.rozszerzeniaPrzydzial : {},
+          podzialNaGrupy: data.podzialNaGrupy && typeof data.podzialNaGrupy === 'object' ? data.podzialNaGrupy : {},
+          przydzialGrupy: data.przydzialGrupy && typeof data.przydzialGrupy === 'object' ? data.przydzialGrupy : {},
+          dyrektorGrupy: data.dyrektorGrupy && typeof data.dyrektorGrupy === 'object' ? data.dyrektorGrupy : {},
         });
         const realizacjaRaw = data.realizacja && typeof data.realizacja === 'object' ? data.realizacja : {};
         const built: Record<string, Record<string, number>> = {};

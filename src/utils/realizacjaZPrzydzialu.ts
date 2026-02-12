@@ -145,6 +145,8 @@ export interface DanePrzydzialuZApi {
   doradztwo?: Record<string, Record<string, number>>;
   dyrektor?: Record<string, Record<string, number>>;
   rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+  podzialNaGrupy?: Record<string, Record<string, boolean>>;
+  przydzialGrupy?: Record<string, Record<string, { 1: number; 2: number }>>;
 }
 
 /**
@@ -168,6 +170,8 @@ export function obliczRealizacjaZPrzydzialu(
   const doradztwo = daneZApi?.doradztwo ?? readDoradztwo(klasaId);
   const dyrektor = daneZApi?.dyrektor ?? readDyrektor(klasaId);
   const rozszerzeniaPrzydzial = daneZApi?.rozszerzeniaPrzydzial ?? {};
+  const podzialNaGrupy = daneZApi?.podzialNaGrupy ?? {};
+  const przydzialGrupy = daneZApi?.przydzialGrupy ?? {};
 
   /** Suma braków i nadwyżek po pozycjach – żeby np. braki z rozszerzeń i nadwyżki ze zwykłych pokazać obie. */
   let sumBraki = 0;
@@ -220,7 +224,15 @@ export function obliczRealizacjaZPrzydzialu(
       if (hoursToChoose != null && hoursToChoose > 0) {
         const key = subjectKey(plan.plan_id, subject);
         const byGrade = przydzial[key] ?? {};
-        const realized = Object.values(byGrade).reduce((a, b) => a + b, 0);
+        const podzial = (podzialNaGrupy[key] ?? {}) as Record<string, boolean>;
+        const grByGrade = (przydzialGrupy[key] ?? {}) as Record<string, { 1: number; 2: number }>;
+        const realized = grades.reduce((s, g) => {
+          if (podzial[g]) {
+            const gr = grByGrade[g];
+            return s + ((gr?.[1] ?? 0) + (gr?.[2] ?? 0));
+          }
+          return s + (byGrade[g] ?? 0);
+        }, 0);
         requiredDoRozdysponowania += hoursToChoose;
         realizedDoRozdysponowania += realized;
         sumBraki += Math.max(0, hoursToChoose - realized);
