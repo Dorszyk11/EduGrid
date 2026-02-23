@@ -33,6 +33,7 @@ interface NauczycielAdmin {
   id: string | number;
   imie: string;
   nazwisko: string;
+  max_obciazenie?: number;
   przedmioty: Array<{ id: string | number; nazwa?: string }>;
 }
 
@@ -85,6 +86,7 @@ export default function PanelAdminaPage() {
     imie: '',
     nazwisko: '',
     przedmiotyIds: [] as string[],
+    limitGodzin: 18,
   });
   const [submittingSzkola, setSubmittingSzkola] = useState(false);
   const [submittingPrzedmiot, setSubmittingPrzedmiot] = useState(false);
@@ -300,9 +302,14 @@ export default function PanelAdminaPage() {
 
   const handleAddNauczyciel = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { imie, nazwisko, przedmiotyIds } = formNauczyciel;
+    const { imie, nazwisko, przedmiotyIds, limitGodzin } = formNauczyciel;
     if (!imie.trim() || !nazwisko.trim()) {
       setMsg({ type: 'err', text: 'Wypełnij imię i nazwisko.' });
+      return;
+    }
+    const lim = Number(limitGodzin);
+    if (Number.isNaN(lim) || lim < 0 || lim > 40) {
+      setMsg({ type: 'err', text: 'Limit godzin musi być między 0 a 40.' });
       return;
     }
     setSubmittingNauczyciel(true);
@@ -315,12 +322,13 @@ export default function PanelAdminaPage() {
           imie: imie.trim(),
           nazwisko: nazwisko.trim(),
           przedmioty: przedmiotyIds.filter(Boolean),
+          max_obciazenie: lim,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setMsg({ type: 'ok', text: 'Nauczyciel został dodany.' });
-      setFormNauczyciel({ imie: '', nazwisko: '', przedmiotyIds: [] });
+      setFormNauczyciel({ imie: '', nazwisko: '', przedmiotyIds: [], limitGodzin: 18 });
       fetchAll();
     } catch (e) {
       setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd dodawania.' });
@@ -589,7 +597,7 @@ export default function PanelAdminaPage() {
             <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Nauczyciele</h2>
               <p className="text-sm text-gray-600 mt-0.5">
-                Dodaj nauczyciela: imię, nazwisko i specjalizację (przedmioty z listy).
+                Dodaj nauczyciela: imię, nazwisko, limit godzin i specjalizację (przedmioty z listy).
               </p>
             </div>
             <div className="p-5 space-y-5">
@@ -613,6 +621,22 @@ export default function PanelAdminaPage() {
                     placeholder="np. Kowalski"
                     className="rounded-lg border border-gray-300 px-3 py-2 w-44"
                   />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-gray-700">Limit godzin (tyg.)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={40}
+                    step={0.5}
+                    value={formNauczyciel.limitGodzin}
+                    onChange={(e) =>
+                      setFormNauczyciel((s) => ({ ...s, limitGodzin: parseFloat(e.target.value) || 18 }))
+                    }
+                    placeholder="18"
+                    className="rounded-lg border border-gray-300 px-3 py-2 w-24"
+                  />
+                  <span className="text-xs text-gray-500">pełny etat = 18, pół = 9</span>
                 </label>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium text-gray-700">Specjalizacja (przedmioty)</span>
@@ -668,6 +692,7 @@ export default function PanelAdminaPage() {
                     <tr className="border-b border-gray-200 bg-gray-50/80">
                       <th className="px-4 py-2 text-sm font-medium text-gray-600">Imię</th>
                       <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwisko</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Limit godz.</th>
                       <th className="px-4 py-2 text-sm font-medium text-gray-600">Specjalizacja</th>
                       <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
                     </tr>
@@ -677,6 +702,7 @@ export default function PanelAdminaPage() {
                       <tr key={String(n.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
                         <td className="px-4 py-2 font-medium text-gray-900">{n.imie}</td>
                         <td className="px-4 py-2 font-medium text-gray-900">{n.nazwisko}</td>
+                        <td className="px-4 py-2 text-gray-700">{n.max_obciazenie ?? 18}</td>
                         <td className="px-4 py-2 text-gray-600">
                           {n.przedmioty?.length
                             ? n.przedmioty.map((p) => p.nazwa ?? p.id).join(', ')

@@ -47,6 +47,8 @@ export async function GET(request: Request) {
     const realizacja = doc.realizacja && typeof doc.realizacja === 'object' ? doc.realizacja : {};
     const podzialNaGrupy = doc.podzial_na_grupy && typeof doc.podzial_na_grupy === 'object' ? doc.podzial_na_grupy : {};
     const przydzialGrupy = doc.przydzial_grupy && typeof doc.przydzial_grupy === 'object' ? doc.przydzial_grupy : {};
+    const dyrektorGrupy = doc.dyrektor_grupy && typeof doc.dyrektor_grupy === 'object' ? doc.dyrektor_grupy : {};
+    const rozszerzeniaGrupy = doc.rozszerzenia_grupy && typeof doc.rozszerzenia_grupy === 'object' ? doc.rozszerzenia_grupy : {};
     return NextResponse.json({
       przydzial: doc.przydzial ?? {},
       doradztwo: doc.doradztwo ?? {},
@@ -57,6 +59,8 @@ export async function GET(request: Request) {
       realizacja,
       podzialNaGrupy,
       przydzialGrupy,
+      dyrektorGrupy,
+      rozszerzeniaGrupy,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Nieznany błąd';
@@ -73,7 +77,7 @@ export async function GET(request: Request) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial, realizacja, podzialNaGrupy, przydzialGrupy } = body;
+    const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial, realizacja, podzialNaGrupy, przydzialGrupy, dyrektorGrupy, rozszerzeniaGrupy } = body;
     if (!klasaId) {
       return NextResponse.json({ error: 'klasaId jest wymagane' }, { status: 400 });
     }
@@ -122,6 +126,8 @@ export async function POST(request: NextRequest) {
       const realizacjaVal = realizacja !== undefined && realizacja !== null && typeof realizacja === 'object' ? realizacja : (doc.realizacja && typeof doc.realizacja === 'object' ? doc.realizacja : {});
       const podzialNaGrupyVal = podzialNaGrupy !== undefined && podzialNaGrupy !== null && typeof podzialNaGrupy === 'object' ? podzialNaGrupy : (doc.podzial_na_grupy && typeof doc.podzial_na_grupy === 'object' ? doc.podzial_na_grupy : {});
       const przydzialGrupyVal = przydzialGrupy !== undefined && przydzialGrupy !== null && typeof przydzialGrupy === 'object' ? przydzialGrupy : (doc.przydzial_grupy && typeof doc.przydzial_grupy === 'object' ? doc.przydzial_grupy : {});
+      const dyrektorGrupyVal = dyrektorGrupy !== undefined && dyrektorGrupy !== null && typeof dyrektorGrupy === 'object' ? dyrektorGrupy : (doc.dyrektor_grupy && typeof doc.dyrektor_grupy === 'object' ? doc.dyrektor_grupy : {});
+      const rozszerzeniaGrupyVal = rozszerzeniaGrupy !== undefined && rozszerzeniaGrupy !== null && typeof rozszerzeniaGrupy === 'object' ? rozszerzeniaGrupy : (doc.rozszerzenia_grupy && typeof doc.rozszerzenia_grupy === 'object' ? doc.rozszerzenia_grupy : {});
       await payload.update({
         collection: 'przydzial-godzin-wybor',
         id: doc.id,
@@ -135,6 +141,8 @@ export async function POST(request: NextRequest) {
           realizacja: realizacjaVal,
           podzial_na_grupy: podzialNaGrupyVal,
           przydzial_grupy: przydzialGrupyVal,
+          dyrektor_grupy: dyrektorGrupyVal,
+          rozszerzenia_grupy: rozszerzeniaGrupyVal,
         },
       });
       return NextResponse.json({ ok: true, updated: true });
@@ -162,6 +170,8 @@ export async function POST(request: NextRequest) {
     const realizacjaCreate = realizacja !== undefined && realizacja !== null && typeof realizacja === 'object' ? realizacja : {};
     const podzialNaGrupyCreate = podzialNaGrupy !== undefined && podzialNaGrupy !== null && typeof podzialNaGrupy === 'object' ? podzialNaGrupy : {};
     const przydzialGrupyCreate = przydzialGrupy !== undefined && przydzialGrupy !== null && typeof przydzialGrupy === 'object' ? przydzialGrupy : {};
+    const dyrektorGrupyCreate = dyrektorGrupy !== undefined && dyrektorGrupy !== null && typeof dyrektorGrupy === 'object' ? dyrektorGrupy : {};
+    const rozszerzeniaGrupyCreate = rozszerzeniaGrupy !== undefined && rozszerzeniaGrupy !== null && typeof rozszerzeniaGrupy === 'object' ? rozszerzeniaGrupy : {};
     await payload.create({
       collection: 'przydzial-godzin-wybor',
       data: {
@@ -175,6 +185,8 @@ export async function POST(request: NextRequest) {
         realizacja: realizacjaCreate,
         podzial_na_grupy: podzialNaGrupyCreate,
         przydzial_grupy: przydzialGrupyCreate,
+        dyrektor_grupy: dyrektorGrupyCreate,
+        rozszerzenia_grupy: rozszerzeniaGrupyCreate,
       },
     });
     return NextResponse.json({ ok: true, created: true });

@@ -69,13 +69,35 @@ function isSubjectRow(row: SubjectRow): row is SubjectRow & { subject: string } 
   return 'subject' in row && typeof (row as { subject?: string }).subject === 'string';
 }
 
+/**
+ * Rok w cyklu (I, II, III…) na podstawie rzeczywistej daty i cyklu klasy.
+ * Klasa 1: wrzesień rok_poczatku – lipiec rok_poczatku+1
+ * Klasa 2: sierpień rok_poczatku+1 – lipiec rok_poczatku+2
+ * Klasa N: sierpień rok_poczatku+(N-1) – lipiec rok_poczatku+N
+ */
+function aktualnyRokWCykle(rokSzkolny: string, rokiPlanu: string[]): string {
+  const m = rokSzkolny.match(/^(\d{4})[-/]\d{4}$/);
+  const rokPoczatku = m ? parseInt(m[1], 10) : null;
+  if (rokPoczatku == null || Number.isNaN(rokPoczatku) || rokiPlanu.length === 0) return rokiPlanu[0] ?? '';
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1–12
+  let yearIndex: number;
+  if (currentMonth >= 8) {
+    yearIndex = currentYear - rokPoczatku;
+  } else {
+    yearIndex = currentYear - rokPoczatku - 1;
+  }
+  yearIndex = Math.max(0, Math.min(yearIndex, rokiPlanu.length - 1));
+  return rokiPlanu[yearIndex] ?? rokiPlanu[0] ?? '';
+}
+
 export default function DyspozycjaPage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
   const [typSzkolyId, setTypSzkolyId] = useState<string>('');
   const [klasaList, setKlasaList] = useState<KlasaItem[]>([]);
   const [selectedRocznik, setSelectedRocznik] = useState<string>('');
   const [selectedLitera, setSelectedLitera] = useState<string>('');
-  const [selectedRok, setSelectedRok] = useState<string>('');
   const [ladowanieTypow, setLadowanieTypow] = useState(true);
   const [ladowanieKlas, setLadowanieKlas] = useState(false);
   const [przydzialData, setPrzydzialData] = useState<{
@@ -112,6 +134,10 @@ export default function DyspozycjaPage() {
   const selectedClass = klasaList.find(
     (k) => k.rok_szkolny === selectedRocznik && k.nazwa === selectedLitera
   );
+
+  /** Rok w cyklu (I, II, III…) – automatycznie na podstawie rzeczywistej daty i cyklu klasy. */
+  const selectedRok =
+    selectedRocznik && rokiPlanu.length > 0 ? aktualnyRokWCykle(selectedRocznik, rokiPlanu) : '';
 
   /** Godziny na dany rok = baza z planu + przydział + dyrektor; doPrzydzielenia = godziny minus już przypisane. */
   const przedmiotyDlaRoku =
@@ -163,7 +189,6 @@ export default function DyspozycjaPage() {
       setLadowanieKlas(true);
       setSelectedRocznik('');
       setSelectedLitera('');
-      setSelectedRok('');
       fetch(`/api/klasy?typSzkolyId=${typSzkolyId}`)
         .then((res) => res.json())
         .then((data) => {
@@ -175,13 +200,8 @@ export default function DyspozycjaPage() {
       setKlasaList([]);
       setSelectedRocznik('');
       setSelectedLitera('');
-      setSelectedRok('');
     }
   }, [typSzkolyId]);
-
-  useEffect(() => {
-    if (!rokiPlanu.includes(selectedRok)) setSelectedRok('');
-  }, [rokiPlanu, selectedRok]);
 
   useEffect(() => {
     if (!selectedClass?.id) {
@@ -406,22 +426,12 @@ export default function DyspozycjaPage() {
               ))}
             </select>
           </div>
-          {typSzkolyId && (
+          {selectedClass && selectedRok && (
             <div className="flex flex-col gap-1 min-w-0">
-              <label className="text-sm font-medium text-gray-600">Rok (klasa w cyklu)</label>
-              <select
-                value={selectedRok}
-                onChange={(e) => setSelectedRok(e.target.value)}
-                disabled={rokiPlanu.length === 0}
-                className="w-full sm:w-[100px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
-              >
-                <option value="">
-                  {rokiPlanu.length === 0 ? '— brak planu dla typu —' : '— rok —'}
-                </option>
-                {rokiPlanu.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+              <label className="text-sm font-medium text-gray-600">Rok (w cyklu)</label>
+              <div className="px-3 py-2.5 text-base text-gray-800 bg-gray-50 rounded-lg border border-gray-200">
+                {selectedRok} <span className="text-gray-500 text-sm">(na podstawie aktualnej daty)</span>
+              </div>
             </div>
           )}
         </div>

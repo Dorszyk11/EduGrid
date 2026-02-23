@@ -84,12 +84,25 @@ function getGodzinyRozszerzenia(schoolType: string): number {
   return 0;
 }
 
-function sumRozszerzeniaPrzydzial(rozszerzeniaPrzydzial: Record<string, Record<string, number>>, planId: string | undefined): number {
+function sumRozszerzeniaPrzydzial(
+  rozszerzeniaPrzydzial: Record<string, Record<string, number>>,
+  planId: string | undefined,
+  rozszerzeniaGrupy?: Record<string, Record<string, GrupyPair>>,
+  rozszerzeniaSet?: Set<string>
+): number {
   const prefix = (planId ?? 'plan') + '_';
+  const includeKey = (key: string) =>
+    key.startsWith(prefix) && (!rozszerzeniaSet || rozszerzeniaSet.has(key));
   let sum = 0;
   for (const [key, byGrade] of Object.entries(rozszerzeniaPrzydzial)) {
-    if (!key.startsWith(prefix)) continue;
+    if (!includeKey(key)) continue;
     for (const v of Object.values(byGrade)) sum += v;
+  }
+  if (rozszerzeniaGrupy) {
+    for (const [key, byGrade] of Object.entries(rozszerzeniaGrupy)) {
+      if (!includeKey(key)) continue;
+      for (const gr of Object.values(byGrade)) sum += sumGrupyPair(gr as GrupyPair);
+    }
   }
   return sum;
 }
@@ -133,14 +146,33 @@ function readDyrektor(klasaId: string): Record<string, Record<string, number>> {
   }
 }
 
-function assignedDirectorForPlan(dyrektor: Record<string, Record<string, number>>, planId: string | undefined): number {
+function assignedDirectorForPlan(
+  dyrektor: Record<string, Record<string, number>>,
+  planId: string | undefined,
+  dyrektorGrupy?: Record<string, Record<string, GrupyPair>>
+): number {
   const prefix = (planId ?? 'plan') + '_';
   let sum = 0;
   for (const [key, byGrade] of Object.entries(dyrektor)) {
     if (!key.startsWith(prefix)) continue;
     for (const v of Object.values(byGrade)) sum += v;
   }
+  if (dyrektorGrupy) {
+    for (const [key, byGrade] of Object.entries(dyrektorGrupy)) {
+      if (!key.startsWith(prefix)) continue;
+      for (const gr of Object.values(byGrade)) sum += sumGrupyPair(gr as GrupyPair);
+    }
+  }
   return sum;
+}
+
+/** Dla komórki z podziałem: [g1, g2] lub { 1: g1, 2: g2 } (API zwraca obiekt) */
+type GrupyPair = [number, number] | { 1?: number; 2?: number };
+
+function sumGrupyPair(p: GrupyPair | undefined): number {
+  if (!p) return 0;
+  if (Array.isArray(p)) return (p[0] ?? 0) + (p[1] ?? 0);
+  return (p[1] ?? 0) + (p[2] ?? 0);
 }
 
 /** Opcjonalne dane z API (przydział dla klasy) – gdy podane, używane zamiast localStorage („dla szkoły”). */
@@ -149,6 +181,16 @@ export interface DanePrzydzialuZApi {
   doradztwo?: Record<string, Record<string, number>>;
   dyrektor?: Record<string, Record<string, number>>;
   rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+  /** Lista kluczy przedmiotów oznaczonych jako rozszerzenie – gdy pusta, wiersz „Przedmioty w zakresie rozszerzonym” nie tworzy braków/nadwyżek */
+  rozszerzenia?: string[];
+  /** Które komórki mają podział na grupy: key -> grade -> true */
+  podzialNaGrupy?: Record<string, Record<string, boolean>>;
+  /** Godziny do wyboru w podzielonych komórkach: key -> grade -> [g1, g2] */
+  przydzialGrupy?: Record<string, Record<string, GrupyPair>>;
+  /** Godziny dyrektorskie w podzielonych komórkach: key -> grade -> [g1, g2] */
+  dyrektorGrupy?: Record<string, Record<string, GrupyPair>>;
+  /** Godziny rozszerzeń w podzielonych komórkach: key -> grade -> [g1, g2] */
+  rozszerzeniaGrupy?: Record<string, Record<string, GrupyPair>>;
 }
 
 /**
@@ -172,6 +214,12 @@ export function obliczRealizacjaZPrzydzialu(
   const doradztwo = daneZApi?.doradztwo ?? readDoradztwo(klasaId);
   const dyrektor = daneZApi?.dyrektor ?? readDyrektor(klasaId);
   const rozszerzeniaPrzydzial = daneZApi?.rozszerzeniaPrzydzial ?? {};
+  const rozszerzeniaArr = Array.isArray(daneZApi?.rozszerzenia) ? daneZApi.rozszerzenia : [];
+  const rozszerzeniaSet = daneZApi?.rozszerzenia !== undefined ? new Set(rozszerzeniaArr) : undefined;
+  const podzialNaGrupy = daneZApi?.podzialNaGrupy ?? {};
+  const przydzialGrupy = daneZApi?.przydzialGrupy ?? {};
+  const dyrektorGrupy = daneZApi?.dyrektorGrupy ?? {};
+  const rozszerzeniaGrupy = daneZApi?.rozszerzeniaGrupy ?? {};
 
   /** Suma braków i nadwyżek po pozycjach – żeby np. braki z rozszerzeń i nadwyżki ze zwykłych pokazać obie. */
   let sumBraki = 0;
@@ -185,7 +233,7 @@ export function obliczRealizacjaZPrzydzialu(
     const directorRow = plan.subjects.find(isDirectorRow);
     const totalDirectorHours = directorRow?.director_discretion_hours?.total_hours ?? 0;
     if (totalDirectorHours > 0) {
-      const real = assignedDirectorForPlan(dyrektor, plan.plan_id);
+      const real = assignedDirectorForPlan(dyrektor, plan.plan_id, dyrektorGrupy);
       requiredDoRozdysponowania += totalDirectorHours;
       realizedDoRozdysponowania += real;
       sumBraki += Math.max(0, totalDirectorHours - real);
@@ -199,7 +247,7 @@ export function obliczRealizacjaZPrzydzialu(
       if (isRozszerzonyRow(subject)) {
         const pool = row.total_hours != null ? Number(row.total_hours) : getGodzinyRozszerzenia(plan.school_type ?? '');
         if (pool > 0) {
-          const real = sumRozszerzeniaPrzydzial(rozszerzeniaPrzydzial, plan.plan_id);
+          const real = sumRozszerzeniaPrzydzial(rozszerzeniaPrzydzial, plan.plan_id, rozszerzeniaGrupy, rozszerzeniaSet);
           requiredDoRozdysponowania += pool;
           realizedDoRozdysponowania += real;
           sumBraki += Math.max(0, pool - real);
@@ -224,7 +272,15 @@ export function obliczRealizacjaZPrzydzialu(
       if (hoursToChoose != null && hoursToChoose > 0) {
         const key = subjectKey(plan.plan_id, subject);
         const byGrade = przydzial[key] ?? {};
-        const realized = Object.values(byGrade).reduce((a, b) => a + b, 0);
+        const byGradeGrupy = przydzialGrupy[key];
+        let realized = 0;
+        for (const g of grades) {
+          if (podzialNaGrupy[key]?.[g]) {
+            realized += sumGrupyPair(byGradeGrupy?.[g] as GrupyPair);
+          } else {
+            realized += byGrade[g] ?? 0;
+          }
+        }
         requiredDoRozdysponowania += hoursToChoose;
         realizedDoRozdysponowania += realized;
         sumBraki += Math.max(0, hoursToChoose - realized);

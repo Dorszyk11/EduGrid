@@ -17,6 +17,7 @@ export async function GET() {
       id: n.id,
       imie: n.imie,
       nazwisko: n.nazwisko,
+      max_obciazenie: typeof n.max_obciazenie === 'number' ? n.max_obciazenie : 18,
       przedmioty: Array.isArray(n.przedmioty)
         ? n.przedmioty.map((p: any) => (typeof p === 'object' && p?.id != null ? { id: p.id, nazwa: p.nazwa } : { id: p, nazwa: null }))
         : [],
@@ -37,7 +38,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { imie, nazwisko, przedmioty } = body;
+    const { imie, nazwisko, przedmioty, max_obciazenie } = body;
     if (!imie?.trim() || !nazwisko?.trim()) {
       return NextResponse.json(
         { error: 'Imię i nazwisko są wymagane.' },
@@ -51,12 +52,18 @@ export async function POST(request: NextRequest) {
           .map((id: unknown) => (typeof id === 'number' && Number.isFinite(id) ? id : typeof id === 'string' ? Number(id) : NaN))
           .filter((n: number) => !Number.isNaN(n) && n > 0)
       : [];
+    const maxObc = typeof max_obciazenie === 'number' && max_obciazenie >= 0 && max_obciazenie <= 40
+      ? max_obciazenie
+      : typeof max_obciazenie === 'string'
+        ? (() => { const n = parseFloat(max_obciazenie); return Number.isFinite(n) && n >= 0 && n <= 40 ? n : 18; })()
+        : 18;
     const doc = await payload.create({
       collection: 'nauczyciele',
       data: {
         imie: String(imie).trim(),
         nazwisko: String(nazwisko).trim(),
         przedmioty: przedmiotyIds,
+        max_obciazenie: maxObc,
       },
     });
     return NextResponse.json({

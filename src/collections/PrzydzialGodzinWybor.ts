@@ -112,6 +112,24 @@ export const PrzydzialGodzinWybor: CollectionConfig = {
         description: 'Obiekt: planId_Przedmiot -> { rocznik: { "1": godz. grupa 1, "2": godz. grupa 2 } }. Tylko dla roczników z włączonym podziałem.',
       },
     },
+    {
+      name: 'dyrektor_grupy',
+      type: 'json',
+      required: false,
+      label: 'Godziny dyrektorskie per grupa',
+      admin: {
+        description: 'Obiekt: planId_Przedmiot -> { rocznik: { "1": godz. dyr. grupa 1, "2": godz. dyr. grupa 2 } }. Tylko dla roczników z włączonym podziałem.',
+      },
+    },
+    {
+      name: 'rozszerzenia_grupy',
+      type: 'json',
+      required: false,
+      label: 'Godziny rozszerzeń per grupa',
+      admin: {
+        description: 'Obiekt: planId_Przedmiot -> { rocznik: { "1": godz. rozsz. grupa 1, "2": godz. rozsz. grupa 2 } }. Tylko dla roczników z włączonym podziałem.',
+      },
+    },
   ],
   timestamps: true,
 };

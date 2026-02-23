@@ -36,7 +36,17 @@ export default function KlasaPage() {
     const nazwaTypu = dane.klasa.typ_szkoly.nazwa;
     fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(klasaId)}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((api: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>> }) => {
+      .then((api: {
+        przydzial?: Record<string, Record<string, number>>;
+        doradztwo?: Record<string, Record<string, number>>;
+        dyrektor?: Record<string, Record<string, number>>;
+        rozszerzenia?: string[];
+        rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+        podzialNaGrupy?: Record<string, Record<string, boolean>>;
+        przydzialGrupy?: Record<string, Record<string, [number, number] | { 1?: number; 2?: number }>>;
+        dyrektorGrupy?: Record<string, Record<string, [number, number] | { 1?: number; 2?: number }>>;
+        rozszerzeniaGrupy?: Record<string, Record<string, [number, number] | { 1?: number; 2?: number }>>;
+      }) => {
         if (typeof localStorage !== 'undefined') {
           try {
             localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(api.przydzial ?? {}));
@@ -44,7 +54,18 @@ export default function KlasaPage() {
             localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(api.dyrektor ?? {}));
           } catch (_) {}
         }
-        setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypu, klasaId));
+        const daneZApi = {
+          przydzial: api.przydzial,
+          doradztwo: api.doradztwo,
+          dyrektor: api.dyrektor,
+          rozszerzenia: api.rozszerzenia,
+          rozszerzeniaPrzydzial: api.rozszerzeniaPrzydzial,
+          podzialNaGrupy: api.podzialNaGrupy,
+          przydzialGrupy: api.przydzialGrupy,
+          dyrektorGrupy: api.dyrektorGrupy,
+          rozszerzeniaGrupy: api.rozszerzeniaGrupy,
+        };
+        setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypu, klasaId, daneZApi));
       })
       .catch(() => setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypu, klasaId)));
   }, [dane, klasaId]);

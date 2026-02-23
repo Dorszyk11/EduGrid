@@ -123,13 +123,28 @@ export default function DashboardPage() {
     let cancelled = false;
     fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(selectedClass.id)}&_t=${odswiezKafelki}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
-      .then((data: { przydzial?: Record<string, Record<string, number>>; doradztwo?: Record<string, Record<string, number>>; dyrektor?: Record<string, Record<string, number>>; rozszerzeniaPrzydzial?: Record<string, Record<string, number>> }) => {
+      .then((data: {
+        przydzial?: Record<string, Record<string, number>>;
+        doradztwo?: Record<string, Record<string, number>>;
+        dyrektor?: Record<string, Record<string, number>>;
+        rozszerzenia?: string[];
+        rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+        podzialNaGrupy?: Record<string, Record<string, boolean>>;
+        przydzialGrupy?: Record<string, Record<string, [number, number] | { 1?: number; 2?: number }>>;
+        dyrektorGrupy?: Record<string, Record<string, [number, number] | { 1?: number; 2?: number }>>;
+        rozszerzeniaGrupy?: Record<string, Record<string, [number, number] | { 1?: number; 2?: number }>>;
+      }) => {
         if (cancelled) return;
         const daneZApi = {
           przydzial: data.przydzial ?? {},
           doradztwo: data.doradztwo ?? {},
           dyrektor: data.dyrektor ?? {},
+          rozszerzenia: data.rozszerzenia,
           rozszerzeniaPrzydzial: data.rozszerzeniaPrzydzial ?? {},
+          podzialNaGrupy: data.podzialNaGrupy,
+          przydzialGrupy: data.przydzialGrupy,
+          dyrektorGrupy: data.dyrektorGrupy,
+          rozszerzeniaGrupy: data.rozszerzeniaGrupy,
         };
         setZgodnoscDane(obliczRealizacjaZPrzydzialu(nazwaTypuSzkolyDoZgodnosci, selectedClass!.id, daneZApi));
       })
