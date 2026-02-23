@@ -31,14 +31,12 @@ const getServerURL = () => {
   return 'http://localhost:3000';
 };
 
-/** Dla Supabase poolera: użyj Transaction mode (port 6543), żeby uniknąć błędu "max clients reached". */
+/** Supabase pooler (:5432 = session mode, :6543 = transaction mode).
+ *  Drizzle-kit schema introspection uses parameterized queries ($1, $2…)
+ *  which PgBouncer in *transaction* mode drops silently.
+ *  Keep session-mode pooler (port 5432) — pool.max:2 already caps connections. */
 function getConnectionString(): string | undefined {
-  const uri = process.env.DATABASE_URI;
-  if (!uri) return undefined;
-  if (uri.includes('pooler.supabase.com') && uri.includes(':5432/')) {
-    return uri.replace(':5432/', ':6543/');
-  }
-  return uri;
+  return process.env.DATABASE_URI || undefined;
 }
 
 export default buildConfig({
