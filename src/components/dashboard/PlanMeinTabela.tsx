@@ -86,13 +86,13 @@ function totalDisplay(row: SubjectRow): React.ReactNode {
   return '0';
 }
 
-/** Dopasowanie nazwy typu szkoły do school_type z MEiN. Dokładna nazwa; wyjątek: „Szkoła podstawowa, klasy I–III” / „Szkoła podstawowa, klasy IV–VIII” dopasowują się do „Szkoła podstawowa”. */
+/** Dopasowanie nazwy typu szkoły do school_type z MEiN. Nazwa z bazy może być np. "Technikum, Klasy I–V" – dopasowuje do planu school_type "Technikum". */
 function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
   const a = (nazwaTypu || '').trim().toLowerCase();
   const b = (schoolType || '').trim().toLowerCase();
-  if (!a) return false;
+  if (!a || !b) return false;
   if (a === b) return true;
-  if (b === 'szkoła podstawowa' && a.startsWith('szkoła podstawowa')) return true;
+  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
   return false;
 }
 
@@ -125,11 +125,14 @@ export interface PlanMeinTabelaProps {
   onDoradztwoChange?: () => void;
 }
 
-/** Z nazwy typu (np. "Szkoła podstawowa, klasy I–III") wyciąga filtr cyklu – żeby pokazać tylko jeden etap. */
+/** Z nazwy typu (np. "Technikum, Klasy I–V") wyciąga filtr cyklu – żeby pokazać tylko jeden etap. */
 function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
   const n = (nazwaTypu || '').toLowerCase();
   if (n.includes('i–iii') || n.includes('i-iii') || n.includes('1–3') || n.includes('1-3')) return 'Klasy I–III';
   if (n.includes('iv–viii') || n.includes('iv-viii') || n.includes('4–8') || n.includes('4-8')) return 'Klasy IV–VIII';
+  if (n.includes('i–v') || n.includes('i-v') || n.includes('1–5') || n.includes('1-5')) return 'Klasy I–V';
+  if (n.includes('i–iv') || n.includes('i-iv') || n.includes('1–4') || n.includes('1-4')) return 'Klasy I–IV';
+  if (n.includes('vii–viii') || n.includes('vii-viii') || n.includes('7–8') || n.includes('7-8')) return 'Klasy VII–VIII';
   return undefined;
 }
 

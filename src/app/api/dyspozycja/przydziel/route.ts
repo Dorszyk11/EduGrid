@@ -141,7 +141,7 @@ async function zapiszDoPostgres(params: {
 
   const pool = new Pool({
     connectionString: conn,
-    ...(conn.includes('supabase') && { ssl: { rejectUnauthorized: false } }),
+    ssl: conn.includes('supabase') ? { rejectUnauthorized: false } : undefined,
   });
 
   const client = await pool.connect();
@@ -245,7 +245,7 @@ export async function GET(request: NextRequest) {
     if (!conn) return NextResponse.json({ error: 'Brak DATABASE_URI' }, { status: 500 });
     const pool = new Pool({
       connectionString: conn,
-      ...(conn.includes('supabase') && { ssl: { rejectUnauthorized: false } }),
+      ssl: conn.includes('supabase') ? { rejectUnauthorized: false } : undefined,
     });
     const client = await pool.connect();
     try {

@@ -44,7 +44,7 @@ async function registerViaDb(email: string, password: string, imie: string, nazw
   if (!connectionString) throw new Error('Brak DATABASE_URI w konfiguracji.');
   const pool = new Pool({
     connectionString,
-    ...(connectionString.includes('supabase') && { ssl: { rejectUnauthorized: false } }),
+    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
   });
   const client = await pool.connect();
   try {

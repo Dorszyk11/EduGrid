@@ -26,9 +26,9 @@ const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
 function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
   const a = (nazwaTypu || '').trim().toLowerCase();
   const b = (schoolType || '').trim().toLowerCase();
-  if (!a) return false;
+  if (!a || !b) return false;
   if (a === b) return true;
-  if (b === 'szkoła podstawowa' && a.startsWith('szkoła podstawowa')) return true;
+  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
   return false;
 }
 

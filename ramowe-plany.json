@@ -1,0 +1,769 @@
+{
+  "plans": [
+    {
+      "plan_id": "sp_i_iii",
+      "attachment_no": "1",
+      "school_type": "Szkoła podstawowa",
+      "cycle": "Klasy I–III",
+      "table_structure": {
+        "grades": ["I", "II", "III"],
+        "unit": "godziny tygodniowo"
+      },
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Edukacja wczesnoszkolna",
+          "hours_by_grade": { "I": 20, "II": 20, "III": 20 },
+          "additional_by_grade": {},
+          "total_hours": 60,
+          "additional_total": 0,
+          "raw": { "razem": "60" }
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 3
+          }
+        }
+        
+      ]
+    },
+    {
+      "plan_id": "sp_iv_viii",
+      "attachment_no": "1",
+      "school_type": "Szkoła podstawowa",
+      "cycle": "Klasy IV–VIII",
+      "table_structure": {
+        "grades": ["IV", "V", "VI", "VII", "VIII"],
+        "unit": "godziny tygodniowo"
+      },
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Język polski",
+          "hours_by_grade": { "IV": 5, "V": 5, "VI": 5, "VII": 5, "VIII": 5 },
+          "total_hours": 25,
+          "raw": { "razem": "25" }
+        },
+        {
+          "lp": 2,
+          "subject": "Język obcy nowożytny",
+          "hours_by_grade": { "IV": 3, "V": 3, "VI": 3, "VII": 3, "VIII": 3 },
+          "total_hours": 15,
+          "raw": { "VII": "3 + 2)", "VIII": "3 + 2)", "razem": "15 + 4)" }
+        },
+        {
+          "lp": 3,
+          "subject": "Drugi język obcy nowożytny albo język łaciński",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 2, "VIII": 2 },
+          "total_hours": 4,
+          "raw": { "VII": "2 + 2)", "VIII": "2 + 2)", "razem": "4 + 4)" }
+        },
+        {
+          "lp": 3,
+          "subject": "Dodatkowe godziny języków obcych w szkołach dwujęzycznych",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 2, "VIII": 2 },
+          "total_hours": 4,
+          "raw": { "VII": "+2)", "VIII": "+2)", "razem": "+4)" }
+        },
+        {
+          "lp": 4,
+          "subject": "Muzyka",
+          "hours_by_grade": { "IV": 1, "V": 1, "VI": 1, "VII": 1, "VIII": 0 },
+          "total_hours": 4,
+          "raw": { "razem": "4" }
+        },
+        {
+          "lp": 5,
+          "subject": "Plastyka",
+          "hours_by_grade": { "IV": 1, "V": 1, "VI": 1, "VII": 1, "VIII": 0 },
+          "total_hours": 4,
+          "raw": { "razem": "4" }
+        },
+        {
+          "lp": 6,
+          "subject": "Historia",
+          "hours_by_grade": { "IV": 1, "V": 2, "VI": 2, "VII": 2, "VIII": 2 },
+          "total_hours": 9,
+          "raw": { "razem": "9" }
+        },
+        {
+          "lp": 7,
+          "subject": "Wiedza o społeczeństwie",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 0, "VIII": 2 },
+          "total_hours": 2,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 8,
+          "subject": "Przyroda",
+          "hours_by_grade": { "IV": 2, "V": 0, "VI": 0, "VII": 0, "VIII": 0 },
+          "total_hours": 2,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 9,
+          "subject": "Geografia",
+          "hours_by_grade": { "IV": 0, "V": 1, "VI": 1, "VII": 2, "VIII": 1 },
+          "total_hours": 5,
+          "raw": { "razem": "5" }
+        },
+        {
+          "lp": 10,
+          "subject": "Biologia",
+          "hours_by_grade": { "IV": 0, "V": 1, "VI": 1, "VII": 2, "VIII": 1 },
+          "total_hours": 5,
+          "raw": { "razem": "5" }
+        },
+        {
+          "lp": 11,
+          "subject": "Chemia",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 2, "VIII": 2 },
+          "total_hours": 4,
+          "raw": { "razem": "4" }
+        },
+        {
+          "lp": 12,
+          "subject": "Fizyka",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 2, "VIII": 2 },
+          "total_hours": 4,
+          "raw": { "razem": "4" }
+        },
+        {
+          "lp": 13,
+          "subject": "Matematyka",
+          "hours_by_grade": { "IV": 4, "V": 4, "VI": 4, "VII": 4, "VIII": 4 },
+          "total_hours": 20,
+          "raw": { "razem": "20" }
+        },
+        {
+          "lp": 14,
+          "subject": "Informatyka",
+          "hours_by_grade": { "IV": 1, "V": 1, "VI": 1, "VII": 1, "VIII": 1 },
+          "total_hours": 5,
+          "raw": { "razem": "5" }
+        },
+        {
+          "lp": 15,
+          "subject": "Technika",
+          "hours_by_grade": { "IV": 1, "V": 1, "VI": 1, "VII": 0, "VIII": 0 },
+          "total_hours": 3,
+          "raw": { "razem": "3" }
+        },
+        {
+          "lp": 16,
+          "subject": "Wychowanie fizyczne",
+          "hours_by_grade": { "IV": 4, "V": 4, "VI": 4, "VII": 4, "VIII": 4 },
+          "total_hours": 20,
+          "raw": { "razem": "20" }
+        },
+        {
+          "lp": 17,
+          "subject": "Edukacja dla bezpieczeństwa",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 0, "VIII": 1 },
+          "total_hours": 1,
+          "raw": { "VII": "–", "VIII": "1", "razem": "1" }
+        },
+        {
+          "lp": 18,
+          "subject": "Zajęcia z wychowawcą",
+          "hours_by_grade": { "IV": 1, "V": 1, "VI": 1, "VII": 1, "VIII": 1 },
+          "total_hours": 5,
+          "raw": { "razem": "5" }
+        },
+        {
+          "lp": 19,
+          "subject": "Zajęcia z zakresu doradztwa zawodowego",
+          "hours_by_grade": { "IV": 0, "V": 0, "VI": 0, "VII": 10, "VIII": 10 }
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 4
+          }
+        }        
+      ]
+    },    
+    {
+      "plan_id": "oddzialy_przysposabiajace_vii_viii",
+      "attachment_no": "2",
+      "school_type": "Oddziały przysposabiające do pracy",
+      "cycle": "Klasy VII–VIII",
+      "table_structure": {
+        "grades": ["VII", "VIII"],
+        "unit": "godziny tygodniowo"
+      },
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Język polski",
+          "hours_by_grade": { "VII": 5, "VIII": 5 },
+          "additional_by_grade": {},
+          "total_hours": 10,
+          "additional_total": 0,
+          "raw": { "razem": "10" }
+        },
+        {
+          "lp": 2,
+          "subject": "Język obcy nowożytny",
+          "hours_by_grade": { "VII": 2, "VIII": 2 },
+          "additional_by_grade": {},
+          "total_hours": 4,
+          "additional_total": 0,
+          "raw": { "razem": "4" }
+        },
+        {
+          "lp": 3,
+          "subject": "Historia",
+          "hours_by_grade": { "VII": 2, "VIII": 2 },
+          "additional_by_grade": {},
+          "total_hours": 4,
+          "additional_total": 0,
+          "raw": { "razem": "4" }
+        },
+        {
+          "lp": 4,
+          "subject": "Wiedza o społeczeństwie",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 5,
+          "subject": "Geografia",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 6,
+          "subject": "Biologia",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 7,
+          "subject": "Chemia",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 8,
+          "subject": "Fizyka",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 9,
+          "subject": "Matematyka",
+          "hours_by_grade": { "VII": 4, "VIII": 4 },
+          "additional_by_grade": {},
+          "total_hours": 8,
+          "additional_total": 0,
+          "raw": { "razem": "8" }
+        },
+        {
+          "lp": 10,
+          "subject": "Informatyka",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 11,
+          "subject": "Wychowanie fizyczne",
+          "hours_by_grade": { "VII": 4, "VIII": 4 },
+          "additional_by_grade": {},
+          "total_hours": 8,
+          "additional_total": 0,
+          "raw": { "razem": "8" }
+        },
+        {
+          "lp": 12,
+          "subject": "Edukacja dla bezpieczeństwa",
+          "hours_by_grade": { "VII": 0, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 1,
+          "additional_total": 0,
+          "raw": { "VII": "–", "VIII": "1", "razem": "1" }
+        },
+        {
+          "lp": 13,
+          "subject": "Zajęcia przeznaczone na osiągnięcie wybranych efektów kształcenia określonych w podstawie programowej kształcenia w zawodzie szkolnictwa branżowego",
+          "hours_by_grade": { "VII": 5, "VIII": 5 },
+          "additional_by_grade": {},
+          "total_hours": 10,
+          "additional_total": 0,
+          "raw": { "razem": "10" }
+        },
+        {
+          "lp": 14,
+          "subject": "Zajęcia z wychowawcą",
+          "hours_by_grade": { "VII": 1, "VIII": 1 },
+          "additional_by_grade": {},
+          "total_hours": 2,
+          "additional_total": 0,
+          "raw": { "razem": "2" }
+        },
+        {
+          "lp": 15,
+          "subject": "Zajęcia z zakresu doradztwa zawodowego",
+          "hours_by_grade": { "VII": 10, "VIII": 10 }
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 2
+          }
+        }
+        
+      ]
+    },
+    {
+      "plan_id": "lo_zakres_podstawowy_i_iv",
+      "school_type": "Liceum ogólnokształcące",
+      "cycle": "Klasy I–IV",
+      "scope": "Zakres podstawowy",
+      "grades": ["I", "II", "III", "IV"],
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Język polski",
+          "hours_by_grade": { "I": 4, "II": 4, "III": 4, "IV": 4 }
+        },
+        {
+          "lp": 2,
+          "subject": "Język obcy nowożytny",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 3 }
+        },
+        {
+          "lp": 3,
+          "subject": "Drugi język obcy nowożytny albo język łaciński",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 2 }
+        },
+        {
+          "lp": 4,
+          "subject": "Filozofia / plastyka / muzyka / język łaciński i kultura antyczna",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0, "IV": 0 }
+        },
+        {
+          "lp": 5,
+          "subject": "Historia",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 1 }
+        },
+        {
+          "lp": 6,
+          "subject": "Edukacja obywatelska",
+          "hours_by_grade": { "I": 0, "II": 2, "III": 1, "IV": 0 }
+        },
+        {
+          "lp": 7,
+          "subject": "Biznes i zarządzanie",
+          "hours_by_grade": { "I": 0, "II": 2, "III": 0, "IV": 0 }
+        },
+        {
+          "lp": 8,
+          "subject": "Geografia",
+          "hours_by_grade": { "I": 1, "II": 2, "III": 1, "IV": 0 }
+        },
+        {
+          "lp": 9,
+          "subject": "Biologia",
+          "hours_by_grade": { "I": 1, "II": 2, "III": 1, "IV": 0 }
+        },
+        {
+          "lp": 10,
+          "subject": "Chemia",
+          "hours_by_grade": { "I": 1, "II": 2, "III": 1, "IV": 0 }
+        },
+        {
+          "lp": 11,
+          "subject": "Fizyka",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 2, "IV": 0 }
+        },
+        {
+          "lp": 12,
+          "subject": "Matematyka",
+          "hours_by_grade": { "I": 3, "II": 4, "III": 3, "IV": 4 }
+        },
+        {
+          "lp": 13,
+          "subject": "Informatyka",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 0 }
+        },
+        {
+          "lp": 14,
+          "subject": "Wychowanie fizyczne",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 3 }
+        },
+        {
+          "lp": 15,
+          "subject": "Edukacja dla bezpieczeństwa",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0, "IV": 0 }
+        },
+        {
+          "lp": 16,
+          "subject": "Zajęcia z wychowawcą",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 1 }
+        },
+        {
+          "lp": 17,
+          "subject": "Zajęcia z zakresu doradztwa zawodowego",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0 },
+          "hours_to_choose": 10
+        },
+        {
+          "lp": 99,
+          "subject": "Dodatkowe godziny języków obcych w szkołach dwujęzycznych",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 2 }
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 3
+          }
+        }
+        
+      ]
+    },
+    {
+      "plan_id": "technikum_zakres_podstawowy_i_v",
+      "school_type": "Technikum",
+      "cycle": "Klasy I–V",
+      "scope": "Zakres podstawowy",
+      "grades": ["I", "II", "III", "IV", "V"],
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Język polski",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 3, "V": 4 },
+          "total_hours": 16
+        },
+        {
+          "lp": 2,
+          "subject": "Język obcy nowożytny",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 3, "V": 3 },
+          "total_hours": 12
+        },
+        {
+          "lp": 3,
+          "subject": "Drugi język obcy nowożytny albo język łaciński",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 1, "V": 1 },
+          "total_hours": 8
+        },
+        {
+          "lp": 4,
+          "subject": "Historia",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 2, "IV": 2, "V": 1 },
+          "total_hours": 7
+        },
+        {
+          "lp": 5,
+          "subject": "Edukacja obywatelska",
+          "hours_by_grade": { "I": 0, "II": 1, "III": 1, "IV": 1, "V": 0 },
+          "total_hours": 3
+        },
+        {
+          "lp": 6,
+          "subject": "Biznes i zarządzanie",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 0, "IV": 0, "V": 0 },
+          "total_hours": 2
+        },
+        {
+          "lp": 7,
+          "subject": "Geografia",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "hours_to_choose": 4,
+          "total_hours": 4
+        },
+        {
+          "lp": 8,
+          "subject": "Biologia",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "hours_to_choose": 4,
+          "total_hours": 4
+        },
+        {
+          "lp": 9,
+          "subject": "Chemia",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "hours_to_choose": 4,
+          "total_hours": 4
+        },
+        {
+          "lp": 10,
+          "subject": "Fizyka",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "hours_to_choose": 4,
+          "total_hours": 4
+        },
+        {
+          "lp": 11,
+          "subject": "Matematyka",
+          "hours_by_grade": { "I": 2, "II": 3, "III": 3, "IV": 3, "V": 3 },
+          "total_hours": 14
+        },
+        {
+          "lp": 12,
+          "subject": "Informatyka",
+          "hours_by_grade": { "I": 2, "II": 1, "III": 0, "IV": 0, "V": 0 },
+          "total_hours": 3
+        },
+        {
+          "lp": 13,
+          "subject": "Wychowanie fizyczne",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 3, "V": 3 },
+          "total_hours": 15
+        },
+        {
+          "lp": 14,
+          "subject": "Edukacja dla bezpieczeństwa",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "total_hours": 1
+        },
+        {
+          "lp": 15,
+          "subject": "Zajęcia z wychowawcą",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 1, "V": 1 },
+          "total_hours": 5
+        },
+        {
+          "lp": 16,
+          "subject": "Przedmioty w zakresie rozszerzonym",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 2, "IV": 2, "V": 2 },
+          "hours_to_choose": 8
+        },
+        {
+          "lp": 17,
+          "subject": "Kształcenie zawodowe",
+          "hours_by_grade": { "I": 11, "II": 12, "III": 13, "IV": 13, "V": 7 },
+          "hours_to_choose": 56
+        },
+        {
+          "lp": 18,
+          "subject": "Zajęcia z zakresu doradztwa zawodowego",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "hours_to_choose": 10
+        },
+        {
+          "lp": 99,
+          "subject": "Dodatkowe godziny języków obcych w szkołach dwujęzycznych",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 2, "V": 1 },
+          "total_hours": 9
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 4
+          }
+        }
+        
+      ]
+    },
+    {
+      "plan_id": "branżowa_i_stopnia_i_iii",
+      "school_type": "Branżowa szkoła I stopnia",
+      "cycle": "Klasy I–III",
+      "scope": "Zakres podstawowy",
+      "grades": ["I", "II", "III"],
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Język polski",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2 },
+          "total_hours": 6
+        },
+        {
+          "lp": 2,
+          "subject": "Język obcy nowożytny",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 1 },
+          "total_hours": 5
+        },
+        {
+          "lp": 3,
+          "subject": "Historia",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1 },
+          "total_hours": 3
+        },
+        {
+          "lp": 4,
+          "subject": "Edukacja obywatelska",
+          "hours_by_grade": { "I": 0, "II": 1, "III": 1 },
+          "total_hours": 2
+        },
+        {
+          "lp": 5,
+          "subject": "Biznes i zarządzanie",
+          "hours_by_grade": { "I": 2, "II": 0, "III": 0 },
+          "total_hours": 2
+        },
+        {
+          "lp": 6,
+          "subject": "Geografia",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0 },
+          "hours_to_choose": 2,
+          "total_hours": 2
+        },
+        {
+          "lp": 7,
+          "subject": "Biologia",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0 },
+          "hours_to_choose": 2,
+          "total_hours": 2
+        },
+        {
+          "lp": 8,
+          "subject": "Chemia",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0 },
+          "hours_to_choose": 2,
+          "total_hours": 2
+        },
+        {
+          "lp": 9,
+          "subject": "Fizyka",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0 },
+          "hours_to_choose": 2,
+          "total_hours": 2
+        },
+        {
+          "lp": 10,
+          "subject": "Matematyka",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 1 },
+          "total_hours": 5
+        },
+        {
+          "lp": 11,
+          "subject": "Informatyka",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0 },
+          "total_hours": 1
+        },
+        {
+          "lp": 12,
+          "subject": "Wychowanie fizyczne",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3 },
+          "total_hours": 9
+        },
+        {
+          "lp": 13,
+          "subject": "Edukacja dla bezpieczeństwa",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0 },
+          "total_hours": 1
+        },
+        {
+          "lp": 14,
+          "subject": "Kształcenie zawodowe",
+          "hours_by_grade": { "I": 12, "II": 18, "III": 20 },
+          "total_hours": 50
+        },
+        {
+          "lp": 15,
+          "subject": "Zajęcia z wychowawcą",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1 },
+          "total_hours": 3
+        },
+        {
+          "lp": 16,
+          "subject": "Zajęcia z zakresu doradztwa zawodowego",
+          "hours_by_grade": { "I": 0, "II": 0, "III": 0 },
+          "hours_to_choose": 10
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 3
+          }
+        }        
+      ]
+    },
+    {
+      "plan_id": "lo_dla_doroslych_stacjonarne_i_iv",
+      "school_type": "Liceum ogólnokształcące dla dorosłych",
+      "cycle": "Klasy I–IV",
+      "mode": "stacjonarne",
+      "scope": "Zakres podstawowy",
+      "grades": ["I", "II", "III", "IV"],
+      "subjects": [
+        {
+          "lp": 1,
+          "subject": "Język polski",
+          "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 3 },
+          "total_hours": 12
+        },
+        {
+          "lp": 2,
+          "subject": "Język obcy nowożytny",
+          "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 3 },
+          "total_hours": 9
+        },
+        {
+          "lp": 3,
+          "subject": "Historia",
+          "hours_by_grade": { "I": 1, "II": 1.5, "III": 2, "IV": 1 },
+          "total_hours": 5.5
+        },
+        {
+          "lp": 4,
+          "subject": "Edukacja obywatelska",
+          "hours_by_grade": { "I": 0, "II": 1, "III": 1, "IV": 0 },
+          "total_hours": 2
+        },
+        {
+          "lp": 5,
+          "subject": "Biznes i zarządzanie",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0, "IV": 0 },
+          "total_hours": 1
+        },
+        {
+          "lp": 6,
+          "subject": "Geografia",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 0 },
+          "total_hours": 3
+        },
+        {
+          "lp": 7,
+          "subject": "Biologia",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 0 },
+          "total_hours": 3
+        },
+        {
+          "lp": 8,
+          "subject": "Chemia",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 0 },
+          "total_hours": 3
+        },
+        {
+          "lp": 9,
+          "subject": "Fizyka",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 0 },
+          "total_hours": 3
+        },
+        {
+          "lp": 10,
+          "subject": "Matematyka",
+          "hours_by_grade": { "I": 3, "II": 2.5, "III": 2, "IV": 3 },
+          "total_hours": 10.5
+        },
+        {
+          "lp": 11,
+          "subject": "Informatyka",
+          "hours_by_grade": { "I": 1, "II": 1, "III": 0, "IV": 0 },
+          "total_hours": 2
+        },
+        {
+          "director_discretion_hours": {
+            "total_hours": 2
+          }
+        }
+      ]
+    }         
+  ]
+}

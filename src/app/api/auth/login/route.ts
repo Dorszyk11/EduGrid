@@ -48,7 +48,7 @@ async function loginViaDb(email: string, password: string): Promise<{ user: { id
 
   const pool = new Pool({
     connectionString,
-    ...(connectionString.includes('supabase') && { ssl: { rejectUnauthorized: false } }),
+    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
   });
   const client = await pool.connect();
   try {

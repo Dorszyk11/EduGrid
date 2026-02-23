@@ -60,14 +60,18 @@ export default buildConfig({
     PrzydzialGodzinWybor,
   ],
   db: postgresAdapter({
-    pool: {
-      connectionString: getConnectionString(),
-      max: 2,
-      idleTimeoutMillis: 10000,
-      ...(process.env.DATABASE_URI?.includes('supabase') && {
-        ssl: { rejectUnauthorized: false },
-      }),
-    },
+    pool: (() => {
+      const uri = process.env.DATABASE_URI || '';
+      const poolConfig: Record<string, unknown> = {
+        connectionString: uri || undefined,
+        max: 2,
+        idleTimeoutMillis: 10000,
+      };
+      if (uri.includes('supabase')) {
+        poolConfig.ssl = { rejectUnauthorized: false };
+      }
+      return poolConfig;
+    })(),
   }),
   typescript: {
     outputFile: path.resolve(process.cwd(), 'payload-types.ts'),

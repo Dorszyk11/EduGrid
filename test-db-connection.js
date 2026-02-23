@@ -36,8 +36,8 @@ console.log('🔍 Testowanie połączenia z bazą danych...');
 console.log('📋 Connection string:', connectionString.replace(/:[^:@]+@/, ':****@')); // Ukryj hasło
 
 const pool = new Pool({
-  connectionString: connectionString,
-  ...(connectionString.includes('supabase') && { ssl: { rejectUnauthorized: false } }),
+  connectionString,
+  ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.query('SELECT NOW() as current_time, current_database() as database_name, current_user as user_name')
@@ -62,6 +62,8 @@ pool.query('SELECT NOW() as current_time, current_database() as database_name, c
       console.error('\n💡 Problem: PostgreSQL nie jest uruchomiony / port zablokowany');
     } else if (error.code === '3D000') {
       console.error('\n💡 Problem: Baza danych nie istnieje');
+    } else if (error.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
+      console.error('\n💡 Problem: Certyfikat SSL Supabase (self-signed) – upewnij się, że ssl: { rejectUnauthorized: false } jest ustawione.');
     } else if (error.code === 'ENOTFOUND') {
       console.error('\n💡 Problem: DNS w Node nie rozwiązuje hosta (mimo że nslookup działa).');
       console.error('   Rozwiązanie: DNS wymuszony w kodzie / VPN z pełnym tunelowaniem DNS.');

@@ -45,12 +45,13 @@ function pominWyswietlanie(subjectName: string): boolean {
   return s.includes('doradztwa zawodowego') || /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/.test(s);
 }
 
+/** Dopasowanie nazwy typu (np. "Technikum, Klasy I–V") do school_type z planu. */
 function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
   const a = (nazwaTypu || '').trim().toLowerCase();
   const b = (schoolType || '').trim().toLowerCase();
-  if (!a) return false;
+  if (!a || !b) return false;
   if (a === b) return true;
-  if (b === 'szkoła podstawowa' && a.startsWith('szkoła podstawowa')) return true;
+  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
   return false;
 }
 
@@ -58,6 +59,9 @@ function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
   const n = (nazwaTypu || '').toLowerCase();
   if (n.includes('i–iii') || n.includes('i-iii') || n.includes('1–3') || n.includes('1-3')) return 'Klasy I–III';
   if (n.includes('iv–viii') || n.includes('iv-viii') || n.includes('4–8') || n.includes('4-8')) return 'Klasy IV–VIII';
+  if (n.includes('i–v') || n.includes('i-v') || n.includes('1–5') || n.includes('1-5')) return 'Klasy I–V';
+  if (n.includes('i–iv') || n.includes('i-iv') || n.includes('1–4') || n.includes('1-4')) return 'Klasy I–IV';
+  if (n.includes('vii–viii') || n.includes('vii-viii') || n.includes('7–8') || n.includes('7-8')) return 'Klasy VII–VIII';
   return undefined;
 }
 
