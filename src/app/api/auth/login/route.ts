@@ -9,7 +9,6 @@ import { getPayloadSecretKey } from '@/utils/auth';
 const COOKIE_NAME = 'payload-token';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dni
 const PAYLOAD_TIMEOUT_MS = 10_000;
-const TOKEN_EXPIRATION = 7200; // jak Payload defaultUser
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return Promise.race([
@@ -88,7 +87,7 @@ async function loginViaDb(email: string, password: string): Promise<{ user: { id
     if (row.nazwisko != null) fieldsToSign.nazwisko = row.nazwisko;
 
     const issuedAt = Math.floor(Date.now() / 1000);
-    const exp = issuedAt + TOKEN_EXPIRATION;
+    const exp = issuedAt + 7200; // 2 godziny
     const token = await new SignJWT(fieldsToSign as Record<string, unknown>)
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
       .setIssuedAt(issuedAt)
