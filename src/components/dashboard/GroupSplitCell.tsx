@@ -25,6 +25,10 @@ interface GroupSplitCellProps {
   splitModeActive: boolean;
   isDeleteMode: boolean;
   activeMode: SplitCellMode;
+  /** Gdy true – w komórce są godziny dyrektorskie (w trybie assign: zielono gdy remaining>0, niebiesko gdy all assigned) */
+  hasDirectorHours?: boolean;
+  /** Gdy true – w komórce są godziny rozszerzeń; kolor fioletowy */
+  hasExtensionHours?: boolean;
 }
 
 function formatHours(assigned: number, plan: number): string {
@@ -38,40 +42,44 @@ function halfBg(
   canAssign: boolean,
   canRemove: boolean,
   mode: SplitCellMode,
+  hasDirectorHours?: boolean,
+  hasExtensionHours?: boolean,
 ): string {
   if (mode === 'delete' && canRemove) return 'cursor-pointer bg-red-200 hover:bg-red-300 ring-1 ring-red-400 rounded-sm';
 
+  /** Niebiesko tylko gdy aktywny tryb assign – pełny przydział lub nadwyżka */
   if (mode === 'assign') {
-    if (canAssign) return 'cursor-pointer bg-green-200 hover:bg-green-300 ring-1 ring-green-400 rounded-sm';
-    if (assigned > 0 && remaining <= 0) return 'bg-sky-200 ring-1 ring-sky-400 rounded-sm';
+    if (hasExtensionHours && assigned > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
+    if (canAssign) return 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded';
+    /** Pełny przydział lub nadwyżka – niebiesko tylko w trybie assign */
+    if ((assigned > 0 || hasDirectorHours) && remaining <= 0) return 'bg-blue-200 ring-2 ring-blue-400 rounded';
   }
   if (mode === 'director') {
     if (canAssign) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
-    if (assigned > 0) return 'bg-sky-100 ring-1 ring-sky-300 rounded-sm';
+    if (assigned > 0 || hasDirectorHours) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
   }
   if (mode === 'extension') {
     if (canAssign) return 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-1 ring-violet-400 rounded-sm';
     if (assigned > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
   }
 
+  /** Bez aktywnego trybu (assign/director/extension) – nie podświetlamy na niebiesko, tylko neutralne tło */
   if (assigned > 0) {
-    if (remaining < 0) return 'bg-blue-100 ring-1 ring-blue-300 rounded-sm';
-    if (remaining === 0) return 'bg-sky-100 ring-1 ring-sky-300 rounded-sm';
+    if (hasExtensionHours) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
     return 'ring-1 ring-gray-300 rounded-sm';
   }
   return '';
 }
 
-function halfText(assigned: number, remaining: number, mode: SplitCellMode): string {
+function halfText(assigned: number, remaining: number, mode: SplitCellMode, hasDirectorHours?: boolean, hasExtensionHours?: boolean): string {
   if (mode === 'assign' || mode === 'delete' || mode === 'director' || mode === 'extension') {
     if (mode === 'director' && assigned > 0) return 'font-bold text-sky-700';
-    if (mode === 'extension' && assigned > 0) return 'font-bold text-violet-700';
+    if ((mode === 'extension' || hasExtensionHours) && assigned > 0) return 'font-bold text-violet-700';
     return '';
   }
   if (assigned <= 0) return '';
-  if (remaining < 0) return 'text-blue-900 font-semibold';
-  if (remaining === 0) return 'text-green-900 font-semibold';
-  return '';
+  if (hasExtensionHours) return 'font-bold text-violet-700';
+  return 'text-gray-700 font-medium';
 }
 
 export default function GroupSplitCell({
@@ -95,6 +103,8 @@ export default function GroupSplitCell({
   splitModeActive,
   isDeleteMode,
   activeMode,
+  hasDirectorHours = false,
+  hasExtensionHours = false,
 }: GroupSplitCellProps) {
   const handleClick = (canAssign: boolean, canRemove: boolean, assign: () => void, remove: () => void) => {
     if (canAssign) return assign;
@@ -103,8 +113,10 @@ export default function GroupSplitCell({
     return undefined;
   };
 
+  /** Prawy przycisk usuwa tylko godziny (nigdy grupy), i tylko gdy aktywny jest tryb danego typu godzin (assign/director/extension). W trybie split prawy przycisk nic nie robi. */
+  const allowRightClickRemove = !splitModeActive && activeMode !== 'split' && activeMode !== 'delete';
   const handleContextMenu = (assigned: number, remove: () => void) => (e: React.MouseEvent) => {
-    if (assigned > 0) {
+    if (allowRightClickRemove && assigned > 0) {
       e.preventDefault();
       e.stopPropagation();
       remove();
@@ -121,10 +133,10 @@ export default function GroupSplitCell({
   };
 
   const titleFor = (group: 1 | 2, canAssign: boolean, canRemove: boolean, assigned: number) => {
-    if (canToggleSplit) return 'Wyłącz podział (prawy przycisk)';
-    if (canAssign) return `Dodaj 1 h ${modeLabel[activeMode]} (gr. ${group}); prawy: usuń`;
+    if (canToggleSplit) return 'Kliknij, aby włączyć/wyłączyć podział na grupy';
+    if (canAssign) return `Dodaj 1 h ${modeLabel[activeMode]} (gr. ${group})${allowRightClickRemove && assigned > 0 ? '; prawy: usuń' : ''}`;
     if (canRemove) return `Usuń 1 h (gr. ${group})`;
-    if (assigned > 0) return `Prawy przycisk: usuń 1 h (gr. ${group})`;
+    if (allowRightClickRemove && assigned > 0) return `Prawy przycisk: usuń 1 h (gr. ${group})`;
     return undefined;
   };
 
@@ -133,25 +145,25 @@ export default function GroupSplitCell({
     : '';
 
   const effectiveMode = splitModeActive ? 'split' as SplitCellMode : activeMode;
-  const bg1 = splitModeActive ? '' : halfBg(assignedG1, remainingG1, canAssignG1, canRemoveG1, effectiveMode);
-  const bg2 = splitModeActive ? '' : halfBg(assignedG2, remainingG2, canAssignG2, canRemoveG2, effectiveMode);
-  const txt1 = splitModeActive ? '' : halfText(assignedG1, remainingG1, effectiveMode);
-  const txt2 = splitModeActive ? '' : halfText(assignedG2, remainingG2, effectiveMode);
+  const bg1 = splitModeActive ? '' : halfBg(assignedG1, remainingG1, canAssignG1, canRemoveG1, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const bg2 = splitModeActive ? '' : halfBg(assignedG2, remainingG2, canAssignG2, canRemoveG2, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const txt1 = splitModeActive ? '' : halfText(assignedG1, remainingG1, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const txt2 = splitModeActive ? '' : halfText(assignedG2, remainingG2, effectiveMode, hasDirectorHours, hasExtensionHours);
 
   const interactive1 = canAssignG1 || canRemoveG1 || canToggleSplit;
   const interactive2 = canAssignG2 || canRemoveG2 || canToggleSplit;
 
-  const half = 'flex items-center justify-center text-xs tabular-nums transition-colors ring-1 ring-gray-200 rounded-sm m-px';
+  const half = 'flex items-center justify-center text-xs tabular-nums transition-colors min-h-0';
+  const containerBorder = hasDirectorHours ? 'ring-1 ring-gray-400 rounded' : '';
 
   return (
     <td
       key={grade}
-      className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-[3.25rem] ${tdClass}`}
-      onContextMenu={(e) => { e.preventDefault(); onToggleSplit(); }}
+      className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-[3.25rem] ${tdClass} ${containerBorder}`}
     >
-      <div className="flex flex-col h-full gap-px">
+      <div className="flex flex-col h-full">
         <div
-          className={`${half} flex-1 ${bg1} ${txt1}`}
+          className={`${half} flex-1 border-b border-gray-200 ${bg1} ${txt1}`}
           onClick={handleClick(canAssignG1, canRemoveG1, onAssignG1, onRemoveG1)}
           onContextMenu={handleContextMenu(assignedG1, onRemoveG1)}
           role={interactive1 ? 'button' : undefined}

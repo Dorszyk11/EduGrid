@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
+import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 import KafelkiRealizacji, { type DaneRealizacji } from '@/components/dashboard/KafelkiRealizacji';
 import { obliczRealizacjaZPrzydzialu } from '@/utils/realizacjaZPrzydzialu';
 
@@ -73,6 +74,10 @@ export default function DashboardPage() {
           nazwa: item.nazwa || item.tytul || item.name || 'Brak nazwy',
         }));
         setTypySzkol(mapped);
+        const zap = getZapamietanyTypSzkoly();
+        if (zap && mapped.some((t: { id: string }) => t.id === zap)) {
+          setTypSzkolyId(zap);
+        }
         setLadowanieTypow(false);
       })
       .catch(err => {
@@ -101,6 +106,20 @@ export default function DashboardPage() {
       setSelectedLitera('');
     }
   }, [typSzkolyId]);
+
+  useEffect(() => {
+    if (!typSzkolyId || ladowanieKlas || !klasaList.length) return;
+    const rocznikiList = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
+    const zapR = getZapamietanyRocznik();
+    const zapL = getZapamietanaLitera();
+    if (zapR && rocznikiList.includes(zapR)) {
+      setSelectedRocznik(zapR);
+      const literkiList = [...new Set(klasaList.filter((k) => k.rok_szkolny === zapR).map((k) => k.nazwa))].filter(Boolean).sort();
+      if (zapL && literkiList.includes(zapL)) {
+        setSelectedLitera(zapL);
+      }
+    }
+  }, [klasaList, typSzkolyId, ladowanieKlas]);
 
   useEffect(() => {
     if (typSzkolyId && selectedRocznik && selectedLitera) {
@@ -193,7 +212,11 @@ export default function DashboardPage() {
     <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto sm:flex-shrink-0">
       <select
         value={typSzkolyId}
-        onChange={(e) => setTypSzkolyId(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value;
+          zapiszTypSzkoly(v);
+          setTypSzkolyId(v);
+        }}
         className="w-full sm:w-[200px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white"
       >
         <option value="">Wybierz typ szkoły</option>
@@ -204,7 +227,9 @@ export default function DashboardPage() {
       <select
         value={selectedRocznik}
         onChange={(e) => {
-          setSelectedRocznik(e.target.value);
+          const v = e.target.value;
+          zapiszRocznik(v);
+          setSelectedRocznik(v);
           setSelectedLitera('');
         }}
         disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
@@ -217,7 +242,11 @@ export default function DashboardPage() {
       </select>
       <select
         value={selectedLitera}
-        onChange={(e) => setSelectedLitera(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value;
+          zapiszLitera(v);
+          setSelectedLitera(v);
+        }}
         disabled={!selectedRocznik || literki.length === 0}
         className="w-full sm:w-[100px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
       >

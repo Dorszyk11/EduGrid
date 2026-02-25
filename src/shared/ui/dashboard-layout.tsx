@@ -22,7 +22,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/szkoly", label: "Typy szkół", icon: "🏢" },
   { href: "/mapowania", label: "Mapowania", icon: "🔗" },
   { href: "/plany-mein", label: "Plany MEiN", icon: "📖" },
-  { href: "/raporty", label: "Raporty", icon: "📈" },
   { href: "/import/mein-pdf", label: "Import PDF", icon: "📥" },
   { href: "/panel-admin", label: "Administracja", icon: "⚙️" },
 ];

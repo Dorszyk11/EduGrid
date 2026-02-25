@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
+import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 
 interface TypSzkoly {
   id: string;
@@ -74,13 +75,30 @@ export default function PrzydzialPage() {
     }
   }, [typSzkolyId]);
 
+  useEffect(() => {
+    if (!typSzkolyId || ladowanieKlas || !klasaList.length) return;
+    const rocznikiList = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
+    const zapR = getZapamietanyRocznik();
+    const zapL = getZapamietanaLitera();
+    if (zapR && rocznikiList.includes(zapR)) {
+      setSelectedRocznik(zapR);
+      const literkiList = [...new Set(klasaList.filter((k) => k.rok_szkolny === zapR).map((k) => k.nazwa))].filter(Boolean).sort();
+      if (zapL && literkiList.includes(zapL)) {
+        setSelectedLitera(zapL);
+      }
+    }
+  }, [klasaList, typSzkolyId, ladowanieKlas]);
+
   const pobierzTypySzkol = async () => {
     setLadowanieTypow(true);
     try {
       const response = await fetch('/api/typy-szkol', { cache: 'no-store' });
       const data = await response.json();
       const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
-      setTypySzkol(list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' })));
+      const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
+      setTypySzkol(mapped);
+      const zap = getZapamietanyTypSzkoly();
+      if (zap && mapped.some((t) => t.id === zap)) setTypSzkolyId(zap);
     } catch (error) {
       console.error('Błąd przy pobieraniu typów szkół:', error);
     } finally {
@@ -164,6 +182,8 @@ export default function PrzydzialPage() {
           rozszerzeniaPrzydzial: {},
           podzialNaGrupy: {},
           przydzialGrupy: {},
+          dyrektorGrupy: {},
+          rozszerzeniaGrupy: {},
         }),
       });
 
@@ -306,22 +326,6 @@ export default function PrzydzialPage() {
               >
                 Podziel na grupy (1 i 2)
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTrybPrzydzielGodzine(false);
-                  setTrybPrzydzielDyrektor(false);
-                  setTrybDodajRozszerzenia(false);
-                  setTrybPrzydzielGodzinyRozszerzen(false);
-                  setTrybPodzielNaGrupy(false);
-                  setTrybUsunGodzine((v) => !v);
-                }}
-                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybUsunGodzine ? 'bg-red-600 text-white hover:bg-red-700 ring-2 ring-red-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Usuń godziny
-              </button>
             </>
           )}
         </div>
@@ -368,7 +372,11 @@ export default function PrzydzialPage() {
       <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
         <select
           value={typSzkolyId}
-          onChange={(e) => setTypSzkolyId(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            zapiszTypSzkoly(v);
+            setTypSzkolyId(v);
+          }}
           disabled={ladowanieTypow}
           className="w-full sm:w-[200px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
@@ -380,7 +388,9 @@ export default function PrzydzialPage() {
         <select
           value={selectedRocznik}
           onChange={(e) => {
-            setSelectedRocznik(e.target.value);
+            const v = e.target.value;
+            zapiszRocznik(v);
+            setSelectedRocznik(v);
             setSelectedLitera('');
           }}
           disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
@@ -393,7 +403,11 @@ export default function PrzydzialPage() {
         </select>
         <select
           value={selectedLitera}
-          onChange={(e) => setSelectedLitera(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            zapiszLitera(v);
+            setSelectedLitera(v);
+          }}
           disabled={!selectedRocznik || literki.length === 0}
           className="w-full sm:w-[100px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >

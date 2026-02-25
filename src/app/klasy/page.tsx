@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getZapamietanyTypSzkoly, zapiszTypSzkoly } from '@/utils/typSzkolyStorage';
 
 interface TypSzkoly {
   id: string;
@@ -29,7 +30,10 @@ export default function KlasyPage() {
       .then((data) => {
         if (data?.error) return;
         const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
-        setTypySzkol(list.map((t: any) => ({ id: String(t.id), nazwa: t.nazwa || 'Brak nazwy' })));
+        const mapped = list.map((t: any) => ({ id: String(t.id), nazwa: t.nazwa || 'Brak nazwy' }));
+        setTypySzkol(mapped);
+        const zap = getZapamietanyTypSzkoly();
+        if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
       })
       .catch(() => {});
   }, []);
@@ -77,7 +81,11 @@ export default function KlasyPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Typ szkoły</label>
           <select
             value={typSzkolyId}
-            onChange={(e) => setTypSzkolyId(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              zapiszTypSzkoly(v);
+              setTypSzkolyId(v);
+            }}
             className="w-full max-w-md border rounded px-3 py-2"
           >
             <option value="">Wszystkie typy</option>

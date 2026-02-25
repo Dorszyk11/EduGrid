@@ -18,7 +18,6 @@ const navigation: NavItem[] = [
   { name: 'Dyspozycja', href: '/dyspozycja', icon: '📋' },
   { name: 'Klasy', href: '/klasy', icon: '👥' },
   { name: 'Nauczyciele', href: '/nauczyciele', icon: '👨‍🏫' },
-  { name: 'Raporty', href: '/raporty', icon: '📈' },
   { name: 'Panel admina', href: '/panel-admin', icon: '⚙️' },
 ];
 

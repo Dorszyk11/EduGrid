@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import plansData from '@/utils/import/ramowe-plany.json';
+import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 
 interface TypSzkoly {
   id: string;
@@ -69,6 +70,12 @@ function isSubjectRow(row: SubjectRow): row is SubjectRow & { subject: string } 
   return 'subject' in row && typeof (row as { subject?: string }).subject === 'string';
 }
 
+/** Suma godzin z obu grup: { 1: n1, 2: n2 } → n1 + n2 */
+function sumGrupy(gr: { 1?: number; 2?: number } | undefined): number {
+  if (!gr) return 0;
+  return (gr[1] ?? 0) + (gr[2] ?? 0);
+}
+
 /**
  * Rok w cyklu (I, II, III…) na podstawie rzeczywistej daty i cyklu klasy.
  * Klasa 1: wrzesień rok_poczatku – lipiec rok_poczatku+1
@@ -106,6 +113,10 @@ export default function DyspozycjaPage() {
     doradztwo: Record<string, Record<string, number>>;
     rozszerzenia: string[];
     rozszerzeniaPrzydzial: Record<string, Record<string, number>>;
+    podzialNaGrupy?: Record<string, Record<string, boolean>>;
+    przydzialGrupy?: Record<string, Record<string, { 1?: number; 2?: number }>>;
+    dyrektorGrupy?: Record<string, Record<string, { 1?: number; 2?: number }>>;
+    rozszerzeniaGrupy?: Record<string, Record<string, { 1?: number; 2?: number }>>;
   } | null>(null);
   const [ladowaniePrzydzial, setLadowaniePrzydzial] = useState(false);
   const [trybPrzydziel, setTrybPrzydziel] = useState(false);
@@ -158,8 +169,13 @@ export default function DyspozycjaPage() {
               const nazwa = row.subject ?? '—';
               const subKey = subjectKey(plan.plan_id, nazwa);
               const base = row.hours_by_grade?.[selectedRok] ?? 0;
-              const p = przydzialData?.przydzial?.[subKey]?.[selectedRok] ?? 0;
-              const d = przydzialData?.dyrektor?.[subKey]?.[selectedRok] ?? 0;
+              const jestPodzial = przydzialData?.podzialNaGrupy?.[subKey]?.[selectedRok];
+              const p = jestPodzial
+                ? sumGrupy(przydzialData?.przydzialGrupy?.[subKey]?.[selectedRok])
+                : (przydzialData?.przydzial?.[subKey]?.[selectedRok] ?? 0);
+              const d = jestPodzial
+                ? sumGrupy(przydzialData?.dyrektorGrupy?.[subKey]?.[selectedRok])
+                : (przydzialData?.dyrektor?.[subKey]?.[selectedRok] ?? 0);
               let godziny: number;
               if (isPrzedmiotLaczny(nazwa)) {
                 godziny = przydzialData?.doradztwo?.[subKey]?.[selectedRok] ?? 0;
@@ -167,10 +183,21 @@ export default function DyspozycjaPage() {
                 const planPrefix = (plan.plan_id ?? 'plan') + '_';
                 godziny = (przydzialData?.rozszerzenia ?? [])
                   .filter((k) => k.startsWith(planPrefix))
-                  .reduce((s, k) => s + (przydzialData?.rozszerzeniaPrzydzial?.[k]?.[selectedRok] ?? 0), 0);
+                  .reduce((s, k) => {
+                    const jp = przydzialData?.podzialNaGrupy?.[k]?.[selectedRok];
+                    const v = jp
+                      ? sumGrupy(przydzialData?.rozszerzeniaGrupy?.[k]?.[selectedRok])
+                      : (przydzialData?.rozszerzeniaPrzydzial?.[k]?.[selectedRok] ?? 0);
+                    return s + v;
+                  }, 0);
               } else {
-                const rozsz = przydzialData?.rozszerzenia?.includes(subKey) ? (przydzialData?.rozszerzeniaPrzydzial?.[subKey]?.[selectedRok] ?? 0) : 0;
-                godziny = base + p + d + rozsz;
+                const rozsz = przydzialData?.rozszerzenia?.includes(subKey)
+                  ? (przydzialData?.podzialNaGrupy?.[subKey]?.[selectedRok]
+                      ? sumGrupy(przydzialData?.rozszerzeniaGrupy?.[subKey]?.[selectedRok])
+                      : (przydzialData?.rozszerzeniaPrzydzial?.[subKey]?.[selectedRok] ?? 0))
+                  : 0;
+                const baseEffective = jestPodzial ? base * 2 : base;
+                godziny = baseEffective + p + d + rozsz;
               }
               const pid = przedmiotIdDlaNazwyNow(nazwa);
               const przypisane = pid ? (assignedGodziny?.[pid]?.[selectedRok] ?? 0) : 0;
@@ -204,6 +231,20 @@ export default function DyspozycjaPage() {
   }, [typSzkolyId]);
 
   useEffect(() => {
+    if (!typSzkolyId || ladowanieKlas || !klasaList.length) return;
+    const rocznikiList = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
+    const zapR = getZapamietanyRocznik();
+    const zapL = getZapamietanaLitera();
+    if (zapR && rocznikiList.includes(zapR)) {
+      setSelectedRocznik(zapR);
+      const literkiList = [...new Set(klasaList.filter((k) => k.rok_szkolny === zapR).map((k) => k.nazwa))].filter(Boolean).sort();
+      if (zapL && literkiList.includes(zapL)) {
+        setSelectedLitera(zapL);
+      }
+    }
+  }, [klasaList, typSzkolyId, ladowanieKlas]);
+
+  useEffect(() => {
     if (!selectedClass?.id) {
       setPrzydzialData(null);
       setAssignedGodziny(null);
@@ -215,12 +256,17 @@ export default function DyspozycjaPage() {
       fetch('/api/przedmioty', { cache: 'no-store' }).then((r) => r.json()),
     ])
       .then(([data, przedmiotyRes]) => {
+        const d = data as any;
         setPrzydzialData({
-          przydzial: (data as any).przydzial && typeof (data as any).przydzial === 'object' ? (data as any).przydzial : {},
-          dyrektor: (data as any).dyrektor && typeof (data as any).dyrektor === 'object' ? (data as any).dyrektor : {},
-          doradztwo: (data as any).doradztwo && typeof (data as any).doradztwo === 'object' ? (data as any).doradztwo : {},
-          rozszerzenia: Array.isArray((data as any).rozszerzenia) ? (data as any).rozszerzenia : [],
-          rozszerzeniaPrzydzial: (data as any).rozszerzeniaPrzydzial && typeof (data as any).rozszerzeniaPrzydzial === 'object' ? (data as any).rozszerzeniaPrzydzial : {},
+          przydzial: d.przydzial && typeof d.przydzial === 'object' ? d.przydzial : {},
+          dyrektor: d.dyrektor && typeof d.dyrektor === 'object' ? d.dyrektor : {},
+          doradztwo: d.doradztwo && typeof d.doradztwo === 'object' ? d.doradztwo : {},
+          rozszerzenia: Array.isArray(d.rozszerzenia) ? d.rozszerzenia : [],
+          rozszerzeniaPrzydzial: d.rozszerzeniaPrzydzial && typeof d.rozszerzeniaPrzydzial === 'object' ? d.rozszerzeniaPrzydzial : {},
+          podzialNaGrupy: d.podzialNaGrupy && typeof d.podzialNaGrupy === 'object' ? d.podzialNaGrupy : {},
+          przydzialGrupy: d.przydzialGrupy && typeof d.przydzialGrupy === 'object' ? d.przydzialGrupy : {},
+          dyrektorGrupy: d.dyrektorGrupy && typeof d.dyrektorGrupy === 'object' ? d.dyrektorGrupy : {},
+          rozszerzeniaGrupy: d.rozszerzeniaGrupy && typeof d.rozszerzeniaGrupy === 'object' ? d.rozszerzeniaGrupy : {},
         });
         const pList = Array.isArray(przedmiotyRes) ? przedmiotyRes : (przedmiotyRes as any)?.przedmioty ?? [];
         setPrzedmioty(pList.map((p: { id: string; nazwa?: string }) => ({ id: String(p.id), nazwa: p.nazwa ?? '' })));
@@ -358,7 +404,10 @@ export default function DyspozycjaPage() {
       const response = await fetch('/api/typy-szkol', { cache: 'no-store' });
       const data = await response.json();
       const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
-      setTypySzkol(list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' })));
+      const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
+      setTypySzkol(mapped);
+      const zap = getZapamietanyTypSzkoly();
+      if (zap && mapped.some((t) => t.id === zap)) setTypSzkolyId(zap);
     } catch (error) {
       console.error('Błąd przy pobieraniu typów szkół:', error);
     } finally {
@@ -385,7 +434,11 @@ export default function DyspozycjaPage() {
             <label className="text-sm font-medium text-gray-600">Typ szkoły</label>
             <select
               value={typSzkolyId}
-              onChange={(e) => setTypSzkolyId(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszTypSzkoly(v);
+                setTypSzkolyId(v);
+              }}
               disabled={ladowanieTypow}
               className="w-full sm:w-[220px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
             >
@@ -400,7 +453,9 @@ export default function DyspozycjaPage() {
             <select
               value={selectedRocznik}
               onChange={(e) => {
-                setSelectedRocznik(e.target.value);
+                const v = e.target.value;
+                zapiszRocznik(v);
+                setSelectedRocznik(v);
                 setSelectedLitera('');
               }}
               disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
@@ -416,7 +471,11 @@ export default function DyspozycjaPage() {
             <label className="text-sm font-medium text-gray-600">Klasa</label>
             <select
               value={selectedLitera}
-              onChange={(e) => setSelectedLitera(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszLitera(v);
+                setSelectedLitera(v);
+              }}
               disabled={!selectedRocznik || literki.length === 0}
               className="w-full sm:w-[120px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
             >

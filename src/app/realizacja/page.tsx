@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import plansData from '@/utils/import/ramowe-plany.json';
+import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 
 interface TypSzkoly {
   id: string;
@@ -158,7 +159,10 @@ export default function RealizacjaPage() {
         const data = await res.json();
         if (!ok) return;
         const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
-        setTypySzkol(list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' })));
+        const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
+        setTypySzkol(mapped);
+        const zap = getZapamietanyTypSzkoly();
+        if (zap && mapped.some((t) => t.id === zap)) setTypSzkolyId(zap);
       } catch (e) {
         if (ok) setTypySzkol([]);
       } finally {
@@ -187,6 +191,20 @@ export default function RealizacjaPage() {
       .catch(() => setKlasaList([]))
       .finally(() => setLadowanieKlas(false));
   }, [typSzkolyId]);
+
+  useEffect(() => {
+    if (!typSzkolyId || ladowanieKlas || !klasaList.length) return;
+    const rocznikiList = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
+    const zapR = getZapamietanyRocznik();
+    const zapL = getZapamietanaLitera();
+    if (zapR && rocznikiList.includes(zapR)) {
+      setSelectedRocznik(zapR);
+      const literkiList = [...new Set(klasaList.filter((k) => k.rok_szkolny === zapR).map((k) => k.nazwa))].filter(Boolean).sort();
+      if (zapL && literkiList.includes(zapL)) {
+        setSelectedLitera(zapL);
+      }
+    }
+  }, [klasaList, typSzkolyId, ladowanieKlas]);
 
   useEffect(() => {
     if (!selectedClass?.id) {
@@ -304,7 +322,11 @@ export default function RealizacjaPage() {
             <label className="text-sm font-medium text-gray-600">Typ szkoły</label>
             <select
               value={typSzkolyId}
-              onChange={(e) => setTypSzkolyId(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszTypSzkoly(v);
+                setTypSzkolyId(v);
+              }}
               disabled={ladowanieTypow}
               className="w-full sm:w-[220px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
             >
@@ -319,7 +341,9 @@ export default function RealizacjaPage() {
             <select
               value={selectedRocznik}
               onChange={(e) => {
-                setSelectedRocznik(e.target.value);
+                const v = e.target.value;
+                zapiszRocznik(v);
+                setSelectedRocznik(v);
                 setSelectedLitera('');
               }}
               disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
@@ -335,7 +359,11 @@ export default function RealizacjaPage() {
             <label className="text-sm font-medium text-gray-600">Klasa</label>
             <select
               value={selectedLitera}
-              onChange={(e) => setSelectedLitera(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszLitera(v);
+                setSelectedLitera(v);
+              }}
               disabled={!selectedRocznik || literki.length === 0}
               className="w-full sm:w-[120px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
             >

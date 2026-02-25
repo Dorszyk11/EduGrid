@@ -175,6 +175,13 @@ function sumGrupyPair(p: GrupyPair | undefined): number {
   return (p[1] ?? 0) + (p[2] ?? 0);
 }
 
+/** Dla przydziału i nadwyżek: przy podziale na grupy liczymy MAX (nie sumę). Podwójne liczenie (suma) tylko w dyspozycji nauczycieli. */
+function maxGrupyPair(p: GrupyPair | undefined): number {
+  if (!p) return 0;
+  if (Array.isArray(p)) return Math.max(p[0] ?? 0, p[1] ?? 0);
+  return Math.max(p[1] ?? 0, p[2] ?? 0);
+}
+
 /** Opcjonalne dane z API (przydział dla klasy) – gdy podane, używane zamiast localStorage („dla szkoły”). */
 export interface DanePrzydzialuZApi {
   przydzial?: Record<string, Record<string, number>>;
@@ -273,10 +280,11 @@ export function obliczRealizacjaZPrzydzialu(
         const key = subjectKey(plan.plan_id, subject);
         const byGrade = przydzial[key] ?? {};
         const byGradeGrupy = przydzialGrupy[key];
+        /** Realizacja = tylko godziny do wyboru (przydział); dyrektorskie NIE liczą się do zrealizowanych przedmiotu. Przy podziale na grupy: MAX (nie suma). */
         let realized = 0;
         for (const g of grades) {
           if (podzialNaGrupy[key]?.[g]) {
-            realized += sumGrupyPair(byGradeGrupy?.[g] as GrupyPair);
+            realized += maxGrupyPair(byGradeGrupy?.[g] as GrupyPair);
           } else {
             realized += byGrade[g] ?? 0;
           }

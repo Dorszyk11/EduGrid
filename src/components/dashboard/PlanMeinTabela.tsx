@@ -826,7 +826,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     if (isPrzedmiotLaczny(subject)) return null;
                     const subKey = subjectKey(plan.plan_id, subject);
                     const hoursToChoose = row.hours_to_choose ?? 0;
-                    /** Dla roczników z podziałem na grupy bierzemy sumę grup z przydzialGrupy; dla pozostałych z przydzial. */
+                    /** Przy podziale na grupy używamy MAX (nie suma) – podwójne liczenie tylko w dyspozycji nauczycieli, nie w przydziale/nadwyżkach. */
                     const assignedByGrade = klasaId
                       ? (() => {
                           const fromPrzydzial = przydzial[subKey] ?? {};
@@ -834,7 +834,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           for (const g of grades) {
                             if (groupSplit.isSplit(subKey, g)) {
                               const gr = groupSplit.getGroupHours(subKey, g);
-                              byGrade[g] = Math.max(gr[1], gr[2]);
+                              byGrade[g] = Math.max(gr[1] ?? 0, gr[2] ?? 0);
                             } else {
                               byGrade[g] = fromPrzydzial[g] ?? 0;
                             }
@@ -849,7 +849,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           for (const g of grades) {
                             if (groupSplit.isSplit(subKey, g)) {
                               const gr = przydzialGrupyDyrektor[subKey]?.[g];
-                              byGrade[g] = gr ? Math.max(gr[1], gr[2]) : (fromDyrektor[g] ?? 0);
+                              byGrade[g] = gr ? Math.max(gr[1] ?? 0, gr[2] ?? 0) : (fromDyrektor[g] ?? 0);
                             } else {
                               byGrade[g] = fromDyrektor[g] ?? 0;
                             }
@@ -858,6 +858,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                         })()
                       : {};
                     const assignedSum = Object.values(assignedByGrade).reduce((a, b) => a + b, 0);
+                    /** Limitu hours_to_choose dyrektorskie NIE wypełniają – można przydzielić pełne 4h mimo dyrektorskich. */
                     const remaining = hoursToChoose - assignedSum;
                     const czyRozszerzony = isPrzedmiotRozszerzony(subject);
                     const obramowanieRozszerzony = czyRozszerzony ? 'border-t-2 border-b-2 border-gray-400' : '';
@@ -879,7 +880,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           for (const g of grades) {
                             if (groupSplit.isSplit(subKey, g)) {
                               const gr = przydzialGrupyRozszerzenia[subKey]?.[g];
-                              byGrade[g] = gr ? Math.max(gr[1], gr[2]) : ((rozszerzeniaPrzydzial[subKey] ?? {})[g] ?? 0);
+                              byGrade[g] = gr ? Math.max(gr[1] ?? 0, gr[2] ?? 0) : ((rozszerzeniaPrzydzial[subKey] ?? {})[g] ?? 0);
                             } else {
                               byGrade[g] = (rozszerzeniaPrzydzial[subKey] ?? {})[g] ?? 0;
                             }
@@ -904,12 +905,14 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                       : (row.total_hours ?? (hasGrades ? grades.reduce((s, g) => s + ((row.hours_by_grade?.[g] ?? 0) as number), 0) : 0));
 
                     const kafelekNazwaKlikalny = trybDodajRozszerzenia && !tylkoOdczyt && !czyRozszerzony;
-                    /** W wierszu „przedmioty o zakresie rozszerzonym”: zrealizowane = suma godzin z puli rozszerzeń (aktualizuje się przy dodawaniu/usuwaniu). Dla przedmiotów oznaczonych jako rozszerzone: zwykłe + pula (np. 2+1=3 z 12). */
+                    /** W wierszu „przedmioty o zakresie rozszerzonym”: zrealizowane = suma godzin z puli rozszerzeń. Dla przedmiotów z hours_to_choose: tylko przydzial (dyrektorskie NIE liczą się do zrealizowanych). */
                     const displayedAssigned = czyRozszerzony
                       ? extendedPoolAssignedTotal
                       : nazwaPogrubiona
                         ? assignedSum + extendedPoolAssignedTotal
-                        : assignedSum;
+                        : hoursToChoose > 0
+                          ? assignedSum
+                          : assignedSum;
                     const displayedTotal = czyRozszerzony
                       ? planoweGodziny
                       : nazwaPogrubiona
@@ -1031,8 +1034,6 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               const extG2Cell = groupSplit.getExtensionForGroup(subKey, g, 2);
                               const totalG1 = base + assignedG1Cell + dirG1Cell + extG1Cell;
                               const totalG2 = base + assignedG2Cell + dirG2Cell + extG2Cell;
-                              const remainingG1 = hoursToChoose - assignedG1;
-                              const remainingG2 = hoursToChoose - assignedG2;
                               const canAssignInCell = canPrzydzielacWKomorce(plan.school_type ?? '', g, subject);
                               const canAssignDirInCell = canPrzydzielacWKomorce(plan.school_type ?? '', g, subject, true) && !czyRozszerzony;
 
@@ -1048,19 +1049,20 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               let onRemG2: () => void = () => cofnijGodzine(subKey, g, 2);
                               let activeMode: 'none' | 'assign' | 'director' | 'extension' | 'delete' | 'split' = 'none';
 
-                              if (trybPodzielNaGrupy && !tylkoOdczyt) {
-                                activeMode = 'split';
-                              } else if (trybUsunGodzine) {
+                              if (trybUsunGodzine) {
                                 activeMode = 'delete';
                                 canG1 = totalG1 > 0;
                                 canG2 = totalG2 > 0;
-                                const removeOne = () => {
-                                  if (extG1Cell > 0) groupSplit.removeExtensionHourFromBothGroups(subKey, g);
-                                  else if (dirG1Cell > 0) groupSplit.removeDirectorHourFromBothGroups(subKey, g);
-                                  else groupSplit.removeHourFromBothGroups(subKey, g);
+                                onRemG1 = () => {
+                                  if (extG1Cell > 0) groupSplit.removeExtensionHourFromGroup(subKey, g, 1);
+                                  else if (dirG1Cell > 0) groupSplit.removeDirectorHourFromGroup(subKey, g, 1);
+                                  else groupSplit.removeHourFromGroup(subKey, g, 1);
                                 };
-                                onRemG1 = removeOne;
-                                onRemG2 = removeOne;
+                                onRemG2 = () => {
+                                  if (extG2Cell > 0) groupSplit.removeExtensionHourFromGroup(subKey, g, 2);
+                                  else if (dirG2Cell > 0) groupSplit.removeDirectorHourFromGroup(subKey, g, 2);
+                                  else groupSplit.removeHourFromGroup(subKey, g, 2);
+                                };
                               } else if (isDirectorMode && canAssignDirInCell) {
                                 activeMode = 'director';
                                 canG1 = !!klasaId && canAddDirectorOrPonadprogramoweThis;
@@ -1092,15 +1094,19 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                 onRemG2 = () => groupSplit.removeExtensionHourFromBothGroups(subKey, g);
                               } else if (isRegularAssignMode && canAssignOrPonadprogramoweThis && hoursToChoose > 0 && canAssignInCell) {
                                 activeMode = 'assign';
-                                const canAssignRegular = !!klasaId && remainingG1 > 0;
+                                const canAssignRegular = !!klasaId && remaining > 0;
                                 canG1 = canAssignRegular;
                                 canG2 = canAssignRegular;
                                 onAssG1 = () => groupSplit.addHourToBothGroups(subKey, g);
                                 onAssG2 = () => groupSplit.addHourToBothGroups(subKey, g);
                                 onRemG1 = () => groupSplit.removeHourFromBothGroups(subKey, g);
                                 onRemG2 = () => groupSplit.removeHourFromBothGroups(subKey, g);
+                              } else if (trybPodzielNaGrupy && !tylkoOdczyt) {
+                                activeMode = 'split';
                               }
 
+                              const hasDirInCell = dirG1Cell > 0 || dirG2Cell > 0;
+                              const hasExtInCell = extG1Cell > 0 || extG2Cell > 0;
                               return (
                                 <GroupSplitCell
                                   key={g}
@@ -1108,8 +1114,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                   planHours={base}
                                   assignedG1={totalG1}
                                   assignedG2={totalG2}
-                                  remainingG1={remainingG1}
-                                  remainingG2={remainingG2}
+remainingG1={remaining}
+                                    remainingG2={remaining}
                                   klasaId={klasaId}
                                   canAssignG1={canG1}
                                   canAssignG2={canG2}
@@ -1124,6 +1130,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                   splitModeActive={trybPodzielNaGrupy && !tylkoOdczyt}
                                   isDeleteMode={trybUsunGodzine}
                                   activeMode={activeMode}
+                                  hasDirectorHours={hasDirInCell}
+                                  hasExtensionHours={hasExtInCell}
                                 />
                               );
                             }
@@ -1140,9 +1148,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                     : maNadgodzinyDyrektorWKomorce && dirH > 0
                                       ? 'bg-sky-200'
                                       : '';
-                            /** Tło + grubsza obramówka (neutralna) dla komórek z godzinami dyrektorskimi (w ramach puli) */
+                            /** Tło dla komórek z godzinami dyrektorskimi. Nie stosuj gdy tryb przydziału/dyrektorski – wtedy bgKlikalny daje zielony/niebieski/sky. */
                             const bgGodzinyDyrektorskie =
-                              maGodzinyDyrektorskie && !maPonadprogramowe && !maNadgodzinyDyrektorWKomorce
+                              maGodzinyDyrektorskie && !maPonadprogramowe && !maNadgodzinyDyrektorWKomorce && !kafelekKlikalnyDyrektor && !kafelekKlikalnyGodziny
                                 ? 'bg-sky-50 ring-2 ring-gray-400 rounded'
                                 : '';
                             const bgKlikalny =
@@ -1189,16 +1197,19 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                       ? 'text-amber-900 font-semibold'
                                       : 'text-red-900 font-semibold'
                                 : '';
-                            const trybDodawaniaGodzin = trybPrzydzielGodzine || trybPrzydzielDyrektor || trybPrzydzielGodzinyRozszerzen;
-                            const maCoUsunac = (czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0 || dirH > 0 || assigned > 0;
-                            const onContextMenuUsun = trybDodawaniaGodzin && !tylkoOdczyt && maCoUsunac
+                            /** Prawy przycisk usuwa tylko godziny (nie grupy) i tylko typu aktywnego przycisku. */
+                            const maCoUsunacDyrektor = dirH > 0 && trybPrzydzielDyrektor;
+                            const maCoUsunacRozszerzenia = (czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0 && trybPrzydzielGodzinyRozszerzen;
+                            const maCoUsunacDoWyboru = assigned > 0 && trybPrzydzielGodzine && !trybPrzydzielGodzinyRozszerzen;
+                            const maCoUsunacPrawym = maCoUsunacDyrektor || maCoUsunacRozszerzenia || maCoUsunacDoWyboru;
+                            const onContextMenuUsun = maCoUsunacPrawym && !tylkoOdczyt
                               ? (e: React.MouseEvent) => {
                                   e.preventDefault();
-                                  if ((czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0) {
-                                    cofnijGodzineRozszerzen(g, planIdPrefix, nazwaPogrubiona ? subKey : undefined);
-                                  } else if (dirH > 0) {
+                                  if (maCoUsunacDyrektor) {
                                     usunGodzineDyrektorska(subKey, g);
-                                  } else {
+                                  } else if (maCoUsunacRozszerzenia) {
+                                    cofnijGodzineRozszerzen(g, planIdPrefix, nazwaPogrubiona ? subKey : undefined);
+                                  } else if (maCoUsunacDoWyboru) {
                                     cofnijGodzine(subKey, g);
                                   }
                                 }
@@ -1255,8 +1266,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                         : 'Kliknij, aby dodać godzinę dyrektorską ponad pulę (po potwierdzeniu)'
                                       : kafelekKlikalnyUsun
                                         ? 'Kliknij, aby usunąć 1 godzinę (najpierw dyrektorską, potem do wyboru)'
-                                        : maCoUsunac && trybDodawaniaGodzin
-                                          ? 'Prawy przycisk: usuń 1 godzinę'
+                                        : maCoUsunacPrawym
+                                          ? 'Prawy przycisk: usuń 1 godzinę (tylko typu aktywnego)'
                                         : maPonadprogramowe
                                           ? 'Godziny ponadprogramowe'
                                           : maNadgodzinyDyrektorWKomorce

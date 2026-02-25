@@ -25,7 +25,7 @@ export default function DashboardPage() {
         <SummaryCard
           title="Zgodność MEiN"
           description="Wskaźnik zgodności z planem ramowym"
-          href="/raporty"
+          href="/realizacja"
         />
       </div>
 
@@ -46,9 +46,9 @@ export default function DashboardPage() {
             description="Przeglądaj i zarządzaj danymi nauczycieli"
           />
           <QuickLink
-            href="/raporty"
-            label="Raporty"
-            description="Generuj raporty zgodności i obciążenia"
+            href="/realizacja"
+            label="Realizacja"
+            description="Realizacja planu i zgodność z wymaganiami MEiN"
           />
         </div>
       </div>
