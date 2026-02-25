@@ -407,7 +407,7 @@ export default function DyspozycjaPage() {
       const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
       setTypySzkol(mapped);
       const zap = getZapamietanyTypSzkoly();
-      if (zap && mapped.some((t) => t.id === zap)) setTypSzkolyId(zap);
+      if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
     } catch (error) {
       console.error('Błąd przy pobieraniu typów szkół:', error);
     } finally {

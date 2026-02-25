@@ -49,9 +49,6 @@ export const Nauczyciele: CollectionConfig = {
       filterOptions: { aktywny: { equals: true } },
       admin: {
         description: "Przedmioty, których uczy nauczyciel.",
-        components: {
-          Field: "src/components/admin/SpecjalizacjaSearchableField#SpecjalizacjaSearchableField",
-        },
       },
     },
     {

@@ -162,7 +162,7 @@ export default function RealizacjaPage() {
         const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
         setTypySzkol(mapped);
         const zap = getZapamietanyTypSzkoly();
-        if (zap && mapped.some((t) => t.id === zap)) setTypSzkolyId(zap);
+        if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
       } catch (e) {
         if (ok) setTypySzkol([]);
       } finally {

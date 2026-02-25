@@ -44,12 +44,6 @@ export default buildConfig({
   serverURL: getServerURL(),
   admin: {
     user: 'users',
-    dependencies: {
-      SpecjalizacjaSearchableField: {
-        path: 'src/components/admin/SpecjalizacjaSearchableField#SpecjalizacjaSearchableField',
-        type: 'component',
-      },
-    },
   },
   editor: slateEditor({}),
   collections: [

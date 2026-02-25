@@ -1065,8 +1065,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                 };
                               } else if (isDirectorMode && canAssignDirInCell) {
                                 activeMode = 'director';
-                                canG1 = !!klasaId && canAddDirectorOrPonadprogramoweThis;
-                                canG2 = !!klasaId && canAddDirectorOrPonadprogramoweThis;
+                                canG1 = !!(!!klasaId && canAddDirectorOrPonadprogramoweThis);
+                                canG2 = !!(!!klasaId && canAddDirectorOrPonadprogramoweThis);
                                 const addDir = () => {
                                   if (remainingDirectorHours > 0) {
                                     groupSplit.addDirectorHourToBothGroups(subKey, g);
