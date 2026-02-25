@@ -231,9 +231,9 @@ export function obliczRealizacjaZPrzydzialu(
   /** Suma braków i nadwyżek po pozycjach – żeby np. braki z rozszerzeń i nadwyżki ze zwykłych pokazać obie. */
   let sumBraki = 0;
   let sumNadwyzki = 0;
-  /** Do procentu realizacji: tylko godziny do rozdysponowania (do wyboru, dyrektorskie, doradztwo, rozszerzenia). */
+  /** Do procentu realizacji: tylko godziny do rozdysponowania. Nadwyżki NIE wliczają się – używamy min(realized, required) per pozycja. */
   let requiredDoRozdysponowania = 0;
-  let realizedDoRozdysponowania = 0;
+  let effectiveRealizedDoRozdysponowania = 0;
 
   for (const plan of plans) {
     const grades = getGrades(plan);
@@ -242,7 +242,7 @@ export function obliczRealizacjaZPrzydzialu(
     if (totalDirectorHours > 0) {
       const real = assignedDirectorForPlan(dyrektor, plan.plan_id, dyrektorGrupy);
       requiredDoRozdysponowania += totalDirectorHours;
-      realizedDoRozdysponowania += real;
+      effectiveRealizedDoRozdysponowania += Math.min(real, totalDirectorHours);
       sumBraki += Math.max(0, totalDirectorHours - real);
       sumNadwyzki += Math.max(0, real - totalDirectorHours);
     }
@@ -256,7 +256,7 @@ export function obliczRealizacjaZPrzydzialu(
         if (pool > 0) {
           const real = sumRozszerzeniaPrzydzial(rozszerzeniaPrzydzial, plan.plan_id, rozszerzeniaGrupy, rozszerzeniaSet);
           requiredDoRozdysponowania += pool;
-          realizedDoRozdysponowania += real;
+          effectiveRealizedDoRozdysponowania += Math.min(real, pool);
           sumBraki += Math.max(0, pool - real);
           sumNadwyzki += Math.max(0, real - pool);
         }
@@ -269,7 +269,7 @@ export function obliczRealizacjaZPrzydzialu(
         const byGrade = doradztwo[key] ?? {};
         const realized = Object.values(byGrade).reduce((a, b) => a + b, 0);
         requiredDoRozdysponowania += req;
-        realizedDoRozdysponowania += realized;
+        effectiveRealizedDoRozdysponowania += Math.min(realized, req);
         sumBraki += Math.max(0, req - realized);
         sumNadwyzki += Math.max(0, realized - req);
         continue;
@@ -290,7 +290,7 @@ export function obliczRealizacjaZPrzydzialu(
           }
         }
         requiredDoRozdysponowania += hoursToChoose;
-        realizedDoRozdysponowania += realized;
+        effectiveRealizedDoRozdysponowania += Math.min(realized, hoursToChoose);
         sumBraki += Math.max(0, hoursToChoose - realized);
         sumNadwyzki += Math.max(0, realized - hoursToChoose);
         continue;
@@ -306,10 +306,10 @@ export function obliczRealizacjaZPrzydzialu(
 
   const brakiGodzin = sumBraki;
   const nadwyzkiGodzin = sumNadwyzki;
-  /** Procent realizacji = tylko od godzin do rozdysponowania (np. 15/20 = 75%, nie 95/100). */
+  /** Procent realizacji = effectiveRealized/required. Nadwyżki nie wliczają się – liczymy min(realized, required) per pozycja. */
   const procentRealizacji =
     requiredDoRozdysponowania > 0
-      ? Math.min(100, (realizedDoRozdysponowania / requiredDoRozdysponowania) * 100)
+      ? (effectiveRealizedDoRozdysponowania / requiredDoRozdysponowania) * 100
       : 100;
 
   return {

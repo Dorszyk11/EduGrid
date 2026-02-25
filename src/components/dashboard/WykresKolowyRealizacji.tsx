@@ -1,7 +1,7 @@
 'use client';
 
 interface WykresKolowyRealizacjiProps {
-  /** Procent realizacji 0–100 */
+  /** Procent realizacji (może być >100 przy nadwyżkach) */
   procent: number;
   /** Opcjonalna etykieta pod wykresem */
   label?: string;
@@ -17,7 +17,8 @@ export default function WykresKolowyRealizacji({
   size = 160,
   className = '',
 }: WykresKolowyRealizacjiProps) {
-  const clamped = Math.min(100, Math.max(0, Number(procent)));
+  const val = Math.max(0, Number(procent));
+  const clamped = Math.min(100, val); // do rysowania koła
   const r = (size - 16) / 2;
   const cx = size / 2;
   const cy = size / 2;
@@ -61,7 +62,7 @@ export default function WykresKolowyRealizacji({
           style={{ transition: 'stroke-dashoffset 0.5s ease' }}
         />
       </svg>
-      <span className="text-2xl font-bold mt-1 text-gray-800">{Math.round(clamped)}%</span>
+      <span className="text-2xl font-bold mt-1 text-gray-800">{Math.round(val * 10) / 10}%</span>
       {label && <span className="text-sm text-gray-500">{label}</span>}
     </div>
   );
