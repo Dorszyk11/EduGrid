@@ -5,6 +5,7 @@ export const Przedmioty: CollectionConfig = {
   admin: {
     useAsTitle: "nazwa",
     defaultColumns: ["nazwa", "typ_zajec", "poziom", "aktywny", "updatedAt"],
+    listSearchableFields: ["nazwa", "kod_mein"],
   },
   access: {
     read: () => true,

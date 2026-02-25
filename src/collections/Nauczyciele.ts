@@ -46,8 +46,12 @@ export const Nauczyciele: CollectionConfig = {
       relationTo: "przedmioty",
       hasMany: true,
       label: "Specjalizacja",
+      filterOptions: { aktywny: { equals: true } },
       admin: {
-        description: "Przedmioty, których uczy nauczyciel (z listy przedmiotów)",
+        description: "Przedmioty, których uczy nauczyciel.",
+        components: {
+          Field: "src/components/admin/SpecjalizacjaSearchableField#SpecjalizacjaSearchableField",
+        },
       },
     },
     {

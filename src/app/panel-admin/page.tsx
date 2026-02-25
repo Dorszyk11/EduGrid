@@ -96,6 +96,7 @@ export default function PanelAdminaPage() {
   const [deletingKlasaId, setDeletingKlasaId] = useState<string | null>(null);
   const [submittingNauczyciel, setSubmittingNauczyciel] = useState(false);
   const [deletingNauczycielId, setDeletingNauczycielId] = useState<string | null>(null);
+  const [searchPrzedmioty, setSearchPrzedmioty] = useState('');
 
   const fetchAll = async () => {
     setLoading(true);
@@ -636,21 +637,25 @@ export default function PanelAdminaPage() {
                     placeholder="18"
                     className="rounded-lg border border-gray-300 px-3 py-2 w-24"
                   />
-                  <span className="text-xs text-gray-500">pełny etat = 18, pół = 9</span>
                 </label>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium text-gray-700">Specjalizacja (przedmioty)</span>
                   {przedmioty.length === 0 ? (
-                    <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200 w-64">
+                    <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded border border-amber-200 w-48 max-w-full">
                       Brak przedmiotów w bazie. Dodaj przedmioty w sekcji „Przedmioty” poniżej – wtedy pojawią się tutaj do wyboru.
                     </p>
                   ) : (
-                    <div className="rounded-lg border border-gray-300 bg-gray-50/50 w-64 max-h-48 overflow-y-auto">
-                      <div className="p-2 flex flex-wrap gap-x-3 gap-y-1">
-                        {przedmioty.map((p) => (
+                    <div className="rounded border border-gray-300 bg-gray-50/50 w-48">
+                      <div className="p-1 flex flex-wrap gap-x-1 gap-y-0 max-h-20 overflow-y-auto border-b border-gray-200">
+                        {przedmioty
+                          .filter((p) =>
+                            !searchPrzedmioty.trim() ||
+                            p.nazwa.toLowerCase().includes(searchPrzedmioty.trim().toLowerCase())
+                          )
+                          .map((p) => (
                           <label
                             key={String(p.id)}
-                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-100 cursor-pointer text-sm text-gray-800"
+                            className="flex items-center gap-1 py-0.5 px-1 rounded hover:bg-gray-100 cursor-pointer text-[11px] text-gray-800"
                           >
                             <input
                               type="checkbox"
@@ -664,14 +669,21 @@ export default function PanelAdminaPage() {
                                     : s.przedmiotyIds.filter((x) => x !== id),
                                 }));
                               }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
                             />
                             <span>{p.nazwa}</span>
                           </label>
                         ))}
                       </div>
+                      <input
+                        type="text"
+                        placeholder="Szukaj przedmiotu…"
+                        value={searchPrzedmioty}
+                        onChange={(e) => setSearchPrzedmioty(e.target.value)}
+                        className="w-full px-2 py-1 text-xs rounded-b focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
                       {formNauczyciel.przedmiotyIds.length > 0 && (
-                        <p className="text-xs text-gray-500 px-2 pb-2 pt-0 border-t border-gray-200 mt-1 pt-2">
+                        <p className="text-[10px] text-gray-500 px-1 pb-1 pt-0.5 border-t border-gray-200">
                           Wybrano: {formNauczyciel.przedmiotyIds.length}
                         </p>
                       )}
