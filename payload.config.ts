@@ -3,6 +3,7 @@ import { buildConfig } from 'payload';
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import { slateEditor } from '@payloadcms/richtext-slate';
 import path from 'path';
+import { getDbSslConfig } from './src/lib/dbSsl';
 
 // Importy kolekcji (bez rozszerzenia .ts – Next.js/TypeScript nie pozwala na .ts w importach)
 import { Users } from './src/collections/Users';
@@ -67,8 +68,9 @@ export default buildConfig({
         max: 2,
         idleTimeoutMillis: 10000,
       };
-      if (uri.includes('supabase')) {
-        poolConfig.ssl = { rejectUnauthorized: false };
+      const sslConfig = getDbSslConfig(uri || undefined);
+      if (sslConfig) {
+        poolConfig.ssl = sslConfig;
       }
       return poolConfig;
     })(),

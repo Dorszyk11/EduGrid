@@ -3,6 +3,7 @@ import { getPayload } from 'payload';
 import config from '@/payload.config';
 import crypto from 'crypto';
 import { Pool } from 'pg';
+import { getDbSslConfig } from '@/lib/dbSsl';
 
 /** Pierwsza inicjalizacja Payload bywa bardzo wolna – po 8 s używamy zapisu bezpośrednio do bazy. */
 const PAYLOAD_TIMEOUT_MS = 8_000;
@@ -44,7 +45,7 @@ async function registerViaDb(email: string, password: string, imie: string, nazw
   if (!connectionString) throw new Error('Brak DATABASE_URI w konfiguracji.');
   const pool = new Pool({
     connectionString,
-    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
+    ssl: getDbSslConfig(connectionString),
   });
   const client = await pool.connect();
   try {

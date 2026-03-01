@@ -4,6 +4,7 @@ import config from '@/payload.config';
 import crypto from 'crypto';
 import { SignJWT } from 'jose';
 import { getPayloadSecretKey } from '@/utils/auth';
+import { getDbSslConfig } from '@/lib/dbSsl';
 
 const COOKIE_NAME = 'payload-token';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dni
@@ -25,7 +26,7 @@ function createDbPool(connectionString: string): DbPool {
   };
   return new Pool({
     connectionString,
-    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
+    ssl: getDbSslConfig(connectionString),
   });
 }
 

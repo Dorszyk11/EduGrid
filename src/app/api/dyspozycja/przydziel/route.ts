@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
+import { getDbSslConfig } from '@/lib/dbSsl';
 
 /** 1 godzina tygodniowo ≈ 38 godzin rocznie (rok szkolny), po 19 na semestr */
 const GODZINY_ROCZNE_ZA_1_TYG = 38;
@@ -141,7 +142,7 @@ async function zapiszDoPostgres(params: {
 
   const pool = new Pool({
     connectionString: conn,
-    ssl: conn.includes('supabase') ? { rejectUnauthorized: false } : undefined,
+    ssl: getDbSslConfig(conn),
   });
 
   const client = await pool.connect();
@@ -245,7 +246,7 @@ export async function GET(request: NextRequest) {
     if (!conn) return NextResponse.json({ error: 'Brak DATABASE_URI' }, { status: 500 });
     const pool = new Pool({
       connectionString: conn,
-      ssl: conn.includes('supabase') ? { rejectUnauthorized: false } : undefined,
+      ssl: getDbSslConfig(conn),
     });
     const client = await pool.connect();
     try {
