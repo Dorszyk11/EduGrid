@@ -2,13 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import crypto from 'crypto';
-import { Pool } from 'pg';
 import { SignJWT } from 'jose';
 import { getPayloadSecretKey } from '@/utils/auth';
 
 const COOKIE_NAME = 'payload-token';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dni
 const PAYLOAD_TIMEOUT_MS = 10_000;
+
+type DbQueryResult = { rows: Record<string, unknown>[] };
+type DbClient = {
+  query: (text: string, params?: unknown[]) => Promise<DbQueryResult>;
+  release: () => void;
+};
+type DbPool = {
+  connect: () => Promise<DbClient>;
+  end: () => Promise<void>;
+};
+
+function createDbPool(connectionString: string): DbPool {
+  const { Pool } = require('pg') as {
+    Pool: new (options: { connectionString: string; ssl?: { rejectUnauthorized: boolean } }) => DbPool;
+  };
+  return new Pool({
+    connectionString,
+    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
+  });
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return Promise.race([
@@ -45,10 +64,7 @@ async function loginViaDb(email: string, password: string): Promise<{ user: { id
   const secret = getPayloadSecretKey();
   if (!secret) return null;
 
-  const pool = new Pool({
-    connectionString,
-    ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : undefined,
-  });
+  const pool = createDbPool(connectionString);
   const client = await pool.connect();
   try {
     const cols = await client.query(
