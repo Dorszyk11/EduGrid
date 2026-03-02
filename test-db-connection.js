@@ -17,7 +17,12 @@ try {
     const env = fs.readFileSync(envPath, 'utf8');
     for (const line of env.split('\n')) {
       const m = line.match(/^\s*([^#=]+)=(.*)$/);
-      if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
+      if (m) {
+        const key = m[1].trim();
+        if (process.env[key] == null) {
+          process.env[key] = m[2].trim().replace(/^["']|["']$/g, '');
+        }
+      }
     }
   }
 } catch (e) {}

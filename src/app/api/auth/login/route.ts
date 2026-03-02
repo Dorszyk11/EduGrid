@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { SignJWT } from 'jose';
 import { getPayloadSecretKey } from '@/utils/auth';
 import { getDbSslConfig } from '@/lib/dbSsl';
+import { assertDatabaseHostResolvable } from '@/lib/dbHost';
 
 const COOKIE_NAME = 'payload-token';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dni
@@ -135,6 +136,7 @@ export async function POST(request: NextRequest) {
     let result: LoginResult | null = null;
 
     try {
+      await assertDatabaseHostResolvable(process.env.DATABASE_URI);
       result = await withTimeout(
         (async (): Promise<LoginResult> => {
           const payload = await getPayload({ config });
