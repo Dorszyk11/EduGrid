@@ -6,9 +6,20 @@ export type SplitCellMode = 'none' | 'assign' | 'director' | 'extension' | 'dele
 
 interface GroupSplitCellProps {
   grade: string;
-  planHours: number;
-  assignedG1: number;
-  assignedG2: number;
+  /** Godziny programowe (baza) w tym roczniku */
+  baseHours: number;
+  /** Godziny „do wyboru” per grupa */
+  optionalG1: number;
+  optionalG2: number;
+  /** Godziny dyrektorskie per grupa */
+  directorG1: number;
+  directorG2: number;
+  /** Godziny z puli rozszerzeń per grupa */
+  extensionG1: number;
+  extensionG2: number;
+  /** Pełna suma (logika klików / tła) */
+  totalG1: number;
+  totalG2: number;
   remainingG1: number;
   remainingG2: number;
   klasaId: string | undefined;
@@ -23,7 +34,8 @@ interface GroupSplitCellProps {
   onRemoveG2: () => void;
   onToggleSplit: () => void;
   splitModeActive: boolean;
-  isDeleteMode: boolean;
+  /** Zachowane dla spójności z wywołaniami (tryb usuwania steruje activeMode) */
+  isDeleteMode?: boolean;
   activeMode: SplitCellMode;
   /** Gdy true – w komórce są godziny dyrektorskie (w trybie assign: zielono gdy remaining>0, niebiesko gdy all assigned) */
   hasDirectorHours?: boolean;
@@ -31,13 +43,8 @@ interface GroupSplitCellProps {
   hasExtensionHours?: boolean;
 }
 
-function formatHours(assigned: number, plan: number): string {
-  if (assigned <= 0) return plan > 0 ? String(plan) : '–';
-  return String(assigned);
-}
-
 function halfBg(
-  assigned: number,
+  total: number,
   remaining: number,
   canAssign: boolean,
   canRemove: boolean,
@@ -49,44 +56,89 @@ function halfBg(
 
   /** Niebiesko tylko gdy aktywny tryb assign – pełny przydział lub nadwyżka */
   if (mode === 'assign') {
-    if (hasExtensionHours && assigned > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
+    if (hasExtensionHours && total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
     if (canAssign) return 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded';
     /** Pełny przydział lub nadwyżka – niebiesko tylko w trybie assign */
-    if ((assigned > 0 || hasDirectorHours) && remaining <= 0) return 'bg-blue-200 ring-2 ring-blue-400 rounded';
+    if ((total > 0 || hasDirectorHours) && remaining <= 0) return 'bg-blue-200 ring-2 ring-blue-400 rounded';
   }
   if (mode === 'director') {
     if (canAssign) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
-    if (assigned > 0 || hasDirectorHours) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
+    if (total > 0 || hasDirectorHours) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
   }
   if (mode === 'extension') {
     if (canAssign) return 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-1 ring-violet-400 rounded-sm';
-    if (assigned > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
+    if (total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
   }
 
   /** Bez aktywnego trybu (assign/director/extension) – nie podświetlamy na niebiesko, tylko neutralne tło */
-  if (assigned > 0) {
+  if (total > 0) {
     if (hasExtensionHours) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
     return 'ring-1 ring-gray-300 rounded-sm';
   }
   return '';
 }
 
-function halfText(assigned: number, remaining: number, mode: SplitCellMode, hasDirectorHours?: boolean, hasExtensionHours?: boolean): string {
+function halfText(total: number, remaining: number, mode: SplitCellMode, hasDirectorHours?: boolean, hasExtensionHours?: boolean): string {
   if (mode === 'assign' || mode === 'delete' || mode === 'director' || mode === 'extension') {
-    if (mode === 'director' && assigned > 0) return 'font-bold text-sky-700';
-    if ((mode === 'extension' || hasExtensionHours) && assigned > 0) return 'font-bold text-violet-700';
+    if (mode === 'director' && total > 0) return 'font-bold text-sky-700';
+    if ((mode === 'extension' || hasExtensionHours) && total > 0) return 'font-bold text-violet-700';
     return '';
   }
-  if (assigned <= 0) return '';
+  if (total <= 0) return '';
   if (hasExtensionHours) return 'font-bold text-violet-700';
   return 'text-gray-700 font-medium';
 }
 
+/** Jak w komórce bez podziału: baza+opcjonalne+rozszerzenie, a godziny dyrektorskie jako +Nd */
+function HalfHoursDisplay({
+  base,
+  optional,
+  extension,
+  director,
+  klasaId,
+}: {
+  base: number;
+  optional: number;
+  extension: number;
+  director: number;
+  klasaId: string | undefined;
+}) {
+  if (!klasaId) {
+    return <>{base > 0 ? String(base) : '–'}</>;
+  }
+  const core = base + optional + extension;
+  const total = core + director;
+  if (total <= 0) {
+    return <>{base > 0 ? String(base) : '–'}</>;
+  }
+  const coreClass =
+    extension > 0
+      ? 'font-bold text-violet-700'
+      : optional > 0
+        ? 'font-medium text-gray-800'
+        : 'text-gray-700 font-medium';
+  if (director > 0) {
+    return (
+      <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 leading-tight">
+        <span className={`tabular-nums ${coreClass}`}>{core}</span>
+        <span className="text-sky-600 font-semibold tabular-nums text-[0.65rem] sm:text-xs">+{director}d</span>
+      </span>
+    );
+  }
+  return <span className={`tabular-nums ${coreClass}`}>{core}</span>;
+}
+
 export default function GroupSplitCell({
   grade,
-  planHours,
-  assignedG1,
-  assignedG2,
+  baseHours,
+  optionalG1,
+  optionalG2,
+  directorG1,
+  directorG2,
+  extensionG1,
+  extensionG2,
+  totalG1,
+  totalG2,
   remainingG1,
   remainingG2,
   klasaId,
@@ -101,7 +153,7 @@ export default function GroupSplitCell({
   onRemoveG2,
   onToggleSplit,
   splitModeActive,
-  isDeleteMode,
+  isDeleteMode: _isDeleteMode,
   activeMode,
   hasDirectorHours = false,
   hasExtensionHours = false,
@@ -144,41 +196,50 @@ export default function GroupSplitCell({
     ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded'
     : '';
 
-  const effectiveMode = splitModeActive ? 'split' as SplitCellMode : activeMode;
-  const bg1 = splitModeActive ? '' : halfBg(assignedG1, remainingG1, canAssignG1, canRemoveG1, effectiveMode, hasDirectorHours, hasExtensionHours);
-  const bg2 = splitModeActive ? '' : halfBg(assignedG2, remainingG2, canAssignG2, canRemoveG2, effectiveMode, hasDirectorHours, hasExtensionHours);
-  const txt1 = splitModeActive ? '' : halfText(assignedG1, remainingG1, effectiveMode, hasDirectorHours, hasExtensionHours);
-  const txt2 = splitModeActive ? '' : halfText(assignedG2, remainingG2, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const effectiveMode = splitModeActive ? ('split' as SplitCellMode) : activeMode;
+  const bg1 = splitModeActive ? '' : halfBg(totalG1, remainingG1, canAssignG1, canRemoveG1, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const bg2 = splitModeActive ? '' : halfBg(totalG2, remainingG2, canAssignG2, canRemoveG2, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const txt1 = splitModeActive ? '' : halfText(totalG1, remainingG1, effectiveMode, hasDirectorHours, hasExtensionHours);
+  const txt2 = splitModeActive ? '' : halfText(totalG2, remainingG2, effectiveMode, hasDirectorHours, hasExtensionHours);
 
   const interactive1 = canAssignG1 || canRemoveG1 || canToggleSplit;
   const interactive2 = canAssignG2 || canRemoveG2 || canToggleSplit;
 
-  const half = 'flex items-center justify-center text-xs tabular-nums transition-colors min-h-0';
+  const half = 'flex items-center justify-center text-xs tabular-nums transition-colors min-h-0 px-0.5';
   const containerBorder = hasDirectorHours ? 'ring-1 ring-gray-400 rounded' : '';
 
   return (
-    <td
-      key={grade}
-      className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-[3.25rem] ${tdClass} ${containerBorder}`}
-    >
+    <td className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-[3.25rem] ${tdClass} ${containerBorder}`} aria-label={`Rocznik ${grade}`}>
       <div className="flex flex-col h-full">
         <div
           className={`${half} flex-1 border-b border-gray-200 ${bg1} ${txt1}`}
           onClick={handleClick(canAssignG1, canRemoveG1, onAssignG1, onRemoveG1)}
-          onContextMenu={handleContextMenu(assignedG1, onRemoveG1)}
+          onContextMenu={handleContextMenu(totalG1, onRemoveG1)}
           role={interactive1 ? 'button' : undefined}
-          title={titleFor(1, canAssignG1, canRemoveG1, assignedG1)}
+          title={titleFor(1, canAssignG1, canRemoveG1, totalG1)}
         >
-          {klasaId ? formatHours(assignedG1, planHours) : (planHours > 0 ? String(planHours) : '–')}
+          <HalfHoursDisplay
+            base={baseHours}
+            optional={optionalG1}
+            extension={extensionG1}
+            director={directorG1}
+            klasaId={klasaId}
+          />
         </div>
         <div
           className={`${half} flex-1 ${bg2} ${txt2}`}
           onClick={handleClick(canAssignG2, canRemoveG2, onAssignG2, onRemoveG2)}
-          onContextMenu={handleContextMenu(assignedG2, onRemoveG2)}
+          onContextMenu={handleContextMenu(totalG2, onRemoveG2)}
           role={interactive2 ? 'button' : undefined}
-          title={titleFor(2, canAssignG2, canRemoveG2, assignedG2)}
+          title={titleFor(2, canAssignG2, canRemoveG2, totalG2)}
         >
-          {klasaId ? formatHours(assignedG2, planHours) : (planHours > 0 ? String(planHours) : '–')}
+          <HalfHoursDisplay
+            base={baseHours}
+            optional={optionalG2}
+            extension={extensionG2}
+            director={directorG2}
+            klasaId={klasaId}
+          />
         </div>
       </div>
     </td>

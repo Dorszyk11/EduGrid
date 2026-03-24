@@ -4,16 +4,25 @@ export type GroupHours = { 1: number; 2: number };
 export type GroupSplitFlags = Record<string, Record<string, boolean>>;
 export type GroupAssignments = Record<string, Record<string, GroupHours>>;
 
+export type GroupSplitSaveExtras = {
+  dyrektor?: Record<string, Record<string, number>>;
+  rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+};
+
 interface UseGroupSplitOptions {
   klasaId: string | undefined;
   przydzial: Record<string, Record<string, number>>;
   setPrzydzial: (next: Record<string, Record<string, number>>) => void;
+  /** Płaskie godziny dyrektorskie / rozszerzeń – przy włączaniu podziału migrowane do struktur grupowych i z powrotem przy wyłączaniu. */
+  dyrektor?: Record<string, Record<string, number>>;
+  rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
   onSave: (
     przydzial: Record<string, Record<string, number>>,
     grupy: GroupAssignments,
     podzial: GroupSplitFlags,
     grupyDyrektor: GroupAssignments,
     grupyRozszerzenia: GroupAssignments,
+    extras?: GroupSplitSaveExtras,
   ) => void;
   onChange?: () => void;
 }
@@ -51,8 +60,15 @@ interface UseGroupSplitReturn {
     grades: string[],
     totalByGrade: Record<string, number>,
     assignedByGrade: Record<string, number>,
-    directorByGrade: Record<string, number>
-  ) => { sumH1: number; sumH2: number; assignedG1: number; assignedG2: number };
+    baseByGrade: Record<string, number>,
+  ) => {
+    sumH1: number;
+    sumH2: number;
+    assignedG1: number;
+    assignedG2: number;
+    directorSumG1: number;
+    directorSumG2: number;
+  };
 }
 
 function removeKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
@@ -111,6 +127,8 @@ export function useGroupSplit({
   klasaId,
   przydzial,
   setPrzydzial,
+  dyrektor: dyrektorFlat = {},
+  rozszerzeniaPrzydzial: rozszerzeniaFlat = {},
   onSave,
   onChange,
 }: UseGroupSplitOptions): UseGroupSplitReturn {
@@ -140,15 +158,21 @@ export function useGroupSplit({
   );
 
   const getDirectorForGroup = useCallback(
-    (subKey: string, grade: string, group: 1 | 2): number =>
-      getForGroup(przydzialGrupyDyrektor, subKey, grade, group),
-    [przydzialGrupyDyrektor]
+    (subKey: string, grade: string, group: 1 | 2): number => {
+      const gr = przydzialGrupyDyrektor[subKey]?.[grade];
+      if (gr && (gr[1] ?? 0) + (gr[2] ?? 0) > 0) return gr[group] ?? 0;
+      return dyrektorFlat[subKey]?.[grade] ?? 0;
+    },
+    [przydzialGrupyDyrektor, dyrektorFlat]
   );
 
   const getExtensionForGroup = useCallback(
-    (subKey: string, grade: string, group: 1 | 2): number =>
-      getForGroup(przydzialGrupyRozszerzenia, subKey, grade, group),
-    [przydzialGrupyRozszerzenia]
+    (subKey: string, grade: string, group: 1 | 2): number => {
+      const gr = przydzialGrupyRozszerzenia[subKey]?.[grade];
+      if (gr && (gr[1] ?? 0) + (gr[2] ?? 0) > 0) return gr[group] ?? 0;
+      return rozszerzeniaFlat[subKey]?.[grade] ?? 0;
+    },
+    [przydzialGrupyRozszerzenia, rozszerzeniaFlat]
   );
 
   const save = useCallback(
@@ -158,6 +182,7 @@ export function useGroupSplit({
       pd: GroupSplitFlags,
       gd?: GroupAssignments,
       gr?: GroupAssignments,
+      extras?: GroupSplitSaveExtras,
     ) => {
       onSave(
         p,
@@ -165,6 +190,7 @@ export function useGroupSplit({
         pd,
         gd ?? przydzialGrupyDyrektor,
         gr ?? przydzialGrupyRozszerzenia,
+        extras,
       );
     },
     [onSave, przydzialGrupyDyrektor, przydzialGrupyRozszerzenia]
@@ -186,6 +212,23 @@ export function useGroupSplit({
       let nextGrupy = przydzialGrupy;
       let nextGrupyDir = przydzialGrupyDyrektor;
       let nextGrupyExt = przydzialGrupyRozszerzenia;
+      let nextDyrektorFlat = dyrektorFlat;
+      let nextRozFlat = rozszerzeniaFlat;
+      let extras: GroupSplitSaveExtras | undefined;
+
+      const mergeFlatSubject = (
+        flat: Record<string, Record<string, number>>,
+        key: string,
+        g: string,
+        value: number,
+      ): Record<string, Record<string, number>> => {
+        const bySub = { ...(flat[key] ?? {}) };
+        if (value > 0) bySub[g] = value;
+        else delete bySub[g];
+        const cleaned = cleanRecord(bySub);
+        if (Object.keys(cleaned).length === 0) return removeKey(flat, key);
+        return { ...flat, [key]: cleaned };
+      };
 
       if (enabling) {
         const current = (przydzial[subKey] ?? {})[grade] ?? 0;
@@ -199,6 +242,34 @@ export function useGroupSplit({
           const { [grade]: _, ...rest } = przydzial[subKey] ?? {};
           nextPrzydzial = { ...przydzial, [subKey]: rest };
           setPrzydzial(nextPrzydzial);
+        }
+
+        const dirFlat = dyrektorFlat[subKey]?.[grade] ?? 0;
+        if (dirFlat > 0) {
+          nextGrupyDir = {
+            ...przydzialGrupyDyrektor,
+            [subKey]: {
+              ...(przydzialGrupyDyrektor[subKey] ?? {}),
+              [grade]: { 1: dirFlat, 2: dirFlat },
+            },
+          };
+          setPrzydzialGrupyDyrektor(nextGrupyDir);
+          nextDyrektorFlat = mergeFlatSubject(dyrektorFlat, subKey, grade, 0);
+          extras = { ...extras, dyrektor: nextDyrektorFlat };
+        }
+
+        const extFlat = rozszerzeniaFlat[subKey]?.[grade] ?? 0;
+        if (extFlat > 0) {
+          nextGrupyExt = {
+            ...przydzialGrupyRozszerzenia,
+            [subKey]: {
+              ...(przydzialGrupyRozszerzenia[subKey] ?? {}),
+              [grade]: { 1: extFlat, 2: extFlat },
+            },
+          };
+          setPrzydzialGrupyRozszerzenia(nextGrupyExt);
+          nextRozFlat = mergeFlatSubject(rozszerzeniaFlat, subKey, grade, 0);
+          extras = { ...extras, rozszerzeniaPrzydzial: nextRozFlat };
         }
       } else {
         const gr = przydzialGrupy[subKey]?.[grade];
@@ -227,6 +298,11 @@ export function useGroupSplit({
             ? removeKey(przydzialGrupyDyrektor, subKey)
             : { ...przydzialGrupyDyrektor, [subKey]: restDir };
           setPrzydzialGrupyDyrektor(nextGrupyDir);
+          const dirSum = Math.max(dirGr[1] ?? 0, dirGr[2] ?? 0);
+          if (dirSum > 0) {
+            nextDyrektorFlat = mergeFlatSubject(dyrektorFlat, subKey, grade, dirSum);
+            extras = { ...extras, dyrektor: nextDyrektorFlat };
+          }
         }
 
         const extGr = przydzialGrupyRozszerzenia[subKey]?.[grade];
@@ -237,13 +313,30 @@ export function useGroupSplit({
             ? removeKey(przydzialGrupyRozszerzenia, subKey)
             : { ...przydzialGrupyRozszerzenia, [subKey]: restExt };
           setPrzydzialGrupyRozszerzenia(nextGrupyExt);
+          const extSum = Math.max(extGr[1] ?? 0, extGr[2] ?? 0);
+          if (extSum > 0) {
+            nextRozFlat = mergeFlatSubject(rozszerzeniaFlat, subKey, grade, extSum);
+            extras = { ...extras, rozszerzeniaPrzydzial: nextRozFlat };
+          }
         }
       }
 
       onChange?.();
-      onSave(nextPrzydzial, nextGrupy, nextPodzial, nextGrupyDir, nextGrupyExt);
+      onSave(nextPrzydzial, nextGrupy, nextPodzial, nextGrupyDir, nextGrupyExt, extras);
     },
-    [klasaId, podzialNaGrupy, przydzial, przydzialGrupy, przydzialGrupyDyrektor, przydzialGrupyRozszerzenia, setPrzydzial, onSave, onChange]
+    [
+      klasaId,
+      podzialNaGrupy,
+      przydzial,
+      przydzialGrupy,
+      przydzialGrupyDyrektor,
+      przydzialGrupyRozszerzenia,
+      dyrektorFlat,
+      rozszerzeniaFlat,
+      setPrzydzial,
+      onSave,
+      onChange,
+    ]
   );
 
   const addHourToGroup = useCallback(
@@ -427,10 +520,64 @@ export function useGroupSplit({
       grades: string[],
       totalByGrade: Record<string, number>,
       assignedByGrade: Record<string, number>,
-      _directorByGrade: Record<string, number>
+      baseByGrade: Record<string, number>,
     ) => {
-      const sumH1 = grades.reduce((s, g) => s + (totalByGrade[g] ?? 0), 0);
-      const sumH2 = sumH1;
+      const optionalForGroup = (g: string, group: 1 | 2): number => {
+        if (podzialNaGrupy[subKey]?.[g] !== true) {
+          return assignedByGrade[g] ?? 0;
+        }
+        const gr = przydzialGrupy[subKey]?.[g];
+        const hasGroupData = gr && gr[1] + gr[2] > 0;
+        return hasGroupData ? (gr[group] ?? 0) : (przydzial[subKey]?.[g] ?? 0);
+      };
+
+      const directorForGroupCell = (g: string, group: 1 | 2): number => {
+        if (podzialNaGrupy[subKey]?.[g] !== true) {
+          return dyrektorFlat[subKey]?.[g] ?? 0;
+        }
+        const gr = przydzialGrupyDyrektor[subKey]?.[g];
+        if (gr && (gr[1] ?? 0) + (gr[2] ?? 0) > 0) return gr[group] ?? 0;
+        return dyrektorFlat[subKey]?.[g] ?? 0;
+      };
+
+      const extensionForGroupCell = (g: string, group: 1 | 2): number => {
+        const flatR = rozszerzeniaFlat[subKey]?.[g] ?? 0;
+        if (podzialNaGrupy[subKey]?.[g] !== true) {
+          return flatR;
+        }
+        const gr = przydzialGrupyRozszerzenia[subKey]?.[g];
+        const sumGr = gr ? (gr[1] ?? 0) + (gr[2] ?? 0) : 0;
+        if (sumGr > 0) return gr![group] ?? 0;
+        return flatR;
+      };
+
+      const sumH1 = grades.reduce((s, g) => {
+        if (podzialNaGrupy[subKey]?.[g] !== true) {
+          return s + (totalByGrade[g] ?? 0);
+        }
+        const base = baseByGrade[g] ?? 0;
+        return (
+          s +
+          base +
+          optionalForGroup(g, 1) +
+          directorForGroupCell(g, 1) +
+          extensionForGroupCell(g, 1)
+        );
+      }, 0);
+
+      const sumH2 = grades.reduce((s, g) => {
+        if (podzialNaGrupy[subKey]?.[g] !== true) {
+          return s + (totalByGrade[g] ?? 0);
+        }
+        const base = baseByGrade[g] ?? 0;
+        return (
+          s +
+          base +
+          optionalForGroup(g, 2) +
+          directorForGroupCell(g, 2) +
+          extensionForGroupCell(g, 2)
+        );
+      }, 0);
 
       const computeForGroup = (group: 1 | 2) =>
         grades.reduce((s, g) => {
@@ -438,19 +585,32 @@ export function useGroupSplit({
             return s + (assignedByGrade[g] ?? 0);
           }
           const gr = przydzialGrupy[subKey]?.[g];
-          const hasGroupData = gr && (gr[1] + gr[2]) > 0;
+          const hasGroupData = gr && gr[1] + gr[2] > 0;
           const fromGrupy = hasGroupData ? gr[group] : (przydzial[subKey]?.[g] ?? 0);
           return s + fromGrupy;
         }, 0);
+
+      const directorSumG1 = grades.reduce((s, g) => s + directorForGroupCell(g, 1), 0);
+      const directorSumG2 = grades.reduce((s, g) => s + directorForGroupCell(g, 2), 0);
 
       return {
         sumH1,
         sumH2,
         assignedG1: computeForGroup(1),
         assignedG2: computeForGroup(2),
+        directorSumG1,
+        directorSumG2,
       };
     },
-    [podzialNaGrupy, przydzialGrupy, przydzial]
+    [
+      podzialNaGrupy,
+      przydzialGrupy,
+      przydzial,
+      przydzialGrupyDyrektor,
+      przydzialGrupyRozszerzenia,
+      dyrektorFlat,
+      rozszerzeniaFlat,
+    ]
   );
 
   return {
