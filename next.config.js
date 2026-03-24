@@ -5,6 +5,7 @@ const webpack = require('webpack')
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['payload'],
+  turbopack: {},
   serverExternalPackages: [
     'drizzle-kit',
     'esbuild',
