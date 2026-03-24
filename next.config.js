@@ -5,24 +5,35 @@ const webpack = require('webpack')
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['payload'],
+  serverExternalPackages: [
+    'drizzle-kit',
+    'esbuild',
+    '@libsql/client',
+    'libsql',
+    '@payloadcms/db-postgres',
+    '@payloadcms/drizzle',
+    'pg',
+    'pg-native',
+  ],
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Payload's deepCopyObject.js uses `instanceof File` which throws
-      // ReferenceError inside webpack's module scope (even though Node 20
-      // has File as a global). ProvidePlugin injects a reference so that
-      // every `File` identifier in bundled code resolves to the real class.
       config.plugins.push(
         new webpack.ProvidePlugin({
           File: path.resolve(__dirname, 'src/lib/file-polyfill.js'),
         })
       )
 
-      // Fallback for optional cli-color dependency used by json-schema-to-typescript
       config.resolve.fallback = {
         ...config.resolve.fallback,
         'cli-color': false,
       }
     }
+
+    config.module.rules.push({
+      test: /\.(txt|md|LICENSE)$/i,
+      type: 'asset/source',
+    })
+
     return config
   },
 }
