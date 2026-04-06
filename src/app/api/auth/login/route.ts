@@ -3,12 +3,16 @@ import { getPayload } from 'payload';
 import config from '@/payload.config';
 import crypto from 'crypto';
 import { SignJWT } from 'jose';
-import { getPayloadSecretKey } from '@/utils/auth';
+import {
+  AUTH_COOKIE_NAME,
+  AUTH_REMEMBER_JWT_MAX_AGE_SEC,
+  AUTH_SESSION_JWT_MAX_AGE_SEC,
+  getPayloadJwtSigningSecretString,
+  reissueAuthJwt,
+} from '@/utils/auth';
 import { getDbSslConfig } from '@/lib/dbSsl';
 import { assertDatabaseHostResolvable } from '@/lib/dbHost';
 
-const COOKIE_NAME = 'payload-token';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dni
 const PAYLOAD_TIMEOUT_MS = 10_000;
 
 type DbQueryResult = { rows: Record<string, unknown>[] };
@@ -60,10 +64,14 @@ function verifyPassword(password: string, salt: string, hash: string): Promise<b
 }
 
 /** Logowanie bezpośrednio z bazy + wystawienie JWT (gdy getPayload się zawiesza). */
-async function loginViaDb(email: string, password: string): Promise<{ user: { id: string; email: string; imie?: string; nazwisko?: string }; token: string } | null> {
+async function loginViaDb(
+  email: string,
+  password: string,
+  rememberMe: boolean
+): Promise<{ user: { id: string; email: string; imie?: string; nazwisko?: string }; token: string } | null> {
   const connectionString = getConnectionString();
   if (!connectionString) return null;
-  const secret = getPayloadSecretKey();
+  const secret = getPayloadJwtSigningSecretString();
   if (!secret) return null;
 
   const pool = createDbPool(connectionString);
@@ -100,6 +108,7 @@ async function loginViaDb(email: string, password: string): Promise<{ user: { id
       id: row.id,
       collection: 'users',
       email: row.email,
+      rm: rememberMe,
     };
     if (row.imie != null) fieldsToSign.imie = row.imie;
     if (row.nazwisko != null) fieldsToSign.nazwisko = row.nazwisko;
@@ -124,6 +133,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const email = typeof body.email === 'string' ? body.email.trim() : '';
     const password = typeof body.password === 'string' ? body.password : '';
+    const rememberMe = body.rememberMe === true;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -162,7 +172,7 @@ export async function POST(request: NextRequest) {
     } catch (payloadErr: unknown) {
       const isTimeout = payloadErr instanceof Error && payloadErr.message === 'timeout';
       if (isTimeout) {
-        const fallback = await loginViaDb(email, password);
+        const fallback = await loginViaDb(email, password, rememberMe);
         if (fallback) result = { user: fallback.user, token: fallback.token };
       } else {
         throw payloadErr;
@@ -176,19 +186,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookie = `${COOKIE_NAME}=${result.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`;
+    const jwtMaxAgeSec = rememberMe
+      ? AUTH_REMEMBER_JWT_MAX_AGE_SEC
+      : AUTH_SESSION_JWT_MAX_AGE_SEC;
+    let tokenOut: string;
+    try {
+      tokenOut = await reissueAuthJwt(result.token, jwtMaxAgeSec, { rememberMe });
+    } catch {
+      return NextResponse.json(
+        { error: 'Nie udało się utworzyć sesji. Spróbuj ponownie.' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json(
-      {
-        user: {
-          id: result.user.id,
-          email: result.user.email,
-          imie: (result.user as { imie?: string }).imie,
-          nazwisko: (result.user as { nazwisko?: string }).nazwisko,
-        },
+    const res = NextResponse.json({
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        imie: (result.user as { imie?: string }).imie,
+        nazwisko: (result.user as { nazwisko?: string }).nazwisko,
       },
-      { headers: { 'Set-Cookie': cookie } }
-    );
+    });
+    res.cookies.set(AUTH_COOKIE_NAME, tokenOut, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      ...(rememberMe ? { maxAge: AUTH_REMEMBER_JWT_MAX_AGE_SEC } : {}),
+    });
+    return res;
   } catch (err: unknown) {
     const message =
       err && typeof err === 'object' && 'message' in err

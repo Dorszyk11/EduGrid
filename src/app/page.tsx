@@ -12,6 +12,7 @@ export default function HomePage() {
   const [password, setPassword] = useState('');
   const [imie, setImie] = useState('');
   const [nazwisko, setNazwisko] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,7 +29,7 @@ export default function HomePage() {
     setSubmitting(true);
     try {
       if (tab === 'login') {
-        const result = await login(email, password);
+        const result = await login(email, password, rememberMe);
         if (result.error) setError(result.error);
       } else {
         const timeoutMs = 70000;
@@ -154,6 +155,17 @@ export default function HomePage() {
             />
             {tab === 'register' && (
               <p className="mt-1 text-xs text-gray-500">Minimum 8 znaków</p>
+            )}
+            {tab === 'login' && (
+              <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Zapamiętaj mnie na tym urządzeniu</span>
+              </label>
             )}
           </div>
           {tab === 'register' && (
