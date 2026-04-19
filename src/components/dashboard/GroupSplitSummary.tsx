@@ -50,9 +50,14 @@ interface GroupSplitZrealizowaneProps {
   /** Te same wartości co w jednej kolumnie „Zrealizowane” (bez podziału na grupy) */
   assigned: number;
   total: number;
+  /** Pozostałe godziny „do wyboru” (hours_to_choose − przydział) */
   remaining: number;
-  /** Opcjonalnie – podpis „z czego N rozszerzeń” (wspólna pula z wiersza „przedmioty rozszerzone”) */
-  extensionPoolSize?: number;
+  /** Godziny rozszerzeń faktycznie przypisane do tego wiersza (nie „cała pula” planu) */
+  extensionHoursForSubject?: number;
+  /** Suma godzin dyrektorskich w tym wierszu */
+  directorHoursForSubject?: number;
+  /** Ile godzin z puli rozszerzeń jeszcze można dopisać (przedmiot rozszerzony) */
+  extensionPoolRemaining?: number;
 }
 
 function statusClasses(assigned: number, total: number): string {
@@ -69,10 +74,22 @@ function formatProgress(assigned: number, total: number): string {
   return assigned > 0 ? String(assigned) : '–';
 }
 
-/** Obie połówki = ten sam postęp co przy jednej komórce; pula „do wyboru” + limit rozszerzeń jak w całej klasie. */
-export function GroupSplitZrealizowane({ assigned, total, remaining, extensionPoolSize }: GroupSplitZrealizowaneProps) {
+/** Obie połówki = ten sam postęp co przy jednej komórce; dopiski: rozszerzenia / dyrektor / do przydziału. */
+export function GroupSplitZrealizowane({
+  assigned,
+  total,
+  remaining,
+  extensionHoursForSubject,
+  directorHoursForSubject,
+  extensionPoolRemaining,
+}: GroupSplitZrealizowaneProps) {
   const cls = statusClasses(assigned, total);
   const main = formatProgress(assigned, total);
+  const hasFooter =
+    (extensionHoursForSubject != null && extensionHoursForSubject > 0) ||
+    (directorHoursForSubject != null && directorHoursForSubject > 0) ||
+    remaining > 0 ||
+    (extensionPoolRemaining != null && extensionPoolRemaining > 0);
   return (
     <div className="flex flex-col h-full min-h-[3.25rem] text-xs tabular-nums">
       <span className={`flex-1 flex items-center justify-end px-2 sm:px-3 ${cls}`}>
@@ -81,12 +98,18 @@ export function GroupSplitZrealizowane({ assigned, total, remaining, extensionPo
       <span className={`flex-1 flex items-center justify-end px-2 sm:px-3 border-t border-gray-200 ${cls}`}>
         <span>{main}</span>
       </span>
-      {(extensionPoolSize != null && extensionPoolSize > 0) || remaining > 0 ? (
+      {hasFooter ? (
         <div className="px-2 sm:px-3 pb-0.5 text-right text-[0.65rem] space-y-0.5 font-normal opacity-90">
-          {extensionPoolSize != null && extensionPoolSize > 0 && (
-            <span className="block leading-tight">z czego {extensionPoolSize} rozszerzeń</span>
+          {extensionHoursForSubject != null && extensionHoursForSubject > 0 && (
+            <span className="block leading-tight">z czego {extensionHoursForSubject} rozszerzeń</span>
           )}
-          {remaining > 0 && <span className="block leading-tight">{remaining} do przydziału</span>}
+          {directorHoursForSubject != null && directorHoursForSubject > 0 && (
+            <span className="block leading-tight">z czego {directorHoursForSubject} godzin dyrektorskich</span>
+          )}
+          {remaining > 0 && <span className="block leading-tight">{remaining} do przydziału (do wyboru)</span>}
+          {extensionPoolRemaining != null && extensionPoolRemaining > 0 && (
+            <span className="block leading-tight">{extensionPoolRemaining} do przydziału z puli rozszerzeń</span>
+          )}
         </div>
       ) : null}
     </div>

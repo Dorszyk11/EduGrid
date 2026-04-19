@@ -1,0 +1,7 @@
+{
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": [".next", "node_modules", "out", "dist", "*.config.js", "payload.config.ts"],
+  "rules": {
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}

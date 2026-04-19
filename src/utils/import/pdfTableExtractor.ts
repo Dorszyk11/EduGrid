@@ -2,9 +2,8 @@
 import fs from "fs";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Node: wyłącz worker
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - pdfjs-dist może nie mieć pełnych typów dla GlobalWorkerOptions
+// Node: wyłącz worker (typy pdfjs-dist nie opisują ustawienia w Node)
+// @ts-expect-error — GlobalWorkerOptions.workerSrc dla środowiska bez workera
 pdfjsLib.GlobalWorkerOptions.workerSrc = undefined;
 
 export interface PdfTextItem {

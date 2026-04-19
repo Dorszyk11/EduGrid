@@ -37,18 +37,6 @@ interface NauczycielAdmin {
   przedmioty: Array<{ id: string | number; nazwa?: string }>;
 }
 
-const TYP_ZAJEC_OPTS = [
-  { value: 'ogolnoksztalcace', label: 'Ogólnokształcące' },
-  { value: 'zawodowe_teoretyczne', label: 'Zawodowe teoretyczne' },
-  { value: 'zawodowe_praktyczne', label: 'Zawodowe praktyczne' },
-];
-
-const POZIOM_OPTS = [
-  { value: 'podstawowy', label: 'Podstawowy' },
-  { value: 'rozszerzony', label: 'Rozszerzony' },
-  { value: 'brak', label: 'Brak podziału' },
-];
-
 const LITERY_KLAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 /** Opcje roku początku cyklu (np. 2022 dla technikum 2022–2027) */
@@ -70,12 +58,6 @@ export default function PanelAdminaPage() {
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const [formSzkola, setFormSzkola] = useState({ nazwa: '', liczba_lat: '', kod_mein: '' });
-  const [formPrzedmiot, setFormPrzedmiot] = useState({
-    nazwa: '',
-    kod_mein: '',
-    typ_zajec: 'ogolnoksztalcace',
-    poziom: 'podstawowy',
-  });
   const [formKlasa, setFormKlasa] = useState({
     typSzkolyId: '',
     litera: 'A',
@@ -89,10 +71,8 @@ export default function PanelAdminaPage() {
     limitGodzin: 18,
   });
   const [submittingSzkola, setSubmittingSzkola] = useState(false);
-  const [submittingPrzedmiot, setSubmittingPrzedmiot] = useState(false);
   const [submittingKlasa, setSubmittingKlasa] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deletingPrzedmiotId, setDeletingPrzedmiotId] = useState<string | null>(null);
   const [deletingKlasaId, setDeletingKlasaId] = useState<string | null>(null);
   const [submittingNauczyciel, setSubmittingNauczyciel] = useState(false);
   const [deletingNauczycielId, setDeletingNauczycielId] = useState<string | null>(null);
@@ -180,56 +160,6 @@ export default function PanelAdminaPage() {
       setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd usuwania.' });
     } finally {
       setDeletingId(null);
-    }
-  };
-
-  const handleAddPrzedmiot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { nazwa, kod_mein, typ_zajec, poziom } = formPrzedmiot;
-    if (!nazwa.trim()) {
-      setMsg({ type: 'err', text: 'Wypełnij nazwę przedmiotu.' });
-      return;
-    }
-    setSubmittingPrzedmiot(true);
-    setMsg(null);
-    try {
-      const res = await fetch('/api/przedmioty', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nazwa: nazwa.trim(),
-          kod_mein: kod_mein.trim() || undefined,
-          typ_zajec,
-          poziom,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      setMsg({ type: 'ok', text: 'Przedmiot dodany.' });
-      setFormPrzedmiot({ nazwa: '', kod_mein: '', typ_zajec: 'ogolnoksztalcace', poziom: 'podstawowy' });
-      fetchAll();
-    } catch (e) {
-      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd dodawania.' });
-    } finally {
-      setSubmittingPrzedmiot(false);
-    }
-  };
-
-  const handleDeletePrzedmiot = async (p: Przedmiot) => {
-    if (!confirm(`Usunąć przedmiot „${p.nazwa}”?`)) return;
-    const id = String(p.id);
-    setDeletingPrzedmiotId(id);
-    setMsg(null);
-    try {
-      const res = await fetch(`/api/przedmioty/${id}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      setMsg({ type: 'ok', text: 'Przedmiot usunięty.' });
-      fetchAll();
-    } catch (e) {
-      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Błąd usuwania.' });
-    } finally {
-      setDeletingPrzedmiotId(null);
     }
   };
 
@@ -642,7 +572,7 @@ export default function PanelAdminaPage() {
                   <span className="text-sm font-medium text-gray-700">Specjalizacja (przedmioty)</span>
                   {przedmioty.length === 0 ? (
                     <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded border border-amber-200 w-48 max-w-full">
-                      Brak przedmiotów w bazie. Dodaj przedmioty w sekcji „Przedmioty” poniżej – wtedy pojawią się tutaj do wyboru.
+                      Brak przedmiotów w bazie – nie można wybrać specjalizacji, dopóki nie pojawią się rekordy przedmiotów (np. z migracji lub seed).
                     </p>
                   ) : (
                     <div className="rounded border border-gray-300 bg-gray-50/50 w-48">
@@ -736,109 +666,6 @@ export default function PanelAdminaPage() {
                 </table>
                 {nauczyciele.length === 0 && (
                   <p className="py-6 text-center text-gray-500 text-sm">Brak nauczycieli. Dodaj pierwszego powyżej.</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Przedmioty – potrzebne do wyboru specjalizacji przy nauczycielach */}
-          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Przedmioty</h2>
-              <p className="text-sm text-gray-600 mt-0.5">Dodaj przedmioty – będą dostępne jako „Specjalizacja” przy dodawaniu nauczycieli.</p>
-            </div>
-            <div className="p-5 space-y-5">
-              <form onSubmit={handleAddPrzedmiot} className="flex flex-wrap gap-3 items-end">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Nazwa</span>
-                    <input
-                      type="text"
-                      value={formPrzedmiot.nazwa}
-                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, nazwa: e.target.value }))}
-                      placeholder="np. Język polski"
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-56"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Kod MEiN</span>
-                    <input
-                      type="text"
-                      value={formPrzedmiot.kod_mein}
-                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, kod_mein: e.target.value }))}
-                      placeholder="JP (opcjonalnie)"
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-28"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Typ zajęć</span>
-                    <select
-                      value={formPrzedmiot.typ_zajec}
-                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, typ_zajec: e.target.value }))}
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-44"
-                    >
-                      {TYP_ZAJEC_OPTS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Poziom</span>
-                    <select
-                      value={formPrzedmiot.poziom}
-                      onChange={(e) => setFormPrzedmiot((s) => ({ ...s, poziom: e.target.value }))}
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-36"
-                    >
-                      {POZIOM_OPTS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={submittingPrzedmiot}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
-                  >
-                    {submittingPrzedmiot ? 'Dodawanie…' : 'Dodaj przedmiot'}
-                  </button>
-                </form>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50/80">
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwa</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Kod MEiN</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Typ</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Poziom</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {przedmioty.map((p) => (
-                      <tr key={String(p.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                        <td className="px-4 py-2 font-medium text-gray-900">{p.nazwa}</td>
-                        <td className="px-4 py-2 text-gray-600">{p.kod_mein ?? '–'}</td>
-                        <td className="px-4 py-2 text-gray-600">
-                          {TYP_ZAJEC_OPTS.find((o) => o.value === p.typ_zajec)?.label ?? p.typ_zajec}
-                        </td>
-                        <td className="px-4 py-2 text-gray-600">
-                          {POZIOM_OPTS.find((o) => o.value === p.poziom)?.label ?? p.poziom}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePrzedmiot(p)}
-                            disabled={deletingPrzedmiotId === String(p.id)}
-                            className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
-                          >
-                            {deletingPrzedmiotId === String(p.id) ? '…' : 'Usuń'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {przedmioty.length === 0 && (
-                  <p className="py-6 text-center text-gray-500 text-sm">Brak przedmiotów. Dodaj pierwszy powyżej.</p>
                 )}
               </div>
             </div>
