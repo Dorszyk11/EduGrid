@@ -1,25 +1,43 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthContext';
+import {
+  IconAbacus,
+  IconAcademic,
+  IconCalendar,
+  IconChart,
+  IconClipboard,
+  IconClose,
+  IconCog,
+  IconChevron,
+  IconLock,
+  IconSliders,
+  IconUsers,
+} from '@/shared/ui/nav-icons';
 
 interface NavItem {
   name: string;
   href: string;
-  icon: string;
+  icon: ReactNode;
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Przydział', href: '/przydzial', icon: '⚙️' },
-  { name: 'Realizacja', href: '/realizacja', icon: '📅' },
-  { name: 'Dyspozycja', href: '/dyspozycja', icon: '📋' },
-  { name: 'Nauczyciele wg przedmiotów', href: '/zapotrzebowanie-kadrowe', icon: '🧮' },
-  { name: 'Klasy', href: '/klasy', icon: '👥' },
-  { name: 'Nauczyciele', href: '/nauczyciele', icon: '👨‍🏫' },
-  { name: 'Panel admina', href: '/panel-admin', icon: '⚙️' },
+  { name: 'Dashboard', href: '/dashboard', icon: <IconChart /> },
+  { name: 'Przydział', href: '/przydzial', icon: <IconSliders /> },
+  { name: 'Realizacja', href: '/realizacja', icon: <IconCalendar /> },
+  { name: 'Dyspozycja', href: '/dyspozycja', icon: <IconClipboard /> },
+  {
+    name: 'Nauczyciele wg przedmiotów',
+    href: '/zapotrzebowanie-kadrowe',
+    icon: <IconAbacus />,
+  },
+  { name: 'Klasy', href: '/klasy', icon: <IconUsers /> },
+  { name: 'Nauczyciele', href: '/nauczyciele', icon: <IconAcademic /> },
+  { name: 'Panel admina', href: '/panel-admin', icon: <IconCog /> },
 ];
 
 interface SidebarProps {
@@ -50,42 +68,42 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile: overlay gdy sidebar otwarty */}
       {open && (
         <button
           type="button"
           onClick={onClose}
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-20 bg-edu-navy/40 backdrop-blur-[2px] transition-opacity duration-200 ease-edu-out lg:hidden"
           aria-label="Zamknij menu"
         />
       )}
       <aside
-        className={`
-          fixed left-0 top-0 z-30 h-screen w-64 bg-gray-900 text-white flex flex-col
-          transition-transform duration-200 ease-out
-          ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
+        className={[
+          'fixed left-0 top-0 z-30 flex h-dvh w-64 flex-col border-r border-white/10 bg-edu-navy text-white',
+          'shadow-edu transition-transform duration-200 ease-edu-out',
+          open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        ].join(' ')}
+        aria-label="Menu główne"
       >
-        {/* Logo + przycisk zamknij na mobile */}
-        <div className="p-4 sm:p-6 border-b border-gray-800 flex items-center justify-between">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-5 sm:px-5">
           <div>
-            <h1 className="text-xl font-bold">EduGrid</h1>
-            <p className="text-sm text-gray-400 mt-1">System siatki godzin</p>
+            <h1 className="font-serif text-xl font-semibold tracking-tight text-white">EduGrid</h1>
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-widest text-white/55">
+              Siatki godzin · MEiN
+            </p>
           </div>
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="lg:hidden p-2 -m-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800"
+              className="edu-focus-ring edu-press shrink-0 rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
               aria-label="Zamknij menu"
             >
-              ✕
+              <IconClose />
             </button>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
           {navigation.map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             return (
@@ -93,53 +111,59 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
                 key={item.name}
                 href={item.href}
                 onClick={onClose}
-                className={`
-                  flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
-                  ${isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }
-                `}
+                className={[
+                  'edu-focus-ring group flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors duration-150 ease-edu-out',
+                  isActive
+                    ? 'bg-white/[0.12] text-white ring-1 ring-white/15'
+                    : 'text-white/75 hover:bg-white/[0.07] hover:text-white',
+                ].join(' ')}
               >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.name}</span>
+                <span
+                  className={[
+                    'mt-0.5 shrink-0 text-white/80 transition-colors duration-150',
+                    isActive ? 'text-edu-accent-muted' : 'group-hover:text-white',
+                  ].join(' ')}
+                  aria-hidden
+                >
+                  {item.icon}
+                </span>
+                <span className="text-[13px] font-medium leading-snug">{item.name}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer: Zaloguj się / Profil użytkownika */}
-        <div className="p-4 border-t border-gray-800 shrink-0 space-y-2">
+        <div className="shrink-0 space-y-2 border-t border-white/10 p-4">
           {loading ? (
-            <div className="flex items-center justify-center py-2">
-              <span className="text-xs text-gray-500">Ładowanie…</span>
+            <div className="flex items-center justify-center py-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/45">Ładowanie…</span>
             </div>
           ) : user ? (
             <div className="relative" ref={profileRef}>
               <button
                 type="button"
                 onClick={() => setProfileOpen((v) => !v)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-gray-200 hover:bg-gray-800 transition-colors"
+                className="edu-focus-ring flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-white/90 transition-colors duration-150 hover:bg-white/[0.08]"
                 aria-expanded={profileOpen}
-                aria-haspopup="true"
+                aria-haspopup="dialog"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-medium text-sm">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-edu-accent text-sm font-semibold text-white shadow-edu-inner">
                   {displayName.charAt(0).toUpperCase()}
                 </span>
-                <span className="flex-1 min-w-0 truncate font-medium text-sm">
-                  {displayName}
-                </span>
-                <span className="text-gray-500 text-xs shrink-0">
-                  {profileOpen ? '▲' : '▼'}
-                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{displayName}</span>
+                <IconChevron up={profileOpen} className="shrink-0 text-white/50" />
               </button>
               {profileOpen && (
-                <div className="absolute left-0 right-0 bottom-full mb-1 py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 shadow-xl min-w-[12rem]">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Profil</p>
-                  <p className="text-sm font-medium text-white truncate">
-                    {[user.imie, user.nazwisko].filter(Boolean).join(' ') || '–'}
+                <div
+                  role="dialog"
+                  aria-label="Profil"
+                  className="absolute inset-x-0 bottom-full mb-2 rounded-xl border border-white/10 bg-edu-navy-soft py-3 px-3 shadow-edu outline outline-1 outline-white/10"
+                >
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/45">Profil</p>
+                  <p className="truncate text-sm font-medium text-white">
+                    {[user.imie, user.nazwisko].filter(Boolean).join(' ') || '—'}
                   </p>
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{user.email}</p>
+                  <p className="mt-1 truncate text-xs text-white/55">{user.email}</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -147,7 +171,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
                       onClose?.();
                       logout();
                     }}
-                    className="mt-3 w-full py-2 px-3 text-sm font-medium text-red-300 hover:text-red-200 hover:bg-gray-700/80 rounded-lg transition-colors"
+                    className="edu-focus-ring mt-3 w-full rounded-lg py-2.5 text-center text-sm font-medium text-red-200 transition-colors hover:bg-red-950/40"
                   >
                     Wyloguj
                   </button>
@@ -158,13 +182,13 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
             <Link
               href="/"
               onClick={onClose}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-500 transition-colors"
+              className="edu-focus-ring edu-press flex items-center justify-center gap-2 rounded-lg bg-edu-accent px-4 py-3 text-center text-sm font-semibold text-white shadow-edu-inner transition-colors duration-150 hover:bg-edu-accent-hover"
             >
-              <span aria-hidden>🔐</span>
+              <IconLock className="h-4 w-4" />
               Zaloguj się
             </Link>
           )}
-          <p className="text-xs text-gray-500 text-center">EduGrid v1.0</p>
+          <p className="text-center text-[10px] font-medium uppercase tracking-wider text-white/35">Wersja aplikacji 1.0</p>
         </div>
       </aside>
     </>

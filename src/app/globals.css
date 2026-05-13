@@ -2,6 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: system-ui, -apple-system, sans-serif;
+/* Institutional design tokens — Polish school / public-sector tone */
+@layer base {
+  :root {
+    --edu-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --edu-shadow-card: 0 4px 24px rgba(16, 38, 67, 0.07);
+    --edu-shadow-header: 0 1px 0 rgba(16, 38, 67, 0.06);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-edu-bg text-edu-ink font-sans antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+  }
+
+  ::selection {
+    @apply bg-edu-accent-muted/30 text-edu-ink;
+  }
+}
+
+@layer utilities {
+  .edu-focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-edu-accent focus-visible:ring-offset-2 focus-visible:ring-offset-edu-bg;
+  }
+
+  .edu-press {
+    @apply active:scale-[0.98] transition-transform duration-150 ease-out;
+  }
+
+  .edu-surface-subtle {
+    background-image: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.82) 0%,
+        rgba(244, 246, 250, 0.95) 100%
+      ),
+      radial-gradient(1200px 400px at 10% -10%, rgba(47, 111, 173, 0.08), transparent);
+  }
+
+  .edu-login-panel {
+    background-color: theme('colors.edu.navy');
+    background-image: linear-gradient(
+        155deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        transparent 45%
+      ),
+      radial-gradient(ellipse 120% 80% at 100% 0%, rgba(47, 111, 173, 0.35), transparent);
+  }
+
+  .edu-spinner {
+    @apply animate-edu-spin rounded-full border-2 border-edu-border border-t-edu-accent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edu-page-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .edu-press:active {
+    transform: none;
+  }
 }

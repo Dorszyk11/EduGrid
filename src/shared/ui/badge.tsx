@@ -3,11 +3,11 @@
 type BadgeVariant = "success" | "warning" | "danger" | "info" | "neutral";
 
 const BADGE_STYLES: Record<BadgeVariant, string> = {
-  success: "bg-green-100 text-green-800",
-  warning: "bg-yellow-100 text-yellow-800",
-  danger: "bg-red-100 text-red-800",
-  info: "bg-blue-100 text-blue-800",
-  neutral: "bg-gray-100 text-gray-800",
+  success: "bg-edu-success-soft text-edu-success ring-1 ring-edu-success/25",
+  warning: "bg-edu-warning-soft text-edu-warning ring-1 ring-edu-warning/25",
+  danger: "bg-edu-danger-soft text-edu-danger ring-1 ring-edu-danger/25",
+  info: "bg-[#e8eef7] text-edu-accent ring-1 ring-edu-accent/25",
+  neutral: "bg-edu-bg-subtle text-edu-muted ring-1 ring-edu-border",
 };
 
 interface BadgeProps {
@@ -23,7 +23,7 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${BADGE_STYLES[variant]} ${className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${BADGE_STYLES[variant]} ${className}`}
     >
       {children}
     </span>

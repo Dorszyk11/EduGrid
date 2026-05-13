@@ -5,3 +5,4 @@ export { Card } from "./card";
 export { Skeleton, TableSkeleton } from "./skeleton";
 export { DataTable } from "./data-table";
 export { Badge } from "./badge";
+export * from "./nav-icons";

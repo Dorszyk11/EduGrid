@@ -178,12 +178,10 @@ export default function DashboardPage() {
 
   if (ladowanieTypow) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-base sm:text-lg text-gray-600">Ładowanie typów szkół...</p>
-          <p className="mt-2 text-sm text-gray-400">Sprawdzanie połączenia z bazą danych...</p>
-        </div>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center p-4">
+        <div className="edu-spinner h-11 w-11 sm:h-12 sm:w-12" role="status" />
+        <p className="mt-5 text-base font-semibold text-edu-ink sm:text-lg">Ładowanie typów szkół...</p>
+        <p className="mt-2 text-sm text-edu-muted">Sprawdzanie połączenia z bazą danych.</p>
       </div>
     );
   }
@@ -191,17 +189,18 @@ export default function DashboardPage() {
   if (typySzkol.length === 0) {
     return (
       <div className="p-4 sm:p-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Dashboard Dyrektora</h1>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-yellow-800 font-semibold mb-2 text-base">Brak typów szkół</p>
-          <p className="text-yellow-700 text-sm sm:text-base mb-4 leading-relaxed">
-            Nie znaleziono żadnych typów szkół w bazie danych. Dodaj typy szkół przez panel administracyjny.
+        <h1 className="font-serif text-2xl font-semibold text-edu-ink sm:mb-6 sm:text-3xl">Dashboard dyrektora</h1>
+        <div className="mt-4 max-w-2xl rounded-xl border border-amber-200/80 bg-edu-warning-soft p-5 shadow-edu-sm">
+          <p className="text-base font-semibold text-edu-warning">Brak typów szkół</p>
+          <p className="mt-2 text-sm leading-relaxed text-edu-muted">
+            Nie znaleziono żadnych typów szkół w bazie danych. Dodaj je w panelu konfiguracyjnym, aby
+            uruchomić pracę nad siatką.
           </p>
           <a
             href="/panel-admin"
-            className="inline-block px-4 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm font-medium"
+            className="edu-focus-ring edu-press mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-edu-warning px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-95"
           >
-            Przejdź do panelu admin
+            Otwórz panel konfiguracji
           </a>
         </div>
       </div>
@@ -217,7 +216,7 @@ export default function DashboardPage() {
           zapiszTypSzkoly(v);
           setTypSzkolyId(v);
         }}
-        className="w-full sm:w-[200px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white"
+        className="min-h-11 w-full rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm font-medium text-edu-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-edu-accent sm:w-[220px] sm:min-w-0"
       >
         <option value="">Wybierz typ szkoły</option>
         {typySzkol.map((typ) => (
@@ -233,7 +232,7 @@ export default function DashboardPage() {
           setSelectedLitera('');
         }}
         disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-        className="w-full sm:w-[140px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+        className="min-h-11 w-full rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm font-medium text-edu-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-edu-accent disabled:opacity-55 sm:w-[150px] sm:min-w-0"
       >
         <option value="">Rocznik</option>
         {roczniki.map((r) => (
@@ -248,7 +247,7 @@ export default function DashboardPage() {
           setSelectedLitera(v);
         }}
         disabled={!selectedRocznik || literki.length === 0}
-        className="w-full sm:w-[100px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+        className="min-h-11 w-full rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm font-medium text-edu-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-edu-accent disabled:opacity-55 sm:w-[110px] sm:min-w-0"
       >
         <option value="">Klasa</option>
         {literki.map((l) => (
@@ -256,8 +255,9 @@ export default function DashboardPage() {
         ))}
       </select>
       {selectedClass && (
-        <span className="text-sm text-gray-600 block sm:inline sm:whitespace-nowrap mt-1 sm:mt-0">
-          Wybrana klasa: <strong>{selectedClass.nazwa}</strong> ({selectedRocznik})
+        <span className="mt-1 block text-sm font-medium text-edu-muted sm:mt-0 sm:inline sm:whitespace-nowrap">
+          Wybrana klasa:{' '}
+          <strong className="text-edu-ink">{selectedClass.nazwa}</strong> ({selectedRocznik})
         </span>
       )}
     </div>
@@ -266,23 +266,28 @@ export default function DashboardPage() {
   if (!dane || !typSzkolyId || !selectedRocznik || !selectedLitera) {
     const nazwaTypuSzkolyShort = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
     return (
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
-        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard Dyrektora</h1>
+      <div className="max-w-full space-y-6 overflow-hidden p-4 sm:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="font-serif text-2xl font-semibold text-edu-ink sm:text-3xl">Dashboard dyrektora</h1>
           <SelectyKaskadowe />
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-yellow-800 text-sm sm:text-base leading-relaxed">
-            Wybierz <strong>typ szkoły</strong>, potem <strong>rocznik</strong> (zakres lat), a na końcu <strong>klasę</strong> (literę) – wtedy załadują się dane tej klasy w dashboardzie.
+        <div className="rounded-xl border border-amber-200/80 bg-edu-warning-soft p-5 shadow-edu-sm">
+          <p className="text-sm leading-relaxed text-edu-muted sm:text-[15px]">
+            Wybierz <strong className="text-edu-ink">typ szkoły</strong>, następnie{' '}
+            <strong className="text-edu-ink">rocznik</strong> oraz{' '}
+            <strong className="text-edu-ink">klasę</strong> — aby wczytać pełny podgląd realizacji dla danej
+            grupy.
           </p>
           {typSzkolyId && !ladowanieKlas && roczniki.length === 0 && (
-            <p className="text-amber-700 text-sm mt-2">Brak klas dla wybranego typu szkoły. Dodaj klasy w panelu admina.</p>
+            <p className="mt-3 text-sm font-medium text-edu-warning">
+              Brak klas dla wybranego typu. Uzupełnij strukturę w panelu administratora.
+            </p>
           )}
         </div>
         {/* Realizacja wymagań – tylko gdy wybrana pełna klasa (typ + rocznik + litera) */}
         {typSzkolyId && selectedRocznik && selectedLitera && selectedClass && (
           <div className="space-y-2">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Realizacja wymagań MEiN</h2>
+            <h2 className="text-lg font-semibold text-edu-ink sm:text-xl">Realizacja wymagań MEiN</h2>
             <KafelkiRealizacji
               dane={zgodnoscDane}
               ladowanie={zgodnoscLadowanie}
@@ -293,8 +298,10 @@ export default function DashboardPage() {
         {/* Plan MEiN widoczny od razu po wyborze typu szkoły */}
         {nazwaTypuSzkolyShort && (
           <div className="space-y-2 min-w-0">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
-            <p className="text-gray-600 text-sm leading-relaxed">
+            <h2 className="text-lg font-semibold text-edu-ink sm:text-xl">
+              Plan ramowy MEiN — przedmioty i wymagane godziny
+            </h2>
+            <p className="text-sm leading-relaxed text-edu-muted">
               Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
             </p>
             <PlanMeinTabela nazwaTypuSzkoly={nazwaTypuSzkolyShort} tylkoOdczyt />
@@ -307,15 +314,15 @@ export default function DashboardPage() {
   const nazwaTypuSzkoly = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard Dyrektora</h1>
+    <div className="max-w-full space-y-6 overflow-hidden p-4 sm:p-6">
+      <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h1 className="font-serif text-2xl font-semibold text-edu-ink sm:text-3xl">Dashboard dyrektora</h1>
         <SelectyKaskadowe />
       </div>
 
       {/* Wykres kołowy + kafelki: procent realizacji, braki godzin, nadwyżki */}
       <div className="space-y-2">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Realizacja wymagań MEiN</h2>
+        <h2 className="text-lg font-semibold text-edu-ink sm:text-xl">Realizacja wymagań MEiN</h2>
         <KafelkiRealizacji
           dane={zgodnoscDane}
           ladowanie={zgodnoscLadowanie}
@@ -326,8 +333,10 @@ export default function DashboardPage() {
       {/* Plan ramowy MEiN */}
       {nazwaTypuSzkoly && (
         <div className="space-y-2 min-w-0">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
+          <h2 className="text-lg font-semibold text-edu-ink sm:text-xl">
+            Plan ramowy MEiN — przedmioty i wymagane godziny
+          </h2>
+          <p className="text-sm leading-relaxed text-edu-muted">
             Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
           </p>
           <PlanMeinTabela

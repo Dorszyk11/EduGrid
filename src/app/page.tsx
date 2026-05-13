@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import RedirectIfNoTypySzkol from '@/components/layout/RedirectIfNoTypySzkol';
 import { useAuth } from '@/components/auth/AuthContext';
+import { IconLock } from '@/shared/ui/nav-icons';
 
 export default function HomePage() {
   const { user, loading, login, register, logout } = useAuth();
@@ -16,7 +17,6 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Rozgrzewa Payload/połączenie z bazą od razu po pokazaniu formularza – rejestracja będzie szybsza
   useEffect(() => {
     if (!loading && !user) {
       fetch('/api/auth/warmup').catch(() => {});
@@ -36,10 +36,11 @@ export default function HomePage() {
         const result = await Promise.race([
           register(email, password, imie, nazwisko),
           new Promise<{ error?: string }>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), timeoutMs)
+            setTimeout(() => reject(new Error('timeout')), timeoutMs),
           ),
         ]).catch((err) => {
-          if (err?.message === 'timeout') return { error: 'Rejestracja trwa zbyt długo. Odśwież stronę, odczekaj chwilę i spróbuj ponownie.' };
+          if (err?.message === 'timeout')
+            return { error: 'Rejestracja trwa zbyt długo. Odśwież stronę, odczekaj chwilę i spróbuj ponownie.' };
           return { error: 'Wystąpił błąd. Spróbuj ponownie.' };
         });
         if (result.error) setError(result.error);
@@ -52,10 +53,10 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="flex min-h-dvh items-center justify-center bg-edu-bg edu-surface-subtle px-4">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
-          <p className="mt-4 text-gray-600">Ładowanie...</p>
+          <div className="edu-spinner mx-auto h-12 w-12" role="status" aria-label="Ładowanie" />
+          <p className="mt-4 text-sm font-medium text-edu-muted">Inicjalizacja aplikacji...</p>
         </div>
       </div>
     );
@@ -64,32 +65,70 @@ export default function HomePage() {
   if (user) {
     return (
       <RedirectIfNoTypySzkol>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">EduGrid</h1>
-            <p className="text-xl text-gray-600 mb-2">System planowania siatki godzin</p>
-            <p className="text-sm text-gray-500 mb-6">Zalogowano: {[user.imie, user.nazwisko].filter(Boolean).join(' ') || user.email}</p>
-            <div className="flex flex-wrap justify-center gap-3 mb-6">
-              <Link
-                href="/dashboard"
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                Przejdź do Dashboard
-              </Link>
-              <Link
-                href="/panel-admin"
-                className="inline-block px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-              >
-                Panel Administracyjny
-              </Link>
+        <div className="flex min-h-dvh flex-col lg:flex-row">
+          <aside className="edu-login-panel relative overflow-hidden px-8 py-12 text-white lg:flex lg:w-[42%] lg:flex-col lg:justify-between lg:py-16 lg:pl-14 lg:pr-12">
+            <div className="relative z-[1] max-w-md">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                Środowisko zarządzania planem nauczania
+              </p>
+              <h1 className="font-serif mt-6 text-3xl font-semibold tracking-tight sm:text-4xl leading-tight">
+                EduGrid
+              </h1>
+              <p className="mt-4 text-sm leading-relaxed text-white/85">
+                Przygotowujcie siatkę godzin zgodnie z harmonogramami Ministerstwa Edukacji i Nauki,
+                przydzielajcie realizację oraz szacujcie realne potrzeby kadrowe dla szkoły.
+              </p>
+              <ul className="mt-10 space-y-4 text-sm text-white/80">
+                <li className="flex gap-3">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-edu-accent-muted" aria-hidden />
+                  Zgodność z aktualnym planem ramowym i rejestrem przedmiotów.
+                </li>
+                <li className="flex gap-3">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-edu-accent-muted" aria-hidden />
+                  Przejrzysty podgląd obciążenia pracą nauczycieli wg przedmiotów.
+                </li>
+                <li className="flex gap-3">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-edu-accent-muted" aria-hidden />
+                  Raporty przydatne w pracy dyrekcji i przy planowaniu zatrudnień.
+                </li>
+              </ul>
             </div>
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="text-sm text-gray-500 hover:text-gray-700 underline"
-            >
-              Wyloguj
-            </button>
+            <p className="relative z-[1] mt-12 text-xs text-white/40 lg:mt-auto">
+              Dostęp do pełnego panelu następuje po uwierzytelnieniu.
+            </p>
+          </aside>
+          <div className="flex flex-1 items-center justify-center bg-edu-bg edu-surface-subtle px-4 py-14 sm:px-8 animate-edu-enter">
+            <div className="w-full max-w-lg rounded-2xl border border-edu-border bg-edu-surface px-8 py-10 shadow-edu">
+              <h2 className="font-serif text-2xl font-semibold text-edu-ink">Witamy ponownie</h2>
+              <p className="mt-2 text-sm leading-relaxed text-edu-muted">
+                Zalogowano jako{' '}
+                <strong className="font-semibold text-edu-ink">
+                  {[user.imie, user.nazwisko].filter(Boolean).join(' ') || user.email}
+                </strong>
+                .
+              </p>
+              <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
+                <Link
+                  href="/dashboard"
+                  className="edu-focus-ring edu-press inline-flex min-h-12 flex-1 items-center justify-center rounded-lg bg-edu-accent px-6 py-3 text-center text-sm font-semibold text-white shadow-edu-inner transition-colors duration-150 hover:bg-edu-accent-hover"
+                >
+                  Przejdź do panelu
+                </Link>
+                <Link
+                  href="/panel-admin"
+                  className="edu-focus-ring edu-press inline-flex min-h-12 flex-1 items-center justify-center rounded-lg border border-edu-border-strong bg-edu-bg-subtle px-6 py-3 text-center text-sm font-semibold text-edu-ink transition-colors hover:border-edu-accent-muted hover:bg-edu-surface"
+                >
+                  Konfiguracja systemu
+                </Link>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="edu-focus-ring mt-6 text-sm font-semibold text-edu-accent underline-offset-4 hover:text-edu-accent-hover hover:underline"
+              >
+                Wyloguj się
+              </button>
+            </div>
           </div>
         </div>
       </RedirectIfNoTypySzkol>
@@ -97,117 +136,188 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">EduGrid</h1>
-          <p className="text-sm text-gray-600 mt-1">System planowania siatki godzin</p>
+    <div className="flex min-h-dvh flex-col lg:flex-row">
+      <aside className="edu-login-panel relative shrink-0 overflow-hidden px-8 py-10 text-white lg:flex lg:w-[44%] lg:flex-col lg:justify-between lg:py-14 lg:pl-14 lg:pr-12">
+        <div className="relative z-[1] max-w-lg lg:mx-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/55">
+            Narzędzie dla placówek oświatowych
+          </p>
+          <h1 className="font-serif mt-5 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.65rem] leading-tight">
+            Planowanie siatki godzin zgodnych z wytycznymi MEiN
+          </h1>
+          <p className="mt-6 text-[15px] leading-relaxed text-white/82">
+            Ewidencjonuj realizację zajęć, kontroluj wymogi godzin dla każdego rocznika i buduj
+            wiarygodny obraz zapotrzebowania na nauczycieli — w jednym, spójnym interfejsie.
+          </p>
         </div>
-        <div className="flex border-b border-gray-200">
-          <button
-            type="button"
-            onClick={() => { setTab('login'); setError(''); }}
-            className={`flex-1 py-3 text-sm font-medium ${tab === 'login' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Logowanie
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('register'); setError(''); }}
-            className={`flex-1 py-3 text-sm font-medium ${tab === 'register' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Zakładanie konta
-          </button>
+        <div className="relative z-[1] mt-10 hidden text-sm text-white/45 lg:block">
+          <p className="max-w-sm leading-relaxed">
+            Zachowaj porządek dokumentacyjny przed kontrolami i zestawiaj dane zespołowi pedagoga w
+            czytelnej formie tabelarycznej.
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
-              {error}
+      </aside>
+
+      <div className="flex flex-1 items-center justify-center px-4 py-12 sm:px-10 lg:py-16 animate-edu-enter">
+        <div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-edu-border bg-edu-surface shadow-edu">
+          <div className="border-b border-edu-border bg-edu-bg-subtle/70 px-6 py-6">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg bg-edu-navy text-white">
+                <IconLock className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-serif text-xl font-semibold text-edu-ink">EduGrid</h2>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-edu-muted">
+                  Bezpieczny dostęp dla personelu szkoły
+                </p>
+              </div>
             </div>
-          )}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Hasło
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-              minLength={tab === 'register' ? 8 : undefined}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            {tab === 'register' && (
-              <p className="mt-1 text-xs text-gray-500">Minimum 8 znaków</p>
+
+          <div className="grid grid-cols-2 gap-px border-b border-edu-border bg-edu-border">
+            <button
+              type="button"
+              onClick={() => {
+                setTab('login');
+                setError('');
+              }}
+              role="tab"
+              aria-selected={tab === 'login'}
+              className={[
+                'edu-focus-ring relative bg-edu-surface py-4 text-[13px] font-semibold transition-colors duration-150',
+                tab === 'login'
+                  ? 'text-edu-ink'
+                  : 'bg-edu-bg-subtle text-edu-muted hover:text-edu-ink edu-press',
+              ].join(' ')}
+            >
+              Logowanie
+              <span
+                className={`absolute inset-x-4 bottom-0 h-0.5 rounded-full transition-all duration-200 ease-edu-out ${
+                  tab === 'login' ? 'bg-edu-accent opacity-100' : 'bg-edu-accent opacity-0'
+                }`}
+                aria-hidden
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab('register');
+                setError('');
+              }}
+              role="tab"
+              aria-selected={tab === 'register'}
+              className={[
+                'edu-focus-ring relative bg-edu-surface py-4 text-[13px] font-semibold transition-colors duration-150',
+                tab === 'register'
+                  ? 'text-edu-ink'
+                  : 'bg-edu-bg-subtle text-edu-muted hover:text-edu-ink edu-press',
+              ].join(' ')}
+            >
+              Nowe konto
+              <span
+                className={`absolute inset-x-4 bottom-0 h-0.5 rounded-full transition-all duration-200 ease-edu-out ${
+                  tab === 'register' ? 'bg-edu-accent opacity-100' : 'bg-edu-accent opacity-0'
+                }`}
+                aria-hidden
+              />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5 p-6 sm:p-7">
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-edu-danger-soft px-4 py-3 text-sm font-medium text-edu-danger"
+              >
+                {error}
+              </div>
             )}
-            {tab === 'login' && (
-              <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">Zapamiętaj mnie na tym urządzeniu</span>
+            <div>
+              <label htmlFor="email" className="mb-1 block text-sm font-semibold text-edu-ink">
+                Adres e-mail
               </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="block w-full min-h-11 rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-edu-accent focus:ring-offset-2 focus:ring-offset-edu-surface"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="mb-1 block text-sm font-semibold text-edu-ink">
+                Hasło
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                minLength={tab === 'register' ? 8 : undefined}
+                className="block w-full min-h-11 rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-edu-accent focus:ring-offset-2 focus:ring-offset-edu-surface"
+              />
+              {tab === 'register' && (
+                <p className="mt-1.5 text-xs font-medium text-edu-muted">Minimum 8 znaków.</p>
+              )}
+              {tab === 'login' && (
+                <label className="edu-focus-ring mt-3 inline-flex cursor-pointer select-none items-center gap-3 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-edu-border-strong text-edu-accent focus:ring-edu-accent"
+                  />
+                  <span className="text-sm font-medium text-edu-ink">
+                    Zapamiętaj mnie na tym urządzeniu
+                  </span>
+                </label>
+              )}
+            </div>
+            {tab === 'register' && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="imie" className="mb-1 block text-sm font-semibold text-edu-ink">
+                    Imię
+                  </label>
+                  <input
+                    id="imie"
+                    type="text"
+                    value={imie}
+                    onChange={(e) => setImie(e.target.value)}
+                    required={tab === 'register'}
+                    autoComplete="given-name"
+                    className="block w-full min-h-11 rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-edu-accent focus:ring-offset-2 focus:ring-offset-edu-surface"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="nazwisko" className="mb-1 block text-sm font-semibold text-edu-ink">
+                    Nazwisko
+                  </label>
+                  <input
+                    id="nazwisko"
+                    type="text"
+                    value={nazwisko}
+                    onChange={(e) => setNazwisko(e.target.value)}
+                    required={tab === 'register'}
+                    autoComplete="family-name"
+                    className="block w-full min-h-11 rounded-lg border border-edu-border-strong bg-edu-surface px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-edu-accent focus:ring-offset-2 focus:ring-offset-edu-surface"
+                  />
+                </div>
+              </div>
             )}
-          </div>
-          {tab === 'register' && (
-            <>
-              <div>
-                <label htmlFor="imie" className="block text-sm font-medium text-gray-700 mb-1">
-                  Imię
-                </label>
-                <input
-                  id="imie"
-                  type="text"
-                  value={imie}
-                  onChange={(e) => setImie(e.target.value)}
-                  required={tab === 'register'}
-                  autoComplete="given-name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="nazwisko" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nazwisko
-                </label>
-                <input
-                  id="nazwisko"
-                  type="text"
-                  value={nazwisko}
-                  onChange={(e) => setNazwisko(e.target.value)}
-                  required={tab === 'register'}
-                  autoComplete="family-name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </>
-          )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            {submitting ? 'Proszę czekać...' : tab === 'login' ? 'Zaloguj się' : 'Załóż konto'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="edu-focus-ring edu-press flex min-h-12 w-full items-center justify-center rounded-lg bg-edu-accent px-4 py-3 text-sm font-semibold text-white shadow-edu-inner transition-colors duration-150 hover:bg-edu-accent-hover disabled:pointer-events-none disabled:opacity-45"
+            >
+              {submitting ? 'Trwa przetwarzanie…' : tab === 'login' ? 'Zaloguj się' : 'Załóż konto'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

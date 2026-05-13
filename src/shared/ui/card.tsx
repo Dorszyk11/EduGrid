@@ -10,17 +10,17 @@ interface CardProps {
 export function Card({ title, children, className = "", action }: CardProps) {
   return (
     <div
-      className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}
+      className={`overflow-hidden rounded-xl border border-edu-border bg-edu-surface shadow-edu-sm ${className}`}
     >
       {(title || action) && (
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edu-border px-5 py-4 sm:px-6">
           {title && (
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="font-serif text-lg font-semibold leading-tight text-edu-ink">{title}</h3>
           )}
-          {action && <div>{action}</div>}
+          {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
-      <div className="px-6 py-4">{children}</div>
+      <div className="px-5 py-5 sm:px-6">{children}</div>
     </div>
   );
 }

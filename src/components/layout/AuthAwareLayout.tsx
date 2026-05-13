@@ -5,6 +5,17 @@ import { useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthContext';
 import DashboardLayout from './DashboardLayout';
 
+function ScreenLoader({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-edu-bg edu-surface-subtle px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-edu-surface px-8 py-10 text-center shadow-edu">
+        <div className="edu-spinner mx-auto h-11 w-11" role="status" aria-label={message} />
+        <p className="mt-5 text-sm font-medium text-edu-muted">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AuthAwareLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -19,14 +30,7 @@ export default function AuthAwareLayout({ children }: { children: React.ReactNod
   }, [isHome, user, loading, router]);
 
   if (loading && !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
-          <p className="mt-4 text-gray-600">Ładowanie...</p>
-        </div>
-      </div>
-    );
+    return <ScreenLoader message="Ładowanie sesji..." />;
   }
 
   if (isHome && !user) {

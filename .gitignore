@@ -40,3 +40,5 @@ next-env.d.ts
 
 # Temporary files
 /temp
+# Added by code-review-graph
+.code-review-graph/

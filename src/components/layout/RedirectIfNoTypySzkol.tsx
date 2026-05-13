@@ -9,6 +9,18 @@ interface RedirectIfNoTypySzkolProps {
   children: React.ReactNode;
 }
 
+function LoaderShell({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-edu-bg edu-surface-subtle px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-edu-surface px-8 py-10 text-center shadow-edu">
+        <div className="edu-spinner mx-auto h-11 w-11" role="status" aria-busy />
+        <p className="mt-5 text-sm font-semibold text-edu-ink">{title}</p>
+        {subtitle && <p className="mt-1 text-xs leading-relaxed text-edu-muted">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzkolProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -36,25 +48,11 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
   }, [pathname, router]);
 
   if (status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900" />
-          <p className="mt-4 text-gray-600">Ładowanie...</p>
-        </div>
-      </div>
-    );
+    return <LoaderShell title="Przygotowywanie danych szkoły…" subtitle="Sprawdzanie typów szkół w systemie." />;
   }
 
   if (status === 'redirect') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
-          <p className="mt-4 text-gray-600">Przekierowanie do planów MEiN...</p>
-        </div>
-      </div>
-    );
+    return <LoaderShell title="Przekierowanie…" subtitle="Brak typów szkół — przechodzimy do planów MEiN." />;
   }
 
   return <>{children}</>;
