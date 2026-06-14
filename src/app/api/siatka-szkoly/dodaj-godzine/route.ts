@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@/payload.config";
+import { requireUserId } from "@/lib/api/guard";
+import { errorResponse } from "@/lib/api/respond";
+import { assertKlasaAccess } from "@/lib/api/klasa-scope";
+import type { Id } from "@/types/domain";
 
 /** 1 godzina tygodniowo ≈ 38 godzin rocznie (rok szkolny), po 19 na semestr */
 const GODZINY_ROCZNE_ZA_1_TYG = 38;
@@ -11,9 +15,10 @@ const GODZINY_ROCZNE_ZA_1_TYG = 38;
  * Body: { przedmiotId: string, klasaId: string, rokSzkolny: string }
  * Jeśli nie ma żadnego przypisania, zwraca 400 – najpierw trzeba przypisać nauczyciela (np. z przydziału).
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const userId = await requireUserId(request);
+    const body = await request.json().catch(() => ({}));
     const przedmiotId = body?.przedmiotId;
     const klasaId = body?.klasaId;
     const rokSzkolny = body?.rokSzkolny;
@@ -26,6 +31,7 @@ export async function POST(request: Request) {
     }
 
     const payload = await getPayload({ config });
+    await assertKlasaAccess(payload, klasaId, userId);
 
     const rozklady = await payload.find({
       collection: "rozkład-godzin",
@@ -49,7 +55,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const doc = rozklady.docs[0] as any;
+    const doc = rozklady.docs[0] as unknown as {
+      id: Id;
+      godziny_tyg?: number;
+      godziny_roczne?: number;
+      semestr_1?: number;
+      semestr_2?: number;
+    };
     const godzinyTyg = (doc.godziny_tyg ?? 0) + 1;
     const godzinyRoczne = (doc.godziny_roczne ?? 0) + GODZINY_ROCZNE_ZA_1_TYG;
     const semestr1 = (doc.semestr_1 ?? 0) + Math.floor(GODZINY_ROCZNE_ZA_1_TYG / 2);
@@ -78,13 +90,6 @@ export async function POST(request: Request) {
       message: "Dodano 1 godzinę tygodniowo.",
     });
   } catch (error) {
-    console.error("Błąd przy dodawaniu godziny:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Nie udało się dodać godziny",
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

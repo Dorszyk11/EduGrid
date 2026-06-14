@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
 import { getDbSslConfig } from '@/lib/dbSsl';
+import { requireUserId } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
+import { NotFoundError, ValidationError } from '@/lib/errors';
 
 /** 1 godzina tygodniowo ≈ 38 godzin rocznie (rok szkolny), po 19 na semestr */
 const GODZINY_ROCZNE_ZA_1_TYG = 38;
@@ -13,6 +16,25 @@ function getConnectionString(): string | undefined {
     return uri.replace(':5432/', ':6543/');
   }
   return uri;
+}
+
+/** Izolacja (surowy SQL, bez Payload): klasa i opcjonalny nauczyciel muszą należeć do konta lub być legacy (NULL). */
+async function assertOwnedRaw(
+  client: PoolClient,
+  userId: string,
+  klasaId: string | number,
+  nauczycielId?: string | number
+): Promise<void> {
+  const k = await client.query('SELECT wlasciciel_id FROM klasy WHERE id = $1 LIMIT 1', [klasaId]);
+  if (k.rows.length === 0) throw new NotFoundError('Klasa', String(klasaId));
+  const kOwner = (k.rows[0] as { wlasciciel_id: number | null }).wlasciciel_id;
+  if (kOwner != null && String(kOwner) !== String(userId)) throw new NotFoundError('Klasa', String(klasaId));
+  if (nauczycielId != null) {
+    const n = await client.query('SELECT wlasciciel_id FROM nauczyciele WHERE id = $1 LIMIT 1', [nauczycielId]);
+    if (n.rows.length === 0) throw new NotFoundError('Nauczyciel', String(nauczycielId));
+    const nOwner = (n.rows[0] as { wlasciciel_id: number | null }).wlasciciel_id;
+    if (nOwner != null && String(nOwner) !== String(userId)) throw new NotFoundError('Nauczyciel', String(nauczycielId));
+  }
 }
 
 type TableInfo = {
@@ -130,6 +152,7 @@ async function getPrzypisaneGodziny(
 
 /** Zapis bezpośrednio do Postgres (omija Payload). */
 async function zapiszDoPostgres(params: {
+  userId: string;
   klasaId: string | number;
   przedmiotId: string | number;
   nauczycielId: string | number;
@@ -147,7 +170,8 @@ async function zapiszDoPostgres(params: {
 
   const client = await pool.connect();
   try {
-    const { klasaId, przedmiotId, nauczycielId, rokSzkolny, godzinyTyg, rok } = params;
+    const { userId, klasaId, przedmiotId, nauczycielId, rokSzkolny, godzinyTyg, rok } = params;
+    await assertOwnedRaw(client, userId, klasaId, nauczycielId);
     const godzinyRoczne = Math.round(godzinyTyg * GODZINY_ROCZNE_ZA_1_TYG);
     const semestr1 = Math.floor(godzinyRoczne / 2);
     const semestr2 = godzinyRoczne - semestr1;
@@ -233,23 +257,22 @@ function toId(v: unknown): string | number {
  */
 export async function GET(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const klasaId = searchParams.get('klasaId');
     const rokSzkolny = searchParams.get('rokSzkolny')?.trim().replace(/-/g, '/');
     if (!klasaId || !rokSzkolny || !/^\d{4}\/\d{4}$/.test(rokSzkolny)) {
-      return NextResponse.json(
-        { error: 'Wymagane: klasaId i rokSzkolny (YYYY/YYYY)' },
-        { status: 400 }
-      );
+      throw new ValidationError('Wymagane: klasaId i rokSzkolny (YYYY/YYYY)');
     }
     const conn = getConnectionString();
-    if (!conn) return NextResponse.json({ error: 'Brak DATABASE_URI' }, { status: 500 });
+    if (!conn) throw new Error('Brak DATABASE_URI');
     const pool = new Pool({
       connectionString: conn,
       ssl: getDbSslConfig(conn),
     });
     const client = await pool.connect();
     try {
+      await assertOwnedRaw(client, userId, toId(klasaId));
       const assigned = await getPrzypisaneGodziny(client, toId(klasaId), rokSzkolny);
       return NextResponse.json({ assigned });
     } finally {
@@ -257,11 +280,7 @@ export async function GET(request: NextRequest) {
       await pool.end();
     }
   } catch (error) {
-    console.error('GET /api/dyspozycja/przydziel:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Błąd odczytu' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
 
@@ -273,6 +292,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const body = await request.json().catch(() => ({}));
     const { klasaId, przedmiotId, nauczycielId, rokSzkolny, godzinyTyg } = body ?? {};
 
@@ -299,6 +319,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await zapiszDoPostgres({
+      userId,
       klasaId: toId(klasaId),
       przedmiotId: toId(przedmiotId),
       nauczycielId: toId(nauczycielId),
@@ -309,10 +330,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('POST /api/dyspozycja/przydziel:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Błąd zapisu' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

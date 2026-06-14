@@ -49,7 +49,20 @@ async function post(path, body, cookie) {
   const foreign = await post("/api/przydzial/zapisz", fakePrzydzial, cookieA);
   if (foreign.status !== 403) fails.push(`zapisz do nie-swojej klasy = ${foreign.status}, oczekiwano 403`);
 
-  console.log(JSON.stringify({ anonStatus: anon.status, foreignStatus: foreign.status, fails }, null, 2));
+  // dyspozycja/przydziel — izolacja przez surowy SQL (assertOwnedRaw)
+  async function getStatus(path, cookie) {
+    const headers = {};
+    if (cookie) headers.Cookie = cookie;
+    const r = await fetch(`${BASE}${path}`, { headers });
+    return r.status;
+  }
+  const dispPath = "/api/dyspozycja/przydziel?klasaId=999999&rokSzkolny=2024/2025";
+  const dispAnon = await getStatus(dispPath, null);
+  if (dispAnon !== 401) fails.push(`dyspozycja GET bez auth = ${dispAnon}, oczekiwano 401`);
+  const dispForeign = await getStatus(dispPath, cookieA);
+  if (dispForeign !== 404) fails.push(`dyspozycja GET cudza klasa = ${dispForeign}, oczekiwano 404`);
+
+  console.log(JSON.stringify({ anonStatus: anon.status, foreignStatus: foreign.status, dispAnon, dispForeign, fails }, null, 2));
   console.log(fails.length === 0 ? "✅ IZOLACJA ZAPISU OK" : "❌ FAILS: " + fails.length);
   process.exit(fails.length ? 1 : 0);
 })().catch((e) => {
