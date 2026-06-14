@@ -1,8 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@/payload.config";
 import { ROK_SZKOLNY_WSZYSTKIE } from "@/lib/siatkaSzkoly";
 import { pobierzMapeGodzinZPlanuIPrzydzialu } from "@/utils/godzinyPlanIPrzydzial";
+import { requireUserId, ownerScope } from "@/lib/api/guard";
+import { errorResponse } from "@/lib/api/respond";
+import { ValidationError } from "@/lib/errors";
 
 function najnowszyRokSzkolny(lata: string[]): string {
   return [...lata].sort((a, b) => b.localeCompare(a, "pl"))[0] ?? "";
@@ -32,8 +35,9 @@ function przydzialyDlaNajnowszegoRoku(
  * - rokSzkolny: Rok szkolny (np. 2024/2025) lub „wszystkie” — wtedy wszystkie aktywne oddziały
  *   typu szkoły i dla każdej pary (klasa, przedmiot) używany jest najnowszy rok z bazy
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get("typSzkolyId");
     const rokSzkolnyRaw = searchParams.get("rokSzkolny");
@@ -45,10 +49,7 @@ export async function GET(request: Request) {
     const trybWszystkieLata = rokSzkolny === ROK_SZKOLNY_WSZYSTKIE;
 
     if (!typSzkolyId) {
-      return NextResponse.json(
-        { error: "typSzkolyId jest wymagany" },
-        { status: 400 }
-      );
+      throw new ValidationError("typSzkolyId jest wymagany", "typSzkolyId");
     }
 
     const payload = await getPayload({ config });
@@ -83,6 +84,7 @@ export async function GET(request: Request) {
         and: [
           { typ_szkoly: { equals: typSzkolyId } },
           { aktywna: { equals: true } },
+          ownerScope(userId),
         ],
       },
       limit: 1000,
@@ -399,12 +401,6 @@ export async function GET(request: Request) {
       podsumowanieCalejSzkoly,
     });
   } catch (error) {
-    console.error("Błąd przy pobieraniu siatki szkoły:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Nieznany błąd",
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
