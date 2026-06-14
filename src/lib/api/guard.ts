@@ -1,7 +1,7 @@
 import { getCurrentUserId } from "@/utils/auth";
 import { AuthenticationError } from "@/lib/errors";
 
-export { toOwnerId, ownerIdOf, canAccessOwned } from "./ownership";
+export { toOwnerId, ownerIdOf, canAccessOwned, ownerScope } from "./ownership";
 
 /**
  * Zwraca ID zalogowanego konta albo rzuca AuthenticationError (→ 401).

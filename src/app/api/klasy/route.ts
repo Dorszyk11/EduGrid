@@ -1,180 +1,128 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
+import type { Where } from "payload";
+import { z } from "zod";
 import config from "@/payload.config";
-import { getCurrentUserId } from "@/utils/auth";
+import { requireUserId, toOwnerId, ownerIdOf, ownerScope } from "@/lib/api/guard";
+import { errorResponse } from "@/lib/api/respond";
+import { validateInput } from "@/lib/validation";
+import { NotFoundError, ValidationError } from "@/lib/errors";
+import type { Id, Ref } from "@/types/domain";
+
+type KlasaRow = {
+  id: Id;
+  nazwa?: string;
+  rok_szkolny?: string;
+  profil?: string | null;
+  wlasciciel?: Id | { id: Id } | null;
+  typ_szkoly?: Ref<{ nazwa?: string }>;
+};
 
 /**
- * GET /api/klasy - Lista klas z opcjonalnymi filtrami
- * Parametry: typSzkolyId, rokSzkolny
+ * GET /api/klasy - lista klas konta (opcjonalne filtry: typSzkolyId, rokSzkolny).
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId(request);
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get("typSzkolyId");
     const rokSzkolny = searchParams.get("rokSzkolny");
 
-    const payload = await getPayload({ config });
-
-    const whereConditions: any = { aktywna: { equals: true } };
+    const and: Where[] = [{ aktywna: { equals: true } }, ownerScope(userId)];
     if (typSzkolyId) {
       const idTyp = Number(typSzkolyId);
-      const typIdValue = !Number.isNaN(idTyp) ? idTyp : typSzkolyId;
-      whereConditions.typ_szkoly = { equals: typIdValue };
+      and.push({ typ_szkoly: { equals: Number.isNaN(idTyp) ? typSzkolyId : idTyp } });
     }
     if (rokSzkolny) {
-      whereConditions.rok_szkolny = { equals: rokSzkolny };
+      and.push({ rok_szkolny: { equals: rokSzkolny } });
     }
 
+    const payload = await getPayload({ config });
     const result = await payload.find({
       collection: "klasy",
-      where: whereConditions,
+      where: { and },
       limit: 500,
       depth: 1,
     });
 
-    const klasy = result.docs.map((k: any) => {
-      const wlascicielId = k.wlasciciel != null ? String(typeof k.wlasciciel === "object" ? (k.wlasciciel as { id?: string }).id : k.wlasciciel) : null;
-      const can_manage = !wlascicielId || (userId != null && wlascicielId === userId);
+    const klasy = (result.docs as unknown as KlasaRow[]).map((k) => {
+      const wlascicielId = ownerIdOf(k.wlasciciel);
+      const typ = k.typ_szkoly;
       return {
         id: k.id,
         nazwa: k.nazwa,
         rok_szkolny: k.rok_szkolny,
         profil: k.profil ?? null,
-        typ_szkoly: k.typ_szkoly
-          ? {
-              id:
-                typeof k.typ_szkoly === "object" ? k.typ_szkoly.id : k.typ_szkoly,
-              nazwa:
-                typeof k.typ_szkoly === "object" ? k.typ_szkoly.nazwa : undefined,
-            }
-          : null,
-        can_manage,
+        typ_szkoly:
+          typ != null
+            ? {
+                id: typeof typ === "object" ? typ.id : typ,
+                nazwa: typeof typ === "object" ? typ.nazwa : undefined,
+              }
+            : null,
+        // właściciel == konto lub legacy (null) → konto może zarządzać
+        can_manage: wlascicielId == null || wlascicielId === userId,
       };
     });
 
     return NextResponse.json({ klasy, total: result.totalDocs });
   } catch (error) {
-    console.error("Błąd przy pobieraniu listy klas:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Nieznany błąd" },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
 
+const createKlasaSchema = z.object({
+  typ_szkoly_id: z.union([z.number(), z.string()]),
+  rok_poczatku: z.union([z.number(), z.string()]),
+  litera: z.string().trim().min(1, "Litera oddziału jest wymagana."),
+  profil: z.string().optional(),
+});
+
 /**
- * POST /api/klasy - Utwórz nową klasę
- * Body: { typ_szkoly_id, rok_poczatku, litera, profil? }
- * rok_szkolny zapisywany jako zakres YYYY-YYYY (np. 2022-2027) na podstawie liczba_lat typu szkoły.
+ * POST /api/klasy - utwórz klasę przypisaną do konta.
+ * rok_szkolny zapisywany jako zakres YYYY-YYYY na podstawie liczba_lat typu szkoły.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId(request);
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Musisz być zalogowany, aby utworzyć klasę." },
-        { status: 401 }
-      );
-    }
-
+    const userId = await requireUserId(request);
     const body = await request.json().catch(() => ({}));
-    const { typ_szkoly_id, rok_poczatku, litera, profil } = body;
+    const input = validateInput(createKlasaSchema, body);
 
-    if (!typ_szkoly_id || rok_poczatku == null || !litera) {
-      return NextResponse.json(
-        { error: "Wymagane: typ_szkoly_id, rok_poczatku, litera" },
-        { status: 400 }
-      );
-    }
-
-    const startYear = Number(rok_poczatku);
+    const startYear = Number(input.rok_poczatku);
     if (Number.isNaN(startYear) || startYear < 2000 || startYear > 2040) {
-      return NextResponse.json(
-        { error: "rok_poczatku musi być rokiem 2000–2040" },
-        { status: 400 }
-      );
+      throw new ValidationError("rok_poczatku musi być rokiem 2000–2040", "rok_poczatku");
     }
 
     const payload = await getPayload({ config });
-
-    const rawId = typ_szkoly_id;
-    let typSzkoly: {
-      id: string | number;
-      nazwa?: string;
-      liczba_lat?: number;
-    } | null = null;
-    try {
-      typSzkoly = await payload.findByID({
-        collection: "typy-szkol",
-        id: rawId as string,
-      });
-    } catch {
-      try {
-        const numId = Number(rawId);
-        if (!Number.isNaN(numId)) {
-          typSzkoly = await payload.findByID({
-            collection: "typy-szkol",
-            id: numId,
-          });
-        }
-      } catch {
-        typSzkoly = null;
-      }
-    }
+    const rawId = input.typ_szkoly_id;
+    const numId = Number(rawId);
+    const typSzkoly = (await payload
+      .findByID({ collection: "typy-szkol", id: !Number.isNaN(numId) ? numId : (rawId as string) })
+      .catch(() => null)) as { id: Id; liczba_lat?: number } | null;
 
     if (!typSzkoly) {
-      return NextResponse.json(
-        { error: "Nie znaleziono typu szkoły o podanym ID: " + String(rawId) },
-        { status: 400 }
-      );
+      throw new NotFoundError("Typ szkoły", String(rawId));
     }
-
     const liczbaLat = typSzkoly.liczba_lat ?? 0;
     if (liczbaLat < 1 || liczbaLat > 8) {
-      return NextResponse.json(
-        { error: "Typ szkoły musi mieć liczba_lat 1–8" },
-        { status: 400 }
-      );
+      throw new ValidationError("Typ szkoły musi mieć liczba_lat w zakresie 1–8");
     }
-
-    const endYear = startYear + liczbaLat;
-    const rokSzkolnyZakres = `${startYear}-${endYear}`;
-    const nazwa = String(litera).trim().toUpperCase();
-
-    // Relacja wlasciciel → users: Payload/Postgres oczekuje liczby (id użytkownika)
-    const wlascicielId = /^\d+$/.test(userId) ? Number(userId) : userId;
 
     const data: Record<string, unknown> = {
-      nazwa,
+      nazwa: String(input.litera).trim().toUpperCase(),
       typ_szkoly: typSzkoly.id,
-      rok_szkolny: rokSzkolnyZakres,
+      rok_szkolny: `${startYear}-${startYear + liczbaLat}`,
       aktywna: true,
-      wlasciciel: wlascicielId,
+      wlasciciel: toOwnerId(userId),
     };
-    if (profil != null && String(profil).trim() !== "") {
-      data.profil = String(profil).trim();
+    if (input.profil != null && String(input.profil).trim() !== "") {
+      data.profil = String(input.profil).trim();
     }
 
-    const created = await payload.create({
+    const created = (await payload.create({
       collection: "klasy",
-      data: data as Record<string, unknown>,
-    });
-
-    const createdId = created.id;
-    const verify = await payload
-      .findByID({
-        collection: "klasy",
-        id: createdId,
-      })
-      .catch(() => null);
-
-    if (!verify) {
-      console.warn(
-        "Klasa utworzona (id=%s) ale weryfikacja findByID nie zwróciła dokumentu",
-        createdId
-      );
-    }
+      data,
+    })) as unknown as KlasaRow;
 
     return NextResponse.json({
       id: created.id,
@@ -184,8 +132,6 @@ export async function POST(request: Request) {
       created: true,
     });
   } catch (error) {
-    console.error("Błąd przy tworzeniu klasy:", error);
-    const msg = error instanceof Error ? error.message : "Nieznany błąd";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return errorResponse(error);
   }
 }

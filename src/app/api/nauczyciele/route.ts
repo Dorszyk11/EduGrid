@@ -2,20 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
 import { z } from "zod";
 import config from "@/payload.config";
-import { requireUserId, toOwnerId } from "@/lib/api/guard";
+import { requireUserId, toOwnerId, ownerScope } from "@/lib/api/guard";
 import { errorResponse } from "@/lib/api/respond";
 import { validateInput } from "@/lib/validation";
 import type { NauczycielRow } from "@/types/domain";
-
-/** Widoczne dla konta: rekordy własne lub legacy (bez właściciela). */
-function ownerScope(userId: string) {
-  return {
-    or: [
-      { wlasciciel: { equals: toOwnerId(userId) } },
-      { wlasciciel: { exists: false } },
-    ],
-  };
-}
 
 /**
  * GET /api/nauczyciele — lista nauczycieli zalogowanego konta
