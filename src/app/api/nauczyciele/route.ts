@@ -1,71 +1,99 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getPayload } from 'payload';
-import config from '@/payload.config';
+import { NextRequest, NextResponse } from "next/server";
+import { getPayload } from "payload";
+import { z } from "zod";
+import config from "@/payload.config";
+import { requireUserId, toOwnerId } from "@/lib/api/guard";
+import { errorResponse } from "@/lib/api/respond";
+import { validateInput } from "@/lib/validation";
+import type { NauczycielRow } from "@/types/domain";
+
+/** Widoczne dla konta: rekordy własne lub legacy (bez właściciela). */
+function ownerScope(userId: string) {
+  return {
+    or: [
+      { wlasciciel: { equals: toOwnerId(userId) } },
+      { wlasciciel: { exists: false } },
+    ],
+  };
+}
 
 /**
- * GET /api/nauczyciele - lista nauczycieli (imię, nazwisko, specjalizacja/przedmioty)
+ * GET /api/nauczyciele — lista nauczycieli zalogowanego konta
+ * (imię, nazwisko, specjalizacja/przedmioty, maks. obciążenie).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const payload = await getPayload({ config });
     const result = await payload.find({
-      collection: 'nauczyciele',
+      collection: "nauczyciele",
+      where: ownerScope(userId),
       limit: 500,
       depth: 1,
     });
-    const nauczyciele = (result.docs || []).map((n: any) => ({
+    const docs = result.docs as unknown as NauczycielRow[];
+    const nauczyciele = docs.map((n) => ({
       id: n.id,
       imie: n.imie,
       nazwisko: n.nazwisko,
-      max_obciazenie: typeof n.max_obciazenie === 'number' ? n.max_obciazenie : 18,
+      max_obciazenie:
+        typeof n.max_obciazenie === "number" ? n.max_obciazenie : 18,
       przedmioty: Array.isArray(n.przedmioty)
-        ? n.przedmioty.map((p: any) => (typeof p === 'object' && p?.id != null ? { id: p.id, nazwa: p.nazwa } : { id: p, nazwa: null }))
+        ? n.przedmioty.map((p) =>
+            typeof p === "object" && p?.id != null
+              ? { id: p.id, nazwa: p.nazwa ?? null }
+              : { id: p as Exclude<typeof p, object>, nazwa: null }
+          )
         : [],
     }));
     return NextResponse.json(nauczyciele);
   } catch (error) {
-    console.error('Błąd GET /api/nauczyciele:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Błąd serwera' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
 
+const createNauczycielSchema = z.object({
+  imie: z.string().trim().min(1, "Imię jest wymagane."),
+  nazwisko: z.string().trim().min(1, "Nazwisko jest wymagane."),
+  przedmioty: z.array(z.union([z.number(), z.string()])).optional(),
+  max_obciazenie: z.union([z.number(), z.string()]).optional(),
+});
+
 /**
- * POST /api/nauczyciele - dodaj nauczyciela (imie, nazwisko, przedmioty: id[])
+ * POST /api/nauczyciele — dodaj nauczyciela do konta zalogowanego użytkownika.
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { imie, nazwisko, przedmioty, max_obciazenie } = body;
-    if (!imie?.trim() || !nazwisko?.trim()) {
-      return NextResponse.json(
-        { error: 'Imię i nazwisko są wymagane.' },
-        { status: 400 }
-      );
-    }
+    const userId = await requireUserId(request);
+    const body = await request.json().catch(() => ({}));
+    const input = validateInput(createNauczycielSchema, body);
+
+    // Payload (Postgres) oczekuje numerycznych ID dla relacji 'przedmioty'.
+    const przedmiotyIds = (input.przedmioty ?? [])
+      .map((id) => (typeof id === "number" ? id : Number(id)))
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    const rawMax =
+      typeof input.max_obciazenie === "number"
+        ? input.max_obciazenie
+        : input.max_obciazenie != null
+          ? parseFloat(input.max_obciazenie)
+          : NaN;
+    const maxObc =
+      Number.isFinite(rawMax) && rawMax >= 0 && rawMax <= 40 ? rawMax : 18;
+
     const payload = await getPayload({ config });
-    // Payload relationship expects numeric IDs for relationTo 'przedmioty' (Postgres default)
-    const przedmiotyIds = Array.isArray(przedmioty)
-      ? przedmioty
-          .map((id: unknown) => (typeof id === 'number' && Number.isFinite(id) ? id : typeof id === 'string' ? Number(id) : NaN))
-          .filter((n: number) => !Number.isNaN(n) && n > 0)
-      : [];
-    const maxObc = typeof max_obciazenie === 'number' && max_obciazenie >= 0 && max_obciazenie <= 40
-      ? max_obciazenie
-      : typeof max_obciazenie === 'string'
-        ? (() => { const n = parseFloat(max_obciazenie); return Number.isFinite(n) && n >= 0 && n <= 40 ? n : 18; })()
-        : 18;
-    const doc = await payload.create({
-      collection: 'nauczyciele',
+    const doc = (await payload.create({
+      collection: "nauczyciele",
       data: {
-        imie: String(imie).trim(),
-        nazwisko: String(nazwisko).trim(),
+        imie: input.imie,
+        nazwisko: input.nazwisko,
         przedmioty: przedmiotyIds,
         max_obciazenie: maxObc,
+        wlasciciel: toOwnerId(userId),
       },
-    });
+    })) as unknown as NauczycielRow;
+
     return NextResponse.json({
       id: doc.id,
       imie: doc.imie,
@@ -73,10 +101,6 @@ export async function POST(request: NextRequest) {
       przedmioty: doc.przedmioty ?? [],
     });
   } catch (error) {
-    console.error('Błąd POST /api/nauczyciele:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Błąd serwera' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

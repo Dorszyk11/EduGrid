@@ -1,89 +1,84 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@/payload.config";
+import { requireUserId, canAccessOwned } from "@/lib/api/guard";
+import { errorResponse } from "@/lib/api/respond";
+import { NotFoundError } from "@/lib/errors";
+import type {
+  NauczycielRow,
+  RozkladRow,
+  KwalifikacjaRow,
+  Ref,
+} from "@/types/domain";
+
+function refId(ref: Ref | null | undefined): string {
+  if (ref == null) return "";
+  return typeof ref === "object" ? String(ref.id) : String(ref);
+}
+function refNazwa(ref: Ref<{ nazwa?: string }> | null | undefined): string {
+  return typeof ref === "object" && ref !== null ? (ref.nazwa ?? "") : "";
+}
 
 /**
- * GET /api/nauczyciele/[id] - Pobierz szczegóły nauczyciela z obciążeniem
+ * GET /api/nauczyciele/[id] - szczegóły nauczyciela z obciążeniem.
+ * Tylko nauczyciel należący do zalogowanego konta (lub legacy bez właściciela).
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const payload = await getPayload({ config });
+    const userId = await requireUserId(request);
     const { id: nauczycielId } = await params;
+    const payload = await getPayload({ config });
 
-    // Pobierz nauczyciela
-    const nauczyciel = await payload.findByID({
-      collection: "nauczyciele",
-      id: nauczycielId,
-    });
-
-    if (!nauczyciel) {
-      return NextResponse.json(
-        { error: "Nauczyciel nie znaleziony" },
-        { status: 404 }
-      );
+    const nauczyciel = (await payload
+      .findByID({ collection: "nauczyciele", id: nauczycielId })
+      .catch(() => null)) as NauczycielRow | null;
+    if (!nauczyciel || !canAccessOwned(nauczyciel.wlasciciel, userId)) {
+      throw new NotFoundError("Nauczyciel", nauczycielId);
     }
 
-    // Pobierz kwalifikacje
-    const kwalifikacje = await payload.find({
+    const kwalifikacjeRes = await payload.find({
       collection: "kwalifikacje",
-      where: {
-        nauczyciel: {
-          equals: nauczycielId,
-        },
-      },
+      where: { nauczyciel: { equals: nauczycielId } },
       limit: 100,
       depth: 1,
     });
-
-    // Pobierz rozkład godzin dla tego nauczyciela
-    const rozkladGodzin = await payload.find({
+    const rozkladRes = await payload.find({
       collection: "rozkład-godzin",
-      where: {
-        nauczyciel: {
-          equals: nauczycielId,
-        },
-      },
+      where: { nauczyciel: { equals: nauczycielId } },
       limit: 1000,
-      depth: 2, // Pobierz powiązane klasy i przedmioty
+      depth: 2,
     });
 
-    // Grupuj po klasach i przedmiotach
-    const obciazenie = rozkladGodzin.docs.map((rozklad: any) => {
-      const klasa = rozklad.klasa;
-      const przedmiot = rozklad.przedmiot;
+    const kwalifikacje = (
+      kwalifikacjeRes.docs as unknown as KwalifikacjaRow[]
+    ).map((k) => ({
+      przedmiot: { id: refId(k.przedmiot), nazwa: refNazwa(k.przedmiot) },
+      stopien: k.stopien,
+      specjalizacja: k.specjalizacja,
+    }));
 
-      return {
-        id: rozklad.id,
-        klasa: {
-          id: typeof klasa === "string" ? klasa : klasa.id,
-          nazwa: typeof klasa === "string" ? klasa : klasa.nazwa,
-        },
-        przedmiot: {
-          id: typeof przedmiot === "string" ? przedmiot : przedmiot.id,
-          nazwa: typeof przedmiot === "string" ? przedmiot : przedmiot.nazwa,
-        },
-        godziny_tyg: rozklad.godziny_tyg || 0,
-        godziny_roczne: rozklad.godziny_roczne || 0,
-        rok_szkolny: rozklad.rok_szkolny,
-        rok: rozklad.rok ?? "",
-      };
-    });
+    const obciazenie = (rozkladRes.docs as unknown as RozkladRow[]).map((r) => ({
+      id: r.id,
+      klasa: { id: refId(r.klasa), nazwa: refNazwa(r.klasa) },
+      przedmiot: { id: refId(r.przedmiot), nazwa: refNazwa(r.przedmiot) },
+      godziny_tyg: r.godziny_tyg || 0,
+      godziny_roczne: r.godziny_roczne || 0,
+      rok_szkolny: r.rok_szkolny,
+      rok: r.rok ?? "",
+    }));
 
-    // Oblicz sumy
-    const sumaGodzinTyg = obciazenie.reduce((sum, o) => sum + o.godziny_tyg, 0);
+    const sumaGodzinTyg = obciazenie.reduce((s, o) => s + o.godziny_tyg, 0);
     const sumaGodzinRocznie = obciazenie.reduce(
-      (sum, o) => sum + o.godziny_roczne,
+      (s, o) => s + o.godziny_roczne,
       0
     );
     const maxObciazenie = nauczyciel.max_obciazenie || 18;
     const roznica = sumaGodzinTyg - maxObciazenie;
     const procentObciazenia =
       maxObciazenie > 0 ? Math.round((sumaGodzinTyg / maxObciazenie) * 100) : 0;
-
-    // Sprawdź status
     let status = "OK";
     if (roznica > 0) status = "PRZECIĄŻENIE";
     else if (sumaGodzinTyg < maxObciazenie * 0.5) status = "NIEDOCIĄŻENIE";
@@ -99,15 +94,7 @@ export async function GET(
         etat: nauczyciel.etat,
         aktywny: nauczyciel.aktywny,
       },
-      kwalifikacje: kwalifikacje.docs.map((k: any) => ({
-        przedmiot: {
-          id: typeof k.przedmiot === "string" ? k.przedmiot : k.przedmiot.id,
-          nazwa:
-            typeof k.przedmiot === "string" ? k.przedmiot : k.przedmiot.nazwa,
-        },
-        stopien: k.stopien,
-        specjalizacja: k.specjalizacja,
-      })),
+      kwalifikacje,
       obciazenie,
       podsumowanie: {
         suma_godzin_tyg: sumaGodzinTyg,
@@ -121,38 +108,32 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Błąd przy pobieraniu danych nauczyciela:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Nieznany błąd",
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
 
 /**
- * DELETE /api/nauczyciele/[id] - usuń nauczyciela
+ * DELETE /api/nauczyciele/[id] - usuń nauczyciela należącego do konta.
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const payload = await getPayload({ config });
+    const userId = await requireUserId(request);
     const { id } = await params;
-    await payload.delete({
-      collection: "nauczyciele",
-      id,
-    });
+    const payload = await getPayload({ config });
+
+    const nauczyciel = (await payload
+      .findByID({ collection: "nauczyciele", id })
+      .catch(() => null)) as NauczycielRow | null;
+    if (!nauczyciel || !canAccessOwned(nauczyciel.wlasciciel, userId)) {
+      throw new NotFoundError("Nauczyciel", id);
+    }
+
+    await payload.delete({ collection: "nauczyciele", id });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Błąd przy usuwaniu nauczyciela:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Nieznany błąd",
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

@@ -41,6 +41,14 @@ export class AuthorizationError extends DomainError {
   }
 }
 
+export class AuthenticationError extends DomainError {
+  constructor(message: string = "Wymagane zalogowanie.") {
+    super("AUTHENTICATION_ERROR", message);
+    this.name = "AuthenticationError";
+    Object.setPrototypeOf(this, AuthenticationError.prototype);
+  }
+}
+
 export class ConflictError extends DomainError {
   constructor(message: string) {
     super("CONFLICT", message);
@@ -58,6 +66,8 @@ export function domainErrorToHttpStatus(error: DomainError): number {
       return 404;
     case "VALIDATION_ERROR":
       return 400;
+    case "AUTHENTICATION_ERROR":
+      return 401;
     case "AUTHORIZATION_ERROR":
       return 403;
     case "CONFLICT":
