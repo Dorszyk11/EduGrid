@@ -40,8 +40,15 @@ function getConnectionString(): string | undefined {
   return process.env.DATABASE_URI || undefined;
 }
 
+const PAYLOAD_SECRET = process.env.PAYLOAD_SECRET;
+if (!PAYLOAD_SECRET) {
+  throw new Error(
+    'Brak wymaganej zmiennej środowiskowej PAYLOAD_SECRET — bez niej JWT byłby podpisywany pustym sekretem.'
+  );
+}
+
 export default buildConfig({
-  secret: process.env.PAYLOAD_SECRET || '',
+  secret: PAYLOAD_SECRET,
   serverURL: getServerURL(),
   admin: {
     user: 'users',
