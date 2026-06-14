@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { requireUserId } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
+import { assertKlasaAccess } from '@/lib/api/klasa-scope';
+import { ValidationError } from '@/lib/errors';
+import type { PrzydzialWyborRow } from '@/types/domain';
 
 /**
  * GET /api/przydzial-godzin-wybor?klasaId=xxx
  * Zwraca przydział godzin do wyboru i doradztwo dla danej klasy.
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const klasaId = searchParams.get('klasaId');
     if (!klasaId) {
-      return NextResponse.json({ error: 'klasaId jest wymagane' }, { status: 400 });
+      throw new ValidationError('klasaId jest wymagane', 'klasaId');
     }
 
     const payload = await getPayload({ config });
+    await assertKlasaAccess(payload, klasaId, userId);
     const result = await payload.find({
       collection: 'przydzial-godzin-wybor',
       where: { klasa: { equals: klasaId } },
       limit: 1,
     });
 
-    const doc = result.docs[0] as any;
+    const doc = result.docs[0] as unknown as PrzydzialWyborRow | undefined;
     if (!doc) {
       return NextResponse.json({ przydzial: {}, doradztwo: {}, dyrektor: {}, rozszerzenia: [], rozszerzeniaGodziny: {}, rozszerzeniaPrzydzial: {}, realizacja: {}, podzialNaGrupy: {}, przydzialGrupy: {} });
     }
@@ -63,9 +70,7 @@ export async function GET(request: Request) {
       rozszerzeniaGrupy,
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
-    console.error('GET /api/przydzial-godzin-wybor:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return errorResponse(error);
   }
 }
 
@@ -76,13 +81,15 @@ export async function GET(request: Request) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const body = await request.json().catch(() => ({}));
     const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial, realizacja, podzialNaGrupy, przydzialGrupy, dyrektorGrupy, rozszerzeniaGrupy } = body;
     if (!klasaId) {
-      return NextResponse.json({ error: 'klasaId jest wymagane' }, { status: 400 });
+      throw new ValidationError('klasaId jest wymagane', 'klasaId');
     }
 
     const payload = await getPayload({ config });
+    await assertKlasaAccess(payload, klasaId, userId);
     const existing = await payload.find({
       collection: 'przydzial-godzin-wybor',
       where: { klasa: { equals: klasaId } },
@@ -96,7 +103,7 @@ export async function POST(request: NextRequest) {
       rozszerzeniaPrzydzial != null && typeof rozszerzeniaPrzydzial === 'object' ? rozszerzeniaPrzydzial : {};
 
     if (existing.docs.length > 0) {
-      const doc = existing.docs[0] as any;
+      const doc = existing.docs[0] as unknown as PrzydzialWyborRow;
       const przydzialVal = przydzial != null ? przydzial : (doc.przydzial ?? {});
       const doradztwoVal = doradztwo != null ? doradztwo : (doc.doradztwo ?? {});
       const dyrektorVal = dyrektor != null ? dyrektor : (doc.dyrektor ?? {});
@@ -191,8 +198,6 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ ok: true, created: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
-    console.error('POST /api/przydzial-godzin-wybor:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return errorResponse(error);
   }
 }

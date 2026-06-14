@@ -1,86 +1,84 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
+import { z } from "zod";
 import config from "@/payload.config";
-import type { Przypisanie } from "@/utils/automatycznyRozdzialGodzin";
+import { requireUserId } from "@/lib/api/guard";
+import { errorResponse } from "@/lib/api/respond";
+import { validateInput } from "@/lib/validation";
+import { AuthorizationError } from "@/lib/errors";
+import { ownedIds } from "@/lib/api/klasa-scope";
+import type { Id } from "@/types/domain";
+
+const idSchema = z.union([z.number(), z.string()]);
+const przypisanieSchema = z.object({
+  przedmiotId: idSchema,
+  klasaId: idSchema,
+  nauczycielId: idSchema,
+  godzinyTygodniowo: z.number(),
+  godzinyRoczne: z.number(),
+});
+const zapiszSchema = z.object({
+  przypisania: z.array(przypisanieSchema),
+  rokSzkolny: z.string().min(1, "rokSzkolny jest wymagany"),
+});
+
+type Przypisanie = z.infer<typeof przypisanieSchema>;
 
 /**
- * POST /api/przydzial/zapisz - Zapisuje przypisania do bazy danych
- *
- * Body:
- * {
- *   przypisania: Przypisanie[];
- *   rokSzkolny: string;
- * }
+ * POST /api/przydzial/zapisz - zapis przypisań (rozkład-godzin) konta.
+ * Izolacja: wolno zapisywać wyłącznie do własnych klas i własnymi nauczycielami.
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { przypisania, rokSzkolny } = body;
-
-    if (!przypisania || !Array.isArray(przypisania)) {
-      return NextResponse.json(
-        { error: "przypisania musi być tablicą" },
-        { status: 400 }
-      );
-    }
-
-    if (!rokSzkolny) {
-      return NextResponse.json(
-        { error: "rokSzkolny jest wymagany" },
-        { status: 400 }
-      );
-    }
+    const userId = await requireUserId(request);
+    const body = await request.json().catch(() => ({}));
+    const { przypisania, rokSzkolny } = validateInput(zapiszSchema, body);
 
     const payload = await getPayload({ config });
+    const [klasyOwned, nauczycieleOwned] = await Promise.all([
+      ownedIds(payload, "klasy", userId),
+      ownedIds(payload, "nauczyciele", userId),
+    ]);
+
+    for (const p of przypisania) {
+      if (!klasyOwned.has(String(p.klasaId))) {
+        throw new AuthorizationError("Brak dostępu do wskazanej klasy.");
+      }
+      if (!nauczycieleOwned.has(String(p.nauczycielId))) {
+        throw new AuthorizationError("Brak dostępu do wskazanego nauczyciela.");
+      }
+    }
 
     const utworzone: string[] = [];
     const bledy: Array<{ przypisanie: Przypisanie; error: string }> = [];
 
     for (const przypisanie of przypisania) {
       try {
-        // Sprawdź, czy już istnieje przypisanie dla tego przedmiotu w klasie
         const istniejące = await payload.find({
           collection: "rozkład-godzin",
           where: {
             and: [
-              {
-                przedmiot: {
-                  equals: przypisanie.przedmiotId,
-                },
-              },
-              {
-                klasa: {
-                  equals: przypisanie.klasaId,
-                },
-              },
-              {
-                nauczyciel: {
-                  equals: przypisanie.nauczycielId,
-                },
-              },
-              {
-                rok_szkolny: {
-                  equals: rokSzkolny,
-                },
-              },
+              { przedmiot: { equals: przypisanie.przedmiotId } },
+              { klasa: { equals: przypisanie.klasaId } },
+              { nauczyciel: { equals: przypisanie.nauczycielId } },
+              { rok_szkolny: { equals: rokSzkolny } },
             ],
           },
           limit: 1,
         });
 
         if (istniejące.docs.length > 0) {
-          // Aktualizuj istniejące przypisanie
+          const existingId = (istniejące.docs[0] as { id: Id }).id;
           await payload.update({
             collection: "rozkład-godzin",
-            id: istniejące.docs[0].id,
+            id: existingId,
             data: {
               godziny_tyg: przypisanie.godzinyTygodniowo,
               godziny_roczne: przypisanie.godzinyRoczne,
             },
           });
-          utworzone.push(`Zaktualizowano: ${istniejące.docs[0].id}`);
+          utworzone.push(`Zaktualizowano: ${existingId}`);
         } else {
-          // Utwórz nowe przypisanie
           const nowe = await payload.create({
             collection: "rozkład-godzin",
             data: {
@@ -106,18 +104,9 @@ export async function POST(request: NextRequest) {
       success: true,
       utworzone: utworzone.length,
       bledy: bledy.length,
-      szczegoly: {
-        utworzone,
-        bledy,
-      },
+      szczegoly: { utworzone, bledy },
     });
   } catch (error) {
-    console.error("Błąd przy zapisywaniu przydziału:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Nieznany błąd",
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

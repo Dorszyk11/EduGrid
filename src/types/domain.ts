@@ -38,3 +38,19 @@ export interface KwalifikacjaRow {
   stopien?: string;
   specjalizacja?: string;
 }
+
+export interface PrzydzialWyborRow {
+  id: Id;
+  klasa?: Ref;
+  przydzial?: Record<string, unknown>;
+  doradztwo?: Record<string, unknown>;
+  dyrektor?: Record<string, unknown>;
+  rozszerzenia?: string[];
+  rozszerzeniaGodziny?: Record<string, number>;
+  rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+  realizacja?: Record<string, unknown>;
+  podzial_na_grupy?: Record<string, unknown>;
+  przydzial_grupy?: Record<string, unknown>;
+  dyrektor_grupy?: Record<string, unknown>;
+  rozszerzenia_grupy?: Record<string, unknown>;
+}
