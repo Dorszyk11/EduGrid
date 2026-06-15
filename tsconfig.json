@@ -26,12 +26,6 @@
       "@/*": [
         "./src/*"
       ],
-      "@/features/*": [
-        "./src/features/*"
-      ],
-      "@/shared/*": [
-        "./src/shared/*"
-      ],
       "@/lib/*": [
         "./src/lib/*"
       ]

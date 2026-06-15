@@ -49,7 +49,7 @@ export const Klasy: CollectionConfig = {
       admin: {
         description: "Np. A, B, C (litera oddziału)",
       },
-      validate: (value: any) => {
+      validate: (value: string | null | undefined) => {
         if (!value || value.length < 1) {
           return "Nazwa klasy jest wymagana";
         }
@@ -75,7 +75,7 @@ export const Klasy: CollectionConfig = {
         description:
           "Format: YYYY-YYYY (rok początku – rok końca cyklu, np. 2022-2027 dla technikum 5-letniego) lub YYYY/YYYY (pojedynczy rok)",
       },
-      validate: (value: any) => {
+      validate: (value: string | null | undefined) => {
         if (!value) {
           return "Rok szkolny jest wymagany";
         }
@@ -114,10 +114,6 @@ export const Klasy: CollectionConfig = {
       label: "Zawód",
       admin: {
         description: "Zawód dla szkół zawodowych (opcjonalnie)",
-        condition: (data: any) => {
-          // Logika warunkowa - można dodać później
-          return true;
-        },
       },
     },
     {
