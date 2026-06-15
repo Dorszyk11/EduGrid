@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
-import crypto from 'crypto';
 import { SignJWT } from 'jose';
 import {
   AUTH_COOKIE_NAME,
@@ -12,6 +11,7 @@ import {
 } from '@/utils/auth';
 import { getDbSslConfig } from '@/lib/dbSsl';
 import { assertDatabaseHostResolvable } from '@/lib/dbHost';
+import { verifyPassword } from '@/lib/auth/haslo';
 
 const PAYLOAD_TIMEOUT_MS = 10_000;
 
@@ -51,16 +51,6 @@ function getConnectionString(): string | undefined {
     return uri.replace(':5432/', ':6543/');
   }
   return uri;
-}
-
-/** Weryfikacja hasła tak jak Payload (pbkdf2, 25000, 512, sha256). */
-function verifyPassword(password: string, salt: string, hash: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    crypto.pbkdf2(password, salt, 25000, 512, 'sha256', (err, derived) => {
-      if (err) return reject(err);
-      resolve(derived.toString('hex') === hash);
-    });
-  });
 }
 
 /** Logowanie bezpośrednio z bazy + wystawienie JWT (gdy getPayload się zawiesza). */
@@ -216,10 +206,11 @@ export async function POST(request: NextRequest) {
     });
     return res;
   } catch (err: unknown) {
-    const message =
-      err && typeof err === 'object' && 'message' in err
-        ? String((err as { message: string }).message)
-        : 'Logowanie nie powiodło się.';
-    return NextResponse.json({ error: message }, { status: 401 });
+    // Nie ujawniamy szczegółów (komunikatów wewnętrznych/bazy) klientowi — logujemy serwerowo.
+    console.error('Błąd logowania:', err);
+    return NextResponse.json(
+      { error: 'Logowanie nie powiodło się. Sprawdź dane i spróbuj ponownie.' },
+      { status: 401 }
+    );
   }
 }
