@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import plansData from '@/utils/import/ramowe-plany.json';
+import { requireUserId } from '@/lib/api/guard';
+import { assertKlasaAccess } from '@/lib/api/klasa-scope';
+import { errorResponse } from '@/lib/api/respond';
+import { ValidationError } from '@/lib/errors';
 
 type HoursByGrade = Record<string, number>;
 type SubjectRow = {
@@ -79,6 +83,7 @@ function getLimityRozszerzenNaRok(plans: PlanMein[]): HoursByGrade {
  */
 export async function POST(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     let klasaId = '';
     let typSzkolyId = '';
 
@@ -95,13 +100,14 @@ export async function POST(request: NextRequest) {
     if (!typSzkolyId) typSzkolyId = (searchParams.get('typSzkolyId') ?? '').trim();
 
     if (!klasaId || !typSzkolyId) {
-      return NextResponse.json(
-        { error: 'klasaId i typSzkolyId są wymagane (body JSON lub query)' },
-        { status: 400 }
-      );
+      throw new ValidationError('klasaId i typSzkolyId są wymagane (body JSON lub query)');
     }
 
     const payload = await getPayload({ config });
+
+    // Izolacja per-konto: klasa musi należeć do konta (lub być legacy bez właściciela)
+    await assertKlasaAccess(payload, /^\d+$/.test(klasaId) ? Number(klasaId) : klasaId, userId);
+
     const typSzkoly = await payload
       .findByID({ collection: 'typy-szkol', id: typSzkolyId })
       .catch(() => null);
@@ -174,10 +180,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      const klasaExists = await payload.findByID({ collection: 'klasy', id: klasaIdForRelation }).catch(() => null);
-      if (!klasaExists) {
-        return NextResponse.json({ error: `Klasa o ID ${klasaId} nie istnieje` }, { status: 400 });
-      }
+      // Klasa zweryfikowana wcześniej przez assertKlasaAccess (istnieje i należy do konta)
       await payload.create({
         collection: 'przydzial-godzin-wybor',
         data: {
@@ -196,10 +199,6 @@ export async function POST(request: NextRequest) {
       komunikat: `Przydzielono godziny rozszerzeń (na podstawie limitów na rok) do ${liczbaPrzedmiotow} przedmiotów.`,
     });
   } catch (error) {
-    console.error('Przydziel godziny rozszerzeń:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Nieznany błąd' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

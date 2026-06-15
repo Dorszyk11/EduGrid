@@ -6,6 +6,7 @@
  */
 
 import type { Payload } from '@/types/payload';
+import { ownerScope } from '@/lib/api/ownership';
 
 // Typy danych
 export interface WynikZgodnosciMein {
@@ -50,6 +51,12 @@ export interface ParametryObliczen {
   klasaId?: string;
   rokSzkolny?: string;
   dataSprawdzenia?: Date; // Dla sprawdzenia, które wymagania MEiN są aktualne
+  /**
+   * Identyfikator właściciela (konta). Gdy podany, wszystkie zapytania o klasy
+   * są ograniczane do klas tego konta (plus klasy bez właściciela – legacy).
+   * Brak wartości = brak izolacji (np. wewnętrzne narzędzia/skrypty).
+   */
+  userId?: string;
 }
 
 /**
@@ -178,6 +185,11 @@ export async function obliczZgodnoscMein(
       });
     }
 
+    // Izolacja per-konto: ogranicz do klas właściciela (jeśli podano userId)
+    if (parametry.userId) {
+      warunkiKlas.and.push(ownerScope(parametry.userId));
+    }
+
     const klasy = await payload.find({
       collection: 'klasy',
       where: warunkiKlas,
@@ -244,6 +256,7 @@ export async function obliczZgodnoscMein(
                   equals: parametry.rokSzkolny,
                 },
               }] : []),
+              ...(parametry.userId ? [ownerScope(parametry.userId)] : []),
             ],
           },
         });
@@ -363,12 +376,14 @@ export async function obliczZgodnoscDlaPrzedmiotuWKlasie(
   payload: Payload,
   przedmiotId: string,
   klasaId: string,
-  rokSzkolny?: string
+  rokSzkolny?: string,
+  userId?: string
 ): Promise<WynikZgodnosciMein | null> {
   const wyniki = await obliczZgodnoscMein(payload, {
     przedmiotId,
     klasaId,
     rokSzkolny,
+    userId,
   });
 
   return wyniki.length > 0 ? wyniki[0] : null;
@@ -385,11 +400,13 @@ export async function obliczZgodnoscDlaPrzedmiotuWKlasie(
 export async function obliczZgodnoscDlaSzkoly(
   payload: Payload,
   typSzkolyId: string,
-  rokSzkolny?: string
+  rokSzkolny?: string,
+  userId?: string
 ): Promise<WynikZgodnosciMein[]> {
   return obliczZgodnoscMein(payload, {
     typSzkolyId,
     rokSzkolny,
+    userId,
   });
 }
 
@@ -404,11 +421,13 @@ export async function obliczZgodnoscDlaSzkoly(
 export async function obliczZgodnoscDlaKlasy(
   payload: Payload,
   klasaId: string,
-  rokSzkolny?: string
+  rokSzkolny?: string,
+  userId?: string
 ): Promise<WynikZgodnosciMein[]> {
   return obliczZgodnoscMein(payload, {
     klasaId,
     rokSzkolny,
+    userId,
   });
 }
 

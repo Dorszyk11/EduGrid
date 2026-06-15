@@ -1,6 +1,7 @@
 import type { Payload } from '@/types/payload';
 import { obliczZgodnoscDlaSzkoly } from './zgodnoscMein';
 import { automatycznyRozdzialGodzin } from './automatycznyRozdzialGodzin';
+import { ownerScope } from '@/lib/api/ownership';
 
 export interface WskaznikRyzyka {
   wartosc: number; // 0-100, gdzie 100 = największe ryzyko
@@ -26,13 +27,14 @@ export interface WskaznikRyzyka {
 export async function obliczWskaznikRyzyka(
   payload: Payload,
   typSzkolyId: string,
-  rokSzkolny: string
+  rokSzkolny: string,
+  userId?: string
 ): Promise<WskaznikRyzyka> {
   const czynniki: WskaznikRyzyka['czynniki'] = [];
   const rekomendacje: string[] = [];
 
   // 1. Sprawdź zgodność z MEiN
-  const zgodnosc = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny);
+  const zgodnosc = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny, userId);
   const brakiMein = zgodnosc.filter(w => w.status === 'BRAK');
   const nadwyzkiMein = zgodnosc.filter(w => w.status === 'NADWYŻKA');
   const zgodne = zgodnosc.filter(w => w.status === 'OK');
@@ -55,6 +57,7 @@ export async function obliczWskaznikRyzyka(
   const rozdzial = await automatycznyRozdzialGodzin(payload, {
     typSzkolyId,
     rokSzkolny,
+    userId,
   });
 
   if (rozdzial.brakiKadrowe.length > 0) {
@@ -74,14 +77,12 @@ export async function obliczWskaznikRyzyka(
     }
   }
 
-  // 3. Sprawdź obciążenia nauczycieli
+  // 3. Sprawdź obciążenia nauczycieli (tylko nauczyciele konta, jeśli podano userId)
   const nauczyciele = await payload.find({
     collection: 'nauczyciele',
-    where: {
-      aktywny: {
-        equals: true,
-      },
-    },
+    where: userId
+      ? { and: [{ aktywny: { equals: true } }, ownerScope(userId)] }
+      : { aktywny: { equals: true } },
     limit: 1000,
   });
 
@@ -145,7 +146,7 @@ export async function obliczWskaznikRyzyka(
     }
   }
 
-  // 4. Sprawdź brak przypisań
+  // 4. Sprawdź brak przypisań (tylko klasy konta, jeśli podano userId)
   const klasy = await payload.find({
     collection: 'klasy',
     where: {
@@ -165,6 +166,7 @@ export async function obliczWskaznikRyzyka(
             equals: true,
           },
         },
+        ...(userId ? [ownerScope(userId)] : []),
       ],
     },
     limit: 1000,

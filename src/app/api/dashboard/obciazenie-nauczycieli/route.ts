@@ -1,21 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { requireUserId, ownerScope } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
 
 export async function GET(request: Request) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
 
     const payload = await getPayload({ config });
 
-    // Pobierz wszystkich aktywnych nauczycieli
+    // Pobierz aktywnych nauczycieli konta
     const nauczyciele = await payload.find({
       collection: 'nauczyciele',
       where: {
-        aktywny: {
-          equals: true,
-        },
+        and: [{ aktywny: { equals: true } }, ownerScope(userId)],
       },
     });
 
@@ -101,10 +102,6 @@ export async function GET(request: Request) {
       statystyki,
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu obciążeń:', error);
-    return NextResponse.json(
-      { error: 'Błąd serwera' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

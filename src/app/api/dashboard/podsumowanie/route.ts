@@ -3,38 +3,38 @@ import { getPayload } from 'payload';
 import config from '@/payload.config';
 import { obliczZgodnoscDlaSzkoly } from '@/utils/zgodnoscMein';
 import { automatycznyRozdzialGodzin } from '@/utils/automatycznyRozdzialGodzin';
+import { requireUserId, ownerScope } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
+import { ValidationError } from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get('typSzkolyId');
     const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
 
-    const payload = await getPayload({ config });
-
     if (!typSzkolyId) {
-      return NextResponse.json(
-        { error: 'typSzkolyId jest wymagany' },
-        { status: 400 }
-      );
+      throw new ValidationError('typSzkolyId jest wymagany', 'typSzkolyId');
     }
 
+    const payload = await getPayload({ config });
+
     // Pobierz zgodność z MEiN
-    const zgodnoscMein = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny);
+    const zgodnoscMein = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny, userId);
 
     // Pobierz braki kadrowe
     const rozdzial = await automatycznyRozdzialGodzin(payload, {
       typSzkolyId,
       rokSzkolny,
+      userId,
     });
 
-    // Pobierz obciążenia nauczycieli
+    // Pobierz obciążenia nauczycieli (tylko nauczyciele konta)
     const nauczyciele = await payload.find({
       collection: 'nauczyciele',
       where: {
-        aktywny: {
-          equals: true,
-        },
+        and: [{ aktywny: { equals: true } }, ownerScope(userId)],
       },
     });
 
@@ -111,10 +111,6 @@ export async function GET(request: Request) {
       metryki: rozdzial.metryki,
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu podsumowania:', error);
-    return NextResponse.json(
-      { error: 'Błąd serwera' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

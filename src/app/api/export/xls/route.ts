@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import * as XLSX from 'xlsx';
+import { requireUserId, ownerScope } from '@/lib/api/guard';
+import { ownedIds } from '@/lib/api/klasa-scope';
+import { errorResponse } from '@/lib/api/respond';
+import { ValidationError } from '@/lib/errors';
 
 /**
  * GET /api/export/xls - Eksport danych do arkusza organizacyjnego (XLS)
- * 
+ *
  * Parametry:
  * - typSzkolyId: ID typu szkoły
  * - rokSzkolny: Rok szkolny (np. 2024/2025)
@@ -13,48 +17,47 @@ import * as XLSX from 'xlsx';
  */
 export async function GET(request: NextRequest) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get('typSzkolyId');
     const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
     const typ = searchParams.get('typ') || 'arkusz-organizacyjny';
 
     if (!typSzkolyId) {
-      return NextResponse.json(
-        { error: 'typSzkolyId jest wymagany' },
-        { status: 400 }
-      );
+      throw new ValidationError('typSzkolyId jest wymagany', 'typSzkolyId');
     }
 
     const payload = await getPayload({ config });
 
-    // Pobierz typ szkoły
+    // Pobierz typ szkoły (słownik współdzielony)
     const typSzkoly = await payload.findByID({
       collection: 'typy-szkol',
       id: typSzkolyId,
     });
 
-    // Pobierz klasy
+    // Pobierz klasy konta
     const klasy = await payload.find({
       collection: 'klasy',
       where: {
-        typ_szkoly: {
-          equals: typSzkolyId,
-        },
-        rok_szkolny: {
-          equals: rokSzkolny,
-        },
+        and: [
+          { typ_szkoly: { equals: typSzkolyId } },
+          { rok_szkolny: { equals: rokSzkolny } },
+          ownerScope(userId),
+        ],
       },
       limit: 1000,
       depth: 1,
     });
 
-    // Pobierz rozkład godzin
+    // Rozkład godzin ograniczony do klas konta (rozkład jest dzieckiem klasy)
+    const klasaIds = [...(await ownedIds(payload, 'klasy', userId))];
     const rozkladGodzin = await payload.find({
       collection: 'rozkład-godzin',
       where: {
-        rok_szkolny: {
-          equals: rokSzkolny,
-        },
+        and: [
+          { rok_szkolny: { equals: rokSzkolny } },
+          { klasa: { in: klasaIds } },
+        ],
       },
       limit: 10000,
       depth: 2, // Pobierz powiązane przedmioty, klasy, nauczycieli
@@ -118,9 +121,7 @@ export async function GET(request: NextRequest) {
       const nauczyciele = await payload.find({
         collection: 'nauczyciele',
         where: {
-          aktywny: {
-            equals: true,
-          },
+          and: [{ aktywny: { equals: true } }, ownerScope(userId)],
         },
         limit: 1000,
       });
@@ -156,14 +157,14 @@ export async function GET(request: NextRequest) {
     } else if (typ === 'zgodnosc-mein') {
       // Eksport zgodności z MEiN
       const { obliczZgodnoscDlaSzkoly } = await import('@/utils/zgodnoscMein');
-      const zgodnosc = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny);
+      const zgodnosc = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny, userId);
 
-      const zgodnoscData = zgodnosc.map((w: any) => ({
-        'Przedmiot': w.przedmiot.nazwa,
-        'Klasa': w.klasa.nazwa,
-        'Wymagane MEiN': w.wymagane.godziny_w_cyklu || 0,
-        'Planowane': w.planowane.godziny_w_cyklu || 0,
-        'Różnica': w.roznica.roznica,
+      const zgodnoscData = zgodnosc.map((w) => ({
+        'Przedmiot': w.przedmiotNazwa,
+        'Klasa': w.klasaNazwa ?? 'Wszystkie klasy',
+        'Wymagane MEiN': w.wymaganeMein.godziny_w_cyklu || 0,
+        'Planowane': w.realizowane.godziny_w_cyklu || 0,
+        'Różnica': w.roznica.godziny,
         'Procent realizacji': Math.round(w.roznica.procent_realizacji * 100) / 100,
         'Status': w.status,
       }));
@@ -192,12 +193,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Błąd przy eksporcie do XLS:', error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

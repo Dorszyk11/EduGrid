@@ -2,26 +2,28 @@ import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import { automatycznyRozdzialGodzin } from '@/utils/automatycznyRozdzialGodzin';
+import { requireUserId } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
+import { ValidationError } from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get('typSzkolyId');
     const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
 
-    const payload = await getPayload({ config });
-
     if (!typSzkolyId) {
-      return NextResponse.json(
-        { error: 'typSzkolyId jest wymagany' },
-        { status: 400 }
-      );
+      throw new ValidationError('typSzkolyId jest wymagany', 'typSzkolyId');
     }
+
+    const payload = await getPayload({ config });
 
     // Użyj algorytmu automatycznego rozdziału, aby wykryć braki
     const wynik = await automatycznyRozdzialGodzin(payload, {
       typSzkolyId,
       rokSzkolny,
+      userId,
     });
 
     // Grupuj braki według przedmiotu
@@ -65,10 +67,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu braków kadrowych:', error);
-    return NextResponse.json(
-      { error: 'Błąd serwera' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

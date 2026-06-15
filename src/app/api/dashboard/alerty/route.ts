@@ -1,28 +1,33 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { requireUserId, ownerScope } from '@/lib/api/guard';
+import { ownedIds } from '@/lib/api/klasa-scope';
+import { errorResponse } from '@/lib/api/respond';
+import { ValidationError } from '@/lib/errors';
 
 /**
  * GET /api/dashboard/alerty - Pobiera wszystkie alerty dla dashboardu
- * 
+ *
  * Parametry:
  * - typSzkolyId: ID typu szkoły (wymagane)
  * - rokSzkolny: Rok szkolny (opcjonalnie, domyślnie 2024/2025)
  */
 export async function GET(request: Request) {
   try {
+    const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typSzkolyId = searchParams.get('typSzkolyId');
     const rokSzkolny = searchParams.get('rokSzkolny') || '2024/2025';
 
     if (!typSzkolyId) {
-      return NextResponse.json(
-        { error: 'typSzkolyId jest wymagany' },
-        { status: 400 }
-      );
+      throw new ValidationError('typSzkolyId jest wymagany', 'typSzkolyId');
     }
 
     const payload = await getPayload({ config });
+
+    // Klasy konta — do ograniczenia zapytań o rozkład (rozkład jest dzieckiem klasy)
+    const klasaIds = [...(await ownedIds(payload, 'klasy', userId))];
     const alerty: Array<{
       typ: 'error' | 'warning' | 'info';
       kategoria: string;
@@ -37,6 +42,7 @@ export async function GET(request: Request) {
     const rozdzial = await automatycznyRozdzialGodzin(payload, {
       typSzkolyId,
       rokSzkolny,
+      userId,
     });
 
     if (rozdzial.brakiKadrowe.length > 0) {
@@ -50,13 +56,11 @@ export async function GET(request: Request) {
       });
     }
 
-    // 2. Alerty przekroczeń obciążeń
+    // 2. Alerty przekroczeń obciążeń (tylko nauczyciele konta)
     const nauczyciele = await payload.find({
       collection: 'nauczyciele',
       where: {
-        aktywny: {
-          equals: true,
-        },
+        and: [{ aktywny: { equals: true } }, ownerScope(userId)],
       },
       limit: 1000,
     });
@@ -107,13 +111,14 @@ export async function GET(request: Request) {
       });
     }
 
-    // 3. Alerty kwalifikacji
+    // 3. Alerty kwalifikacji (tylko rozkład klas konta)
     const rozklady = await payload.find({
       collection: 'rozkład-godzin',
       where: {
-        rok_szkolny: {
-          equals: rokSzkolny,
-        },
+        and: [
+          { rok_szkolny: { equals: rokSzkolny } },
+          { klasa: { in: klasaIds } },
+        ],
       },
       depth: 2,
       limit: 10000,
@@ -232,7 +237,7 @@ export async function GET(request: Request) {
 
     // 5. Alerty zgodności MEiN
     const { obliczZgodnoscDlaSzkoly } = await import('@/utils/zgodnoscMein');
-    const zgodnosc = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny);
+    const zgodnosc = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny, userId);
     const brakiMein = zgodnosc.filter(w => w.status === 'BRAK');
 
     if (brakiMein.length > 0) {
@@ -259,12 +264,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu alertów:', error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

@@ -9,6 +9,7 @@
  */
 
 import type { Payload } from '@/types/payload';
+import { ownerScope } from '@/lib/api/ownership';
 
 // Typy danych
 export interface DostepnoscNauczyciela {
@@ -162,6 +163,8 @@ export async function znajdzDostepnychNauczycieli(
     minimalneObciazenie?: number;
     preferowani?: string[];
     wykluczeni?: string[];
+    /** Gdy podany, pula nauczycieli jest ograniczana do danego konta (izolacja per-konto). */
+    wlascicielId?: string;
   } = {}
 ): Promise<DostepnoscNauczyciela[]> {
   const {
@@ -169,16 +172,15 @@ export async function znajdzDostepnychNauczycieli(
     minimalneObciazenie = 0,
     preferowani = [],
     wykluczeni = [],
+    wlascicielId,
   } = opcje;
 
-  // Pobierz wszystkich aktywnych nauczycieli
+  // Pobierz wszystkich aktywnych nauczycieli (per-konto, jeśli podano wlascicielId)
   const nauczyciele = await payload.find({
     collection: 'nauczyciele',
-    where: {
-      aktywny: {
-        equals: true,
-      },
-    },
+    where: wlascicielId
+      ? { and: [{ aktywny: { equals: true } }, ownerScope(wlascicielId)] }
+      : { aktywny: { equals: true } },
   });
 
   const dostepni: DostepnoscNauczyciela[] = [];

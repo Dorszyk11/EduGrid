@@ -9,6 +9,7 @@
  */
 
 import type { Payload } from '@/types/payload';
+import { ownerScope } from '@/lib/api/ownership';
 import {
   sprawdzDostepnoscNauczyciela,
   znajdzDostepnychNauczycieli,
@@ -91,6 +92,11 @@ export interface ParametryRozdzialu {
   maksymalnePrzekroczenie?: number; // Maksymalne przekroczenie obciążenia (domyślnie: 0)
   preferujKontynuacje?: boolean; // Preferuj nauczycieli, którzy już uczą przedmiotu
   minimalneObciazenie?: number; // Minimalne obciążenie nauczyciela (opcjonalnie)
+  /**
+   * Identyfikator właściciela (konta). Gdy podany, klasy i nauczyciele są
+   * ograniczani do danych tego konta (plus rekordy bez właściciela – legacy).
+   */
+  userId?: string;
 }
 
 export interface DiagnostykaPrzydzialu {
@@ -118,6 +124,9 @@ export async function getDiagnostykaPrzydzialu(
       { rok_szkolny: { equals: rok } },
     ],
   };
+  if (parametry.userId) {
+    warunkiTylkoRok.and.push(ownerScope(parametry.userId));
+  }
 
   const klasyTylkoRok = await payload.find({
     collection: 'klasy',
@@ -137,6 +146,9 @@ export async function getDiagnostykaPrzydzialu(
     const orConditions: any[] = [{ typ_szkoly: { equals: typStr } }];
     if (typNum != null) orConditions.push({ typ_szkoly: { equals: typNum } });
     warunkiKlas.and.push({ or: orConditions });
+  }
+  if (parametry.userId) {
+    warunkiKlas.and.push(ownerScope(parametry.userId));
   }
 
   const klasy = await payload.find({
@@ -193,6 +205,9 @@ async function pobierzZadania(
     const orConditions: any[] = [{ typ_szkoly: { equals: typStr } }];
     if (typNum != null) orConditions.push({ typ_szkoly: { equals: typNum } });
     warunkiKlas.and.push({ or: orConditions });
+  }
+  if (parametry.userId) {
+    warunkiKlas.and.push(ownerScope(parametry.userId));
   }
 
   const klasy = await payload.find({
@@ -329,14 +344,12 @@ export async function automatycznyRozdzialGodzin(
   // KROK 1: Pobierz wszystkie zadania
   const zadania = await pobierzZadania(payload, parametry);
 
-  // KROK 2: Pobierz wszystkich aktywnych nauczycieli
+  // KROK 2: Pobierz wszystkich aktywnych nauczycieli (per-konto, jeśli podano userId)
   const nauczyciele = await payload.find({
     collection: 'nauczyciele',
-    where: {
-      aktywny: {
-        equals: true,
-      },
-    },
+    where: parametry.userId
+      ? { and: [{ aktywny: { equals: true } }, ownerScope(parametry.userId)] }
+      : { aktywny: { equals: true } },
   });
 
   // KROK 3: Oblicz początkowe obciążenia nauczycieli
@@ -416,6 +429,7 @@ export async function automatycznyRozdzialGodzin(
         minimalneObciazenie: 0,
         preferowani: zadanie.preferowaniNauczyciele,
         wykluczeni: zadanie.wykluczeniNauczyciele,
+        wlascicielId: parametry.userId,
       }
     );
 

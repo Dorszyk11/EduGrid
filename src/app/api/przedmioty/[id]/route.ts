@@ -1,38 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { requireUserId } from '@/lib/api/guard';
+import { ownedIds } from '@/lib/api/klasa-scope';
+import { errorResponse } from '@/lib/api/respond';
+import { NotFoundError } from '@/lib/errors';
 
 /**
- * GET /api/przedmioty/[id] - Pobierz szczegóły przedmiotu z podziałem na klasy
+ * GET /api/przedmioty/[id] - Pobierz szczegóły przedmiotu z podziałem na klasy (konta)
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await requireUserId(request);
     const { id: przedmiotId } = await params;
     const payload = await getPayload({ config });
 
-    // Pobierz przedmiot
+    // Pobierz przedmiot (słownik współdzielony)
     const przedmiot = await payload.findByID({
       collection: 'przedmioty',
       id: przedmiotId,
     });
 
     if (!przedmiot) {
-      return NextResponse.json(
-        { error: 'Przedmiot nie znaleziony' },
-        { status: 404 }
-      );
+      throw new NotFoundError('Przedmiot', przedmiotId);
     }
 
-    // Pobierz rozkład godzin dla tego przedmiotu
+    // Rozkład godzin dla tego przedmiotu – tylko klasy konta (izolacja)
+    const klasaIds = [...(await ownedIds(payload, 'klasy', userId))];
     const rozkladGodzin = await payload.find({
       collection: 'rozkład-godzin',
       where: {
-        przedmiot: {
-          equals: przedmiotId,
-        },
+        and: [
+          { przedmiot: { equals: przedmiotId } },
+          { klasa: { in: klasaIds } },
+        ],
       },
       limit: 1000,
       depth: 2, // Pobierz powiązane klasy i nauczycieli
@@ -99,22 +103,17 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu danych przedmiotu:', error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
 
-/** DELETE /api/przedmioty/[id] – usuń przedmiot. */
+/** DELETE /api/przedmioty/[id] – usuń przedmiot (słownik współdzielony; wymaga zalogowania). */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUserId(request);
     const { id } = await params;
     const payload = await getPayload({ config });
     await payload.delete({ collection: 'przedmioty', id });
