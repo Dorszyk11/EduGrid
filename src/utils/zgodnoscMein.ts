@@ -6,6 +6,7 @@
  */
 
 import type { Payload } from '@/types/payload';
+import type { Where } from 'payload';
 import { ownerScope } from '@/lib/api/ownership';
 
 // Typy danych
@@ -74,7 +75,7 @@ export async function obliczZgodnoscMein(
   const dataSprawdzenia = parametry.dataSprawdzenia || new Date();
 
   // 1. Pobierz wymagania MEiN (siatki godzin)
-  const warunkiMein: any = {
+  const warunkiMein: { and: Where[] } = {
     and: [
       {
         data_obowiazywania_od: {
@@ -145,7 +146,7 @@ export async function obliczZgodnoscMein(
         });
 
     // 3. Znajdź klasy dla tego typu szkoły
-    const warunkiKlas: any = {
+    const warunkiKlas: { and: Where[] } = {
       and: [
         {
           typ_szkoly: {

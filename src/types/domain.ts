@@ -32,6 +32,15 @@ export interface RozkladRow {
   godziny_roczne?: number;
 }
 
+export interface KlasaRow {
+  id: Id;
+  nazwa?: string;
+  profil?: string;
+  rok_szkolny?: string;
+  typ_szkoly?: Id | { id: Id } | null;
+  wlasciciel?: Id | { id: Id } | null;
+}
+
 export interface KwalifikacjaRow {
   id: Id;
   przedmiot?: Ref<{ nazwa?: string }>;

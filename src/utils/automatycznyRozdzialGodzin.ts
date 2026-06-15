@@ -9,6 +9,7 @@
  */
 
 import type { Payload } from '@/types/payload';
+import type { Where } from 'payload';
 import { ownerScope } from '@/lib/api/ownership';
 import {
   sprawdzDostepnoscNauczyciela,
@@ -118,7 +119,7 @@ export async function getDiagnostykaPrzydzialu(
   const { typSzkolyId, rokSzkolny } = parametry;
   const rok = String(rokSzkolny).trim();
 
-  const warunkiTylkoRok: any = {
+  const warunkiTylkoRok: { and: Where[] } = {
     and: [
       { aktywna: { equals: true } },
       { rok_szkolny: { equals: rok } },
@@ -134,7 +135,7 @@ export async function getDiagnostykaPrzydzialu(
     limit: 500,
   });
 
-  const warunkiKlas: any = {
+  const warunkiKlas: { and: Where[] } = {
     and: [
       { aktywna: { equals: true } },
       { rok_szkolny: { equals: rok } },
@@ -143,7 +144,7 @@ export async function getDiagnostykaPrzydzialu(
   if (typSzkolyId != null && typSzkolyId !== '') {
     const typStr = String(typSzkolyId);
     const typNum = /^\d+$/.test(typStr) ? Number(typStr) : null;
-    const orConditions: any[] = [{ typ_szkoly: { equals: typStr } }];
+    const orConditions: Where[] = [{ typ_szkoly: { equals: typStr } }];
     if (typNum != null) orConditions.push({ typ_szkoly: { equals: typNum } });
     warunkiKlas.and.push({ or: orConditions });
   }
@@ -170,7 +171,7 @@ export async function getDiagnostykaPrzydzialu(
     liczbaSiatekMein: siatkiMein.docs.length,
     rokSzkolny: rok,
     typSzkolyId: parametry.typSzkolyId,
-    nazwyKlas: klasy.docs.map((k: any) => k.nazwa ?? String(k.id)),
+    nazwyKlas: klasy.docs.map((k: { nazwa?: string; id: number | string }) => k.nazwa ?? String(k.id)),
   };
 }
 
@@ -184,7 +185,7 @@ async function pobierzZadania(
   const { typSzkolyId, rokSzkolny } = parametry;
 
   // Pobierz klasy
-  const warunkiKlas: any = {
+  const warunkiKlas: { and: Where[] } = {
     and: [
       {
         aktywna: {
@@ -202,7 +203,7 @@ async function pobierzZadania(
   if (typSzkolyId != null && typSzkolyId !== '') {
     const typStr = String(typSzkolyId);
     const typNum = /^\d+$/.test(typStr) ? Number(typStr) : null;
-    const orConditions: any[] = [{ typ_szkoly: { equals: typStr } }];
+    const orConditions: Where[] = [{ typ_szkoly: { equals: typStr } }];
     if (typNum != null) orConditions.push({ typ_szkoly: { equals: typNum } });
     warunkiKlas.and.push({ or: orConditions });
   }

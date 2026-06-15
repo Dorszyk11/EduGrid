@@ -6,6 +6,12 @@ import { requireUserId, ownerScope } from '@/lib/api/guard';
 import { ownedIds } from '@/lib/api/klasa-scope';
 import { errorResponse } from '@/lib/api/respond';
 import { ValidationError } from '@/lib/errors';
+import type { KlasaRow, NauczycielRow, RozkladRow } from '@/types/domain';
+
+/** Zwraca rozwinięty dokument relacji albo null, gdy relacja to samo id. */
+function asDoc<T>(rel: unknown): (T & { id: number | string }) | null {
+  return typeof rel === 'object' && rel !== null ? (rel as T & { id: number | string }) : null;
+}
 
 /**
  * GET /api/export/xls - Eksport danych do arkusza organizacyjnego (XLS)
@@ -72,10 +78,10 @@ export async function GET(request: NextRequest) {
       workbook = XLSX.utils.book_new();
 
       // Arkusz 1: Rozkład godzin (przedmiot × klasa × nauczyciel)
-      const rozkladData = rozkladGodzin.docs.map((rozklad: any) => {
-        const przedmiot = typeof rozklad.przedmiot === 'object' ? rozklad.przedmiot : null;
-        const klasa = typeof rozklad.klasa === 'object' ? rozklad.klasa : null;
-        const nauczyciel = typeof rozklad.nauczyciel === 'object' ? rozklad.nauczyciel : null;
+      const rozkladData = (rozkladGodzin.docs as RozkladRow[]).map((rozklad) => {
+        const przedmiot = asDoc<{ nazwa?: string }>(rozklad.przedmiot);
+        const klasa = asDoc<{ nazwa?: string }>(rozklad.klasa);
+        const nauczyciel = asDoc<{ imie?: string; nazwisko?: string }>(rozklad.nauczyciel);
 
         return {
           'Klasa': klasa?.nazwa || 'Brak',
@@ -91,18 +97,16 @@ export async function GET(request: NextRequest) {
       XLSX.utils.book_append_sheet(workbook, ws1, 'Rozkład godzin');
 
       // Arkusz 2: Podsumowanie per klasa
-      const podsumowanieKlas = klasy.docs.map((klasa: any) => {
-        const rozkladKlasy = rozkladGodzin.docs.filter((r: any) => {
-          const rKlasa = typeof r.klasa === 'object' ? r.klasa : null;
+      const wszystkieRozklady = rozkladGodzin.docs as RozkladRow[];
+      const podsumowanieKlas = (klasy.docs as KlasaRow[]).map((klasa) => {
+        const rozkladKlasy = wszystkieRozklady.filter((r) => {
+          const rKlasa = asDoc<{ nazwa?: string }>(r.klasa);
           return rKlasa?.id === klasa.id;
         });
 
-        const sumaGodzin = rozkladKlasy.reduce((sum: number, r: any) => sum + (r.godziny_roczne || 0), 0);
+        const sumaGodzin = rozkladKlasy.reduce((sum, r) => sum + (r.godziny_roczne || 0), 0);
         const liczbaPrzedmiotow = new Set(
-          rozkladKlasy.map((r: any) => {
-            const przedmiot = typeof r.przedmiot === 'object' ? r.przedmiot : null;
-            return przedmiot?.id;
-          }).filter(Boolean)
+          rozkladKlasy.map((r) => asDoc<{ nazwa?: string }>(r.przedmiot)?.id).filter(Boolean)
         ).size;
 
         return {
@@ -126,14 +130,14 @@ export async function GET(request: NextRequest) {
         limit: 1000,
       });
 
-      const obciazeniaNauczycieli = nauczyciele.docs.map((nauczyciel: any) => {
-        const rozkladNauczyciela = rozkladGodzin.docs.filter((r: any) => {
-          const rNauczyciel = typeof r.nauczyciel === 'object' ? r.nauczyciel : null;
+      const obciazeniaNauczycieli = (nauczyciele.docs as NauczycielRow[]).map((nauczyciel) => {
+        const rozkladNauczyciela = wszystkieRozklady.filter((r) => {
+          const rNauczyciel = asDoc<{ imie?: string; nazwisko?: string }>(r.nauczyciel);
           return rNauczyciel?.id === nauczyciel.id;
         });
 
-        const sumaGodzinTyg = rozkladNauczyciela.reduce((sum: number, r: any) => sum + (r.godziny_tyg || 0), 0);
-        const sumaGodzinRocznie = rozkladNauczyciela.reduce((sum: number, r: any) => sum + (r.godziny_roczne || 0), 0);
+        const sumaGodzinTyg = rozkladNauczyciela.reduce((sum, r) => sum + (r.godziny_tyg || 0), 0);
+        const sumaGodzinRocznie = rozkladNauczyciela.reduce((sum, r) => sum + (r.godziny_roczne || 0), 0);
         const maxObciazenie = nauczyciel.max_obciazenie || 18;
         const procentWykorzystania = maxObciazenie > 0 ? (sumaGodzinTyg / maxObciazenie) * 100 : 0;
 
