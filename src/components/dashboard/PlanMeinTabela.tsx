@@ -5,61 +5,38 @@ import plansData from '@/utils/import/ramowe-plany.json';
 import { useGroupSplit, type GroupAssignments, type GroupSplitFlags, type GroupSplitSaveExtras } from '@/hooks/useGroupSplit';
 import GroupSplitCell from './GroupSplitCell';
 import { GroupSplitRazem, GroupSplitZrealizowane } from './GroupSplitSummary';
+import type { PrzydzialGrupyByGrade, SubjectRow, DirectorRow, PlanMein } from '@/lib/przydzial/typy';
+import {
+  isDirectorRow,
+  getGrades,
+  matchSchoolType,
+  isPrzedmiotLaczny,
+  isPrzedmiotRozszerzony,
+  subjectKey,
+} from '@/lib/przydzial/plany-mein';
+
+export type { PlanMein };
 
 const STORAGE_PREFIX = 'przydzial-wyboru-';
 const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
 const STORAGE_DYREKTOR = 'dyrektor-godziny-';
 
-type HoursByGrade = Record<string, number>;
-/** Dla rocznika z podziałem na grupy: godziny grupy 1 i 2 osobno */
-type PrzydzialGrupyByGrade = Record<string, { 1: number; 2: number }>;
-type RawByGrade = Record<string, string>;
-
-type SubjectRow = {
-  lp?: number;
-  subject?: string;
-  hours_by_grade?: HoursByGrade;
-  additional_by_grade?: HoursByGrade;
-  total_hours?: number;
-  additional_total?: number;
-  raw?: RawByGrade;
-  hours_to_choose?: number;
-};
-
-type DirectorRow = {
-  director_discretion_hours: { total_hours: number };
-};
-
-type TableStructure = {
-  grades?: string[];
-  unit?: string;
-};
-
-export type PlanMein = {
-  plan_id?: string;
-  attachment_no: string;
-  school_type: string;
-  cycle: string;
-  /** Krótka etykieta cyklu (np. "Klasy 1–3", "Klasy 4–8") – z JSON, dla czytelnego wyświetlania */
-  cycle_short?: string;
-  scope?: string;
-  grades?: string[];
-  table_structure?: TableStructure;
-  source_pages?: number[];
-  source_pages_hint?: number[];
-  subjects: (SubjectRow | DirectorRow)[];
-};
+/**
+ * Zapis do localStorage jako nietrwały cache (źródłem prawdy jest API/baza).
+ * Zapis bywa niemożliwy (przekroczona quota, tryb prywatny, wyłączony storage) –
+ * wtedy cache pomijamy świadomie i logujemy w trybie debug, zamiast cicho połykać błąd.
+ */
+function cacheSet(key: string, value: unknown): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.debug('Pominięto zapis cache localStorage:', key, err);
+  }
+}
 
 const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
 const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
-
-function isDirectorRow(r: SubjectRow | DirectorRow): r is DirectorRow {
-  return 'director_discretion_hours' in r && !('subject' in r);
-}
-
-function getGrades(plan: PlanMein): string[] {
-  return plan.table_structure?.grades ?? plan.grades ?? [];
-}
 
 function getUnit(plan: PlanMein): string | undefined {
   return plan.table_structure?.unit;
@@ -87,16 +64,6 @@ function totalDisplay(row: SubjectRow): React.ReactNode {
     return <span className="text-gray-500">min. {row.hours_to_choose}</span>;
   }
   return '0';
-}
-
-/** Dopasowanie nazwy typu szkoły do school_type z MEiN. Nazwa z bazy może być np. "Technikum, Klasy I–V" – dopasowuje do planu school_type "Technikum". */
-function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
-  const a = (nazwaTypu || '').trim().toLowerCase();
-  const b = (schoolType || '').trim().toLowerCase();
-  if (!a || !b) return false;
-  if (a === b) return true;
-  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
-  return false;
 }
 
 export interface PlanMeinTabelaProps {
@@ -139,25 +106,8 @@ function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
   return undefined;
 }
 
-/** Klucz przydziału: plan + przedmiot (unikalny w obrębie widoku). */
-function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
-
 /** W technikum w klasie V nie można dodawać zwykłych „godzin do wyboru” na geografię, biologię, fizykę i chemię. Godziny dyrektorskie i rozszerzone można. */
 const PRZEDMIOTY_BLOKOWANE_V_TECHNIKUM = ['Geografia', 'Biologia', 'Fizyka', 'Chemia'];
-
-/** Przedmioty w wymiarze łącznym (godziny w cyklu), nie tygodniowo – wyświetlane poniżej tabeli. */
-const PRZEDMIOTY_LACZNE_CYKL: string[] = ['Zajęcia z zakresu doradztwa zawodowego'];
-
-function isPrzedmiotLaczny(subjectName: string): boolean {
-  return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
-}
-
-/** Przedmiot w zakresie rozszerzonym – przenosimy na górę tabeli z Lp. "roz." */
-function isPrzedmiotRozszerzony(subjectName: string): boolean {
-  return /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/i.test((subjectName || '').trim());
-}
 
 /** Godziny w zakresie rozszerzonym dodawane do „Zrealizowane godziny” (np. technikum 8). */
 function getGodzinyRozszerzenia(schoolType: string): number {
@@ -279,13 +229,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         setPrzydzialGrupy(pg);
         setPrzydzialGrupyDyrektor(dgr);
         setPrzydzialGrupyRozszerzenia(rgr);
-        try {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(p));
-            localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(d));
-            localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(dy));
-          }
-        } catch (_) {}
+        cacheSet(STORAGE_PREFIX + klasaId, p);
+        cacheSet(STORAGE_DORADZTWO + klasaId, d);
+        cacheSet(STORAGE_DYREKTOR + klasaId, dy);
       })
       .catch(() => {
         if (cancelled) return;
@@ -329,7 +275,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     return () => {
       cancelled = true;
     };
-  }, [klasaId, refetchTrigger]);
+    // settery stanu są stabilne tożsamościowo (React) – dodane dla zgodności z react-hooks/exhaustive-deps
+  }, [klasaId, refetchTrigger, setPodzialNaGrupy, setPrzydzialGrupy, setPrzydzialGrupyDyrektor, setPrzydzialGrupyRozszerzenia]);
 
   const zapiszDoBazy = useCallback(
     (p: Record<string, Record<string, number>>, d: Record<string, Record<string, number>>, dy: Record<string, Record<string, number>>, rozszPrzydzial?: Record<string, Record<string, number>>, pg?: Record<string, PrzydzialGrupyByGrade>, podzial?: Record<string, Record<string, boolean>>, dyrGrupy?: Record<string, PrzydzialGrupyByGrade>, rozszGrupy?: Record<string, PrzydzialGrupyByGrade>) => {
@@ -358,9 +305,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     const nextDy = extras?.dyrektor ?? dyrektor;
     if (extras?.dyrektor !== undefined) {
       setDyrektor(extras.dyrektor);
-      try {
-        if (klasaId) localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(extras.dyrektor));
-      } catch (_) {}
+      if (klasaId) cacheSet(STORAGE_DYREKTOR + klasaId, extras.dyrektor);
     }
     if (extras?.rozszerzeniaPrzydzial !== undefined) {
       setRozszerzeniaPrzydzial(extras.rozszerzeniaPrzydzial);
@@ -406,9 +351,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     (next: Record<string, Record<string, number>>) => {
       if (!klasaId) return;
       setPrzydzial(next);
-      try {
-        localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(next));
-      } catch (_) {}
+      cacheSet(STORAGE_PREFIX + klasaId, next);
       onPrzydzialChange?.();
       zapiszDoBazy(next, zrealizowaneDoradztwo, dyrektor, undefined, przydzialGrupy);
     },
@@ -456,9 +399,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     (next: Record<string, Record<string, number>>) => {
       if (!klasaId) return;
       setZrealizowaneDoradztwo(next);
-      try {
-        localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(next));
-      } catch (_) {}
+      cacheSet(STORAGE_DORADZTWO + klasaId, next);
       onDoradztwoChange?.();
       zapiszDoBazy(przydzial, next, dyrektor);
     },
@@ -469,9 +410,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     (next: Record<string, Record<string, number>>) => {
       if (!klasaId) return;
       setDyrektor(next);
-      try {
-        localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(next));
-      } catch (_) {}
+      cacheSet(STORAGE_DYREKTOR + klasaId, next);
       onPrzydzialChange?.();
       zapiszDoBazy(przydzial, zrealizowaneDoradztwo, next);
     },
