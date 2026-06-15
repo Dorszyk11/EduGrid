@@ -6,75 +6,12 @@ import { requireUserId } from '@/lib/api/guard';
 import { assertKlasaAccess } from '@/lib/api/klasa-scope';
 import { errorResponse } from '@/lib/api/respond';
 import { ValidationError } from '@/lib/errors';
-
-type HoursByGrade = Record<string, number>;
-type SubjectRow = {
-  subject?: string;
-  hours_by_grade?: HoursByGrade;
-  total_hours?: number;
-};
-type DirectorRow = { director_discretion_hours?: { total_hours: number } };
-type PlanMein = {
-  plan_id?: string;
-  school_type: string;
-  cycle: string;
-  grades?: string[];
-  table_structure?: { grades?: string[] };
-  subjects: (SubjectRow | DirectorRow)[];
-};
+import type { HoursByGrade, PlanMein } from '@/lib/przydzial/typy';
+import { getGrades, getLimityRozszerzenNaRok, matchSchoolType } from '@/lib/przydzial/plany-mein';
+import { rozdzielRozszerzenia } from '@/lib/przydzial/godziny';
 
 const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
 const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
-
-function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
-  const a = (nazwaTypu || '').trim().toLowerCase();
-  const b = (schoolType || '').trim().toLowerCase();
-  if (!a || !b) return false;
-  if (a === b) return true;
-  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
-  return false;
-}
-
-function isDirectorRow(entry: SubjectRow | DirectorRow): entry is DirectorRow {
-  return 'director_discretion_hours' in entry && !('subject' in entry);
-}
-
-const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
-function isPrzedmiotLaczny(subjectName: string): boolean {
-  return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
-}
-
-/** Przedmiot w zakresie rozszerzonym w planie MEiN (np. "Przedmioty w zakresie rozszerzonym") */
-function isPrzedmiotRozszerzony(subjectName: string): boolean {
-  return /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/i.test((subjectName || '').trim());
-}
-
-function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
-
-/**
- * Zwraca limity godzin rozszerzeń na rok (łączne dla wszystkich przedmiotów) z planu MEiN –
- * z pierwszego wiersza „przedmioty o zakresie rozszerzonym”.
- */
-function getLimityRozszerzenNaRok(plans: PlanMein[]): HoursByGrade {
-  const byGrade: HoursByGrade = {};
-  for (const plan of plans) {
-    for (const entry of plan.subjects) {
-      if (isDirectorRow(entry)) continue;
-      const row = entry as SubjectRow;
-      const subject = row.subject ?? '';
-      if (!isPrzedmiotRozszerzony(subject)) continue;
-      const hoursByGrade = row.hours_by_grade ?? {};
-      const grades = plan.table_structure?.grades ?? plan.grades ?? [];
-      for (const g of grades) {
-        byGrade[g] = (hoursByGrade[g] ?? 0) as number;
-      }
-      return byGrade;
-    }
-  }
-  return byGrade;
-}
 
 /**
  * POST /api/przydzial/przydziel-godziny-rozszerzen
@@ -148,25 +85,16 @@ export async function POST(request: NextRequest) {
     const rozszerzeniaArr = Array.isArray(currentDoc?.rozszerzenia) ? currentDoc.rozszerzenia : [];
     const rozszerzeniaSet = new Set(rozszerzeniaArr);
     const extendedKeysOrdered = rozszerzeniaArr.filter((k) => rozszerzeniaSet.has(k));
-    const N = extendedKeysOrdered.length;
 
     const limityNaRok = getLimityRozszerzenNaRok(plans);
-    const gradesOrder = plans[0] ? (plans[0].table_structure?.grades ?? plans[0].grades ?? []) : [];
+    const gradesOrder = plans[0] ? getGrades(plans[0]) : [];
 
-    const przydzialUzupelniony: Record<string, HoursByGrade> = { ...currentPrzydzial };
-
-    if (N > 0 && gradesOrder.length > 0) {
-      for (const g of gradesOrder) {
-        const limitG = (limityNaRok[g] ?? 0) as number;
-        if (limitG <= 0) continue;
-        for (let k = 0; k < limitG; k++) {
-          const subKey = extendedKeysOrdered[k % N];
-          if (!przydzialUzupelniony[subKey]) przydzialUzupelniony[subKey] = {};
-          const prev = (przydzialUzupelniony[subKey][g] ?? 0) as number;
-          przydzialUzupelniony[subKey][g] = prev + 1;
-        }
-      }
-    }
+    const przydzialUzupelniony = rozdzielRozszerzenia(
+      currentPrzydzial,
+      extendedKeysOrdered,
+      limityNaRok,
+      gradesOrder
+    );
 
     if (existing.docs.length > 0 && currentDoc) {
       await payload.update({

@@ -6,76 +6,12 @@ import { requireUserId } from '@/lib/api/guard';
 import { assertKlasaAccess } from '@/lib/api/klasa-scope';
 import { errorResponse } from '@/lib/api/respond';
 import { ValidationError } from '@/lib/errors';
-
-type HoursByGrade = Record<string, number>;
-type SubjectRow = {
-  subject?: string;
-  hours_to_choose?: number;
-  total_hours?: number;
-  hours_by_grade?: HoursByGrade;
-};
-type DirectorRow = { director_discretion_hours?: { total_hours: number } };
-type PlanMein = {
-  plan_id?: string;
-  school_type: string;
-  cycle: string;
-  grades?: string[];
-  table_structure?: { grades?: string[] };
-  subjects: (SubjectRow | DirectorRow)[];
-};
+import type { HoursByGrade, PlanMein, SubjectRow } from '@/lib/przydzial/typy';
+import { getGrades, isDirectorRow, isPrzedmiotLaczny, matchSchoolType, subjectKey } from '@/lib/przydzial/plany-mein';
+import { uzupelnijNierozdysponowane } from '@/lib/przydzial/godziny';
 
 const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
 const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
-
-function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
-  const a = (nazwaTypu || '').trim().toLowerCase();
-  const b = (schoolType || '').trim().toLowerCase();
-  if (!a || !b) return false;
-  if (a === b) return true;
-  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
-  return false;
-}
-
-function isDirectorRow(entry: SubjectRow | DirectorRow): entry is DirectorRow {
-  return 'director_discretion_hours' in entry && !('subject' in entry);
-}
-
-const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
-function isPrzedmiotLaczny(subjectName: string): boolean {
-  return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
-}
-
-function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
-
-/**
- * Uzupełnia tylko nierozdysponowane godziny: zostawia już przydzielone,
- * a pozostałe wpisuje optymalnie (najpierw zera, potem wyrównuje).
- */
-function uzupełnijNierozdysponowane(
-  current: HoursByGrade,
-  totalRequired: number,
-  grades: string[]
-): HoursByGrade {
-  if (grades.length === 0 || totalRequired <= 0) return { ...current };
-  const result: HoursByGrade = {};
-  let assigned = 0;
-  for (const g of grades) {
-    const v = (current[g] ?? 0);
-    result[g] = v;
-    assigned += v;
-  }
-  let remaining = totalRequired - assigned;
-  if (remaining <= 0) return result;
-  for (let i = 0; i < remaining; i++) {
-    const g = grades.reduce((min, gr) =>
-      (result[gr] ?? 0) < (result[min] ?? 0) ? gr : min
-    , grades[0]);
-    result[g] = (result[g] ?? 0) + 1;
-  }
-  return result;
-}
 
 /**
  * POST /api/przydzial/generuj - Przydziela godziny do wyboru do przedmiotów po kolei (po latach).
@@ -147,7 +83,7 @@ export async function POST(request: NextRequest) {
     const przydzialNowy: Record<string, HoursByGrade> = {};
     const doradztwoNowy: Record<string, HoursByGrade> = {};
     for (const plan of plans) {
-      const grades = plan.table_structure?.grades ?? plan.grades ?? [];
+      const grades = getGrades(plan);
       for (const entry of plan.subjects) {
         if (isDirectorRow(entry)) continue;
         const row = entry as SubjectRow;
@@ -157,14 +93,14 @@ export async function POST(request: NextRequest) {
           if (totalHours <= 0) continue;
           const key = subjectKey(plan.plan_id, subject);
           const current = currentDoradztwo[key] ?? {};
-          doradztwoNowy[key] = uzupełnijNierozdysponowane(current, totalHours, grades);
+          doradztwoNowy[key] = uzupelnijNierozdysponowane(current, totalHours, grades);
           continue;
         }
         const hoursToChoose = row.hours_to_choose ?? 0;
         if (hoursToChoose <= 0) continue;
         const key = subjectKey(plan.plan_id, subject);
         const current = currentPrzydzial[key] ?? {};
-        przydzialNowy[key] = uzupełnijNierozdysponowane(current, hoursToChoose, grades);
+        przydzialNowy[key] = uzupelnijNierozdysponowane(current, hoursToChoose, grades);
       }
     }
 
