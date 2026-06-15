@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
+import { z } from 'zod';
 import { getDbSslConfig } from '@/lib/dbSsl';
 import { requireUserId } from '@/lib/api/guard';
 import { errorResponse } from '@/lib/api/respond';
+import { validateInput } from '@/lib/validation';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 
 /** 1 godzina tygodniowo ≈ 38 godzin rocznie (rok szkolny), po 19 na semestr */
 const GODZINY_ROCZNE_ZA_1_TYG = 38;
+
+const przydzielSchema = z.object({
+  klasaId: z.union([z.string(), z.number()]),
+  przedmiotId: z.union([z.string(), z.number()]),
+  nauczycielId: z.union([z.string(), z.number()]),
+  rokSzkolny: z.union([z.string(), z.number()]).transform((v) => String(v)).pipe(z.string().min(1, 'rokSzkolny jest wymagany')),
+  godzinyTyg: z.coerce.number().min(0.5, 'godzinyTyg musi być liczbą od 0.5 do 10').max(10, 'godzinyTyg musi być liczbą od 0.5 do 10'),
+  rok: z.string().trim().optional(),
+});
 
 function getConnectionString(): string | undefined {
   const uri = process.env.DATABASE_URI;
@@ -294,38 +305,21 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await requireUserId(request);
     const body = await request.json().catch(() => ({}));
-    const { klasaId, przedmiotId, nauczycielId, rokSzkolny, godzinyTyg } = body ?? {};
+    const input = validateInput(przydzielSchema, body);
 
-    if (!klasaId || !przedmiotId || !nauczycielId || rokSzkolny == null || rokSzkolny === '') {
-      return NextResponse.json(
-        { error: 'Wymagane: klasaId, przedmiotId, nauczycielId, rokSzkolny' },
-        { status: 400 }
-      );
-    }
-    const hours = Number(godzinyTyg);
-    if (!Number.isFinite(hours) || hours < 0.5 || hours > 10) {
-      return NextResponse.json(
-        { error: 'godzinyTyg musi być liczbą od 0.5 do 10' },
-        { status: 400 }
-      );
-    }
-
-    const rokNorm = String(rokSzkolny).trim().replace(/-/g, '/');
+    const rokNorm = input.rokSzkolny.trim().replace(/-/g, '/');
     if (!/^\d{4}\/\d{4}$/.test(rokNorm)) {
-      return NextResponse.json(
-        { error: 'rokSzkolny w formacie YYYY-YYYY lub YYYY/YYYY' },
-        { status: 400 }
-      );
+      throw new ValidationError('rokSzkolny w formacie YYYY-YYYY lub YYYY/YYYY', 'rokSzkolny');
     }
 
     const result = await zapiszDoPostgres({
       userId,
-      klasaId: toId(klasaId),
-      przedmiotId: toId(przedmiotId),
-      nauczycielId: toId(nauczycielId),
+      klasaId: toId(input.klasaId),
+      przedmiotId: toId(input.przedmiotId),
+      nauczycielId: toId(input.nauczycielId),
       rokSzkolny: rokNorm,
-      godzinyTyg: hours,
-      rok: typeof body.rok === 'string' ? body.rok.trim() || undefined : undefined,
+      godzinyTyg: input.godzinyTyg,
+      rok: input.rok || undefined,
     });
 
     return NextResponse.json(result);

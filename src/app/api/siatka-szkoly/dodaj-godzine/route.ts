@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
+import { z } from "zod";
 import config from "@/payload.config";
 import { requireUserId } from "@/lib/api/guard";
 import { errorResponse } from "@/lib/api/respond";
+import { validateInput } from "@/lib/validation";
 import { assertKlasaAccess } from "@/lib/api/klasa-scope";
 import type { Id } from "@/types/domain";
 
 /** 1 godzina tygodniowo ≈ 38 godzin rocznie (rok szkolny), po 19 na semestr */
 const GODZINY_ROCZNE_ZA_1_TYG = 38;
+
+const dodajGodzineSchema = z.object({
+  przedmiotId: z.union([z.string(), z.number()]),
+  klasaId: z.union([z.string(), z.number()]),
+  rokSzkolny: z.union([z.string(), z.number()]).transform(String),
+});
 
 /**
  * POST /api/siatka-szkoly/dodaj-godzine
@@ -19,16 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await requireUserId(request);
     const body = await request.json().catch(() => ({}));
-    const przedmiotId = body?.przedmiotId;
-    const klasaId = body?.klasaId;
-    const rokSzkolny = body?.rokSzkolny;
-
-    if (!przedmiotId || !klasaId || !rokSzkolny) {
-      return NextResponse.json(
-        { error: "Wymagane: przedmiotId, klasaId, rokSzkolny" },
-        { status: 400 }
-      );
-    }
+    const { przedmiotId, klasaId, rokSzkolny } = validateInput(dodajGodzineSchema, body);
 
     const payload = await getPayload({ config });
     await assertKlasaAccess(payload, klasaId, userId);

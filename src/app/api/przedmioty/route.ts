@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
+import { z } from 'zod';
 import config from '@/payload.config';
+import { requireUserId } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
+import { validateInput } from '@/lib/validation';
+import type { Id } from '@/types/domain';
 
-/** GET /api/przedmioty – lista przedmiotów. */
+type PrzedmiotRow = {
+  id: Id;
+  nazwa?: string;
+  kod_mein?: string;
+  typ_zajec?: string;
+  poziom?: string;
+  aktywny?: boolean;
+};
+
+/** GET /api/przedmioty – lista przedmiotów (słownik współdzielony). */
 export async function GET() {
   try {
     const payload = await getPayload({ config });
@@ -10,7 +24,7 @@ export async function GET() {
       collection: 'przedmioty',
       limit: 500,
     });
-    const mapped = res.docs.map((p: any) => ({
+    const mapped = (res.docs as unknown as PrzedmiotRow[]).map((p) => ({
       id: p.id,
       nazwa: p.nazwa ?? 'Brak nazwy',
       kod_mein: p.kod_mein,
@@ -20,43 +34,38 @@ export async function GET() {
     }));
     return NextResponse.json(mapped);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
-    console.error('Błąd przy pobieraniu przedmiotów:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return errorResponse(error);
   }
 }
 
-/** POST /api/przedmioty – dodaj przedmiot. */
+const createPrzedmiotSchema = z.object({
+  nazwa: z.string().trim().min(1, 'nazwa jest wymagana'),
+  kod_mein: z.union([z.string(), z.number()]).optional(),
+  typ_zajec: z.enum(['ogolnoksztalcace', 'zawodowe_teoretyczne', 'zawodowe_praktyczne']),
+  poziom: z.enum(['podstawowy', 'rozszerzony', 'brak']),
+  aktywny: z.boolean().optional(),
+  jednostka_org: z.union([z.string(), z.number()]).optional(),
+});
+
+/** POST /api/przedmioty – dodaj przedmiot do słownika (wymaga zalogowania). */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { nazwa, kod_mein, typ_zajec, poziom, aktywny, jednostka_org } = body ?? {};
-    if (!nazwa || !typ_zajec || !poziom) {
-      return NextResponse.json(
-        { error: 'Wymagane: nazwa, typ_zajec, poziom' },
-        { status: 400 }
-      );
-    }
-    const validTyp = ['ogolnoksztalcace', 'zawodowe_teoretyczne', 'zawodowe_praktyczne'].includes(typ_zajec);
-    const validPoziom = ['podstawowy', 'rozszerzony', 'brak'].includes(poziom);
-    if (!validTyp || !validPoziom) {
-      return NextResponse.json(
-        { error: 'typ_zajec: ogolnoksztalcace|zawodowe_teoretyczne|zawodowe_praktyczne; poziom: podstawowy|rozszerzony|brak' },
-        { status: 400 }
-      );
-    }
+    await requireUserId(request);
+    const body = await request.json().catch(() => ({}));
+    const input = validateInput(createPrzedmiotSchema, body);
+
     const payload = await getPayload({ config });
-    const created = await payload.create({
+    const created = (await payload.create({
       collection: 'przedmioty',
       data: {
-        nazwa: String(nazwa).trim(),
-        kod_mein: kod_mein != null ? String(kod_mein).trim() : undefined,
-        typ_zajec,
-        poziom,
-        aktywny: aktywny !== false,
-        jednostka_org: jednostka_org != null ? String(jednostka_org).trim() : undefined,
+        nazwa: input.nazwa,
+        kod_mein: input.kod_mein != null ? String(input.kod_mein).trim() : undefined,
+        typ_zajec: input.typ_zajec,
+        poziom: input.poziom,
+        aktywny: input.aktywny !== false,
+        jednostka_org: input.jednostka_org != null ? String(input.jednostka_org).trim() : undefined,
       },
-    });
+    })) as unknown as PrzedmiotRow;
     return NextResponse.json({
       id: created.id,
       nazwa: created.nazwa,
@@ -66,8 +75,6 @@ export async function POST(request: NextRequest) {
       aktywny: created.aktywny !== false,
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
-    console.error('Błąd przy dodawaniu przedmiotu:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return errorResponse(error);
   }
 }

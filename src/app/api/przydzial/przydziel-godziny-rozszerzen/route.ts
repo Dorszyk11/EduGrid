@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
+import { z } from 'zod';
 import config from '@/payload.config';
 import plansData from '@/utils/import/ramowe-plany.json';
 import { requireUserId } from '@/lib/api/guard';
 import { assertKlasaAccess } from '@/lib/api/klasa-scope';
 import { errorResponse } from '@/lib/api/respond';
-import { ValidationError } from '@/lib/errors';
+import { validateInput } from '@/lib/validation';
 import type { HoursByGrade, PlanMein } from '@/lib/przydzial/typy';
 import { getGrades, getLimityRozszerzenNaRok, matchSchoolType } from '@/lib/przydzial/plany-mein';
 import { rozdzielRozszerzenia } from '@/lib/przydzial/godziny';
 
 const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
 const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
+
+const przydzielRozszerzeniaSchema = z.object({
+  klasaId: z.string().trim().min(1, 'klasaId jest wymagane (body JSON lub query)'),
+  typSzkolyId: z.string().trim().min(1, 'typSzkolyId jest wymagane (body JSON lub query)'),
+});
 
 /**
  * POST /api/przydzial/przydziel-godziny-rozszerzen
@@ -36,9 +42,7 @@ export async function POST(request: NextRequest) {
     if (!klasaId) klasaId = (searchParams.get('klasaId') ?? '').trim();
     if (!typSzkolyId) typSzkolyId = (searchParams.get('typSzkolyId') ?? '').trim();
 
-    if (!klasaId || !typSzkolyId) {
-      throw new ValidationError('klasaId i typSzkolyId są wymagane (body JSON lub query)');
-    }
+    ({ klasaId, typSzkolyId } = validateInput(przydzielRozszerzeniaSchema, { klasaId, typSzkolyId }));
 
     const payload = await getPayload({ config });
 

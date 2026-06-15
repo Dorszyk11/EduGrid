@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
+import { z } from 'zod';
 import config from '@/payload.config';
 import crypto from 'crypto';
 import { Pool } from 'pg';
 import { getDbSslConfig } from '@/lib/dbSsl';
+
+const registerSchema = z.object({
+  email: z.string().trim().min(1, 'Podaj email i hasło.').email('Podaj poprawny adres email.'),
+  password: z.string().min(8, 'Hasło musi mieć co najmniej 8 znaków.'),
+  imie: z.string().trim().min(1, 'Podaj imię i nazwisko.'),
+  nazwisko: z.string().trim().min(1, 'Podaj imię i nazwisko.'),
+});
 
 /** Pierwsza inicjalizacja Payload bywa bardzo wolna – po 8 s używamy zapisu bezpośrednio do bazy. */
 const PAYLOAD_TIMEOUT_MS = 8_000;
@@ -92,30 +100,12 @@ async function registerViaDb(email: string, password: string, imie: string, nazw
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const email = typeof body.email === 'string' ? body.email.trim() : '';
-    const password = typeof body.password === 'string' ? body.password : '';
-    const imie = typeof body.imie === 'string' ? body.imie.trim() : '';
-    const nazwisko = typeof body.nazwisko === 'string' ? body.nazwisko.trim() : '';
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Podaj email i hasło.' },
-        { status: 400 }
-      );
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Nieprawidłowe dane rejestracji.';
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
-    if (!imie || !nazwisko) {
-      return NextResponse.json(
-        { error: 'Podaj imię i nazwisko.' },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Hasło musi mieć co najmniej 8 znaków.' },
-        { status: 400 }
-      );
-    }
+    const { email, password, imie, nazwisko } = parsed.data;
 
     let usedPayload = false;
     try {

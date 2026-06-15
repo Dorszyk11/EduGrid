@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
+import { z } from 'zod';
 import config from '@/payload.config';
 import { requireUserId } from '@/lib/api/guard';
 import { errorResponse } from '@/lib/api/respond';
+import { validateInput } from '@/lib/validation';
 import { assertKlasaAccess } from '@/lib/api/klasa-scope';
 import { ValidationError } from '@/lib/errors';
 import type { PrzydzialWyborRow } from '@/types/domain';
+
+const godzinyByGrade = z.record(z.string(), z.record(z.string(), z.number()));
+const looseRecord = z.record(z.string(), z.unknown());
+
+/** Body upsertu przydziału klasy: keystone klasaId rygorystycznie, bloki JSON wg kształtu klienta. */
+const upsertWyborSchema = z.object({
+  klasaId: z.union([z.string(), z.number()]),
+  przydzial: godzinyByGrade.optional(),
+  doradztwo: godzinyByGrade.optional(),
+  dyrektor: godzinyByGrade.optional(),
+  rozszerzenia: z.array(z.string()).optional(),
+  rozszerzeniaGodziny: z.record(z.string(), z.number()).optional(),
+  rozszerzeniaPrzydzial: godzinyByGrade.optional(),
+  realizacja: looseRecord.optional(),
+  podzialNaGrupy: looseRecord.optional(),
+  przydzialGrupy: looseRecord.optional(),
+  dyrektorGrupy: looseRecord.optional(),
+  rozszerzeniaGrupy: looseRecord.optional(),
+});
 
 /**
  * GET /api/przydzial-godzin-wybor?klasaId=xxx
@@ -83,10 +104,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await requireUserId(request);
     const body = await request.json().catch(() => ({}));
-    const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial, realizacja, podzialNaGrupy, przydzialGrupy, dyrektorGrupy, rozszerzeniaGrupy } = body;
-    if (!klasaId) {
-      throw new ValidationError('klasaId jest wymagane', 'klasaId');
-    }
+    const { klasaId, przydzial, doradztwo, dyrektor, rozszerzenia, rozszerzeniaGodziny, rozszerzeniaPrzydzial, realizacja, podzialNaGrupy, przydzialGrupy, dyrektorGrupy, rozszerzeniaGrupy } = validateInput(upsertWyborSchema, body);
 
     const payload = await getPayload({ config });
     await assertKlasaAccess(payload, klasaId, userId);
