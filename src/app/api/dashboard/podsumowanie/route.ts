@@ -6,6 +6,7 @@ import { automatycznyRozdzialGodzin } from '@/utils/automatycznyRozdzialGodzin';
 import { requireUserId, ownerScope } from '@/lib/api/guard';
 import { errorResponse } from '@/lib/api/respond';
 import { ValidationError } from '@/lib/errors';
+import type { RozkladRow } from '@/types/domain';
 
 export async function GET(request: Request) {
   try {
@@ -38,42 +39,42 @@ export async function GET(request: Request) {
       },
     });
 
-    const obciazenia = [];
-    for (const nauczyciel of nauczyciele.docs) {
+    // Jedno zapytanie zamiast N+1: wszystkie rozkłady nauczycieli konta, agregacja w pamięci.
+    const teacherIds = nauczyciele.docs.map((n) => n.id);
+    const sumaByNauczyciel = new Map<string, number>();
+    if (teacherIds.length > 0) {
       const rozklady = await payload.find({
         collection: 'rozkład-godzin',
         where: {
           and: [
-            {
-              nauczyciel: {
-                equals: nauczyciel.id,
-              },
-            },
-            {
-              rok_szkolny: {
-                equals: rokSzkolny,
-              },
-            },
+            { nauczyciel: { in: teacherIds } },
+            { rok_szkolny: { equals: rokSzkolny } },
           ],
         },
+        limit: 10000,
+        depth: 0,
       });
+      for (const r of rozklady.docs as unknown as RozkladRow[]) {
+        const ref = r.nauczyciel;
+        const nid = typeof ref === 'object' && ref !== null ? String(ref.id) : String(ref ?? '');
+        if (!nid) continue;
+        sumaByNauczyciel.set(nid, (sumaByNauczyciel.get(nid) ?? 0) + (r.godziny_tyg || 0));
+      }
+    }
 
-      const sumaGodzinTyg = rozklady.docs.reduce(
-        (sum, r) => sum + (r.godziny_tyg || 0),
-        0
-      );
+    const obciazenia = nauczyciele.docs.map((nauczyciel) => {
+      const sumaGodzinTyg = sumaByNauczyciel.get(String(nauczyciel.id)) ?? 0;
       const maxObciazenie = nauczyciel.max_obciazenie || 18;
       const procentWykorzystania = maxObciazenie > 0
         ? (sumaGodzinTyg / maxObciazenie) * 100
         : 0;
-
-      obciazenia.push({
+      return {
         nauczycielId: nauczyciel.id,
         aktualneObciazenie: sumaGodzinTyg,
         maxObciazenie,
         procentWykorzystania,
-      });
-    }
+      };
+    });
 
     // Oblicz statystyki
     const statystykiZgodnosci = {
