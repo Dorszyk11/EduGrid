@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
+import { buttonClass } from '@/components/ui/Button';
 
 interface TypSzkoly {
   id: string;
@@ -211,19 +212,16 @@ export default function PrzydzialPage() {
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Przydział</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">Przydział</h1>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 flex-1 min-w-0">
-          <Link
-            href="/plany-mein"
-            className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium border border-gray-300"
-          >
+          <Link href="/plany-mein" className={buttonClass('secondary')}>
             Zobacz plany MEiN
           </Link>
           {!ukryjGenerujPrzydzial && (
             <button
               onClick={generujPrzydzial}
               disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+              className="px-5 py-2.5 bg-accent text-white rounded hover:bg-accent-strong disabled:bg-line-strong disabled:cursor-not-allowed font-medium"
             >
               {ladowanie ? 'Generowanie...' : 'Generuj przydział'}
             </button>
@@ -231,13 +229,13 @@ export default function PrzydzialPage() {
           <button
             onClick={otworzPotwierdzenieReset}
             disabled={ladowanie || resetowanie || !selectedClass?.id}
-            className="px-4 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed font-medium border border-red-200"
+            className="px-4 py-2.5 bg-danger-bg text-danger rounded hover:bg-danger-bg disabled:bg-surface-2 disabled:text-ink-faint disabled:cursor-not-allowed font-medium border border-line"
           >
             {resetowanie ? 'Resetowanie...' : 'Reset'}
           </button>
           {selectedClass?.id && (
             <>
-              <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
+              <span className="hidden sm:inline text-ink-faint text-sm mx-1">|</span>
               {maGodzinyDoWyboru && (
                 <button
                   type="button"
@@ -249,8 +247,8 @@ export default function PrzydzialPage() {
                     setTrybPodzielNaGrupy(false);
                     setTrybPrzydzielGodzine((v) => !v);
                   }}
-                  className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                    trybPrzydzielGodzine ? 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
+                    trybPrzydzielGodzine ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
                   }`}
                 >
                   Przydziel godzinę
@@ -266,15 +264,15 @@ export default function PrzydzialPage() {
                     setTrybPodzielNaGrupy(false);
                     setTrybPrzydzielDyrektor((v) => !v);
                   }}
-                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybPrzydzielDyrektor ? 'bg-sky-600 text-white hover:bg-sky-700 ring-2 ring-sky-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybPrzydzielDyrektor ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
                 }`}
               >
                 Godz. dyrektorskie
               </button>
               {maRozszerzenia && (
                 <>
-                  <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
+                  <span className="hidden sm:inline text-ink-faint text-sm mx-1">|</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -285,8 +283,8 @@ export default function PrzydzialPage() {
                       setTrybPodzielNaGrupy(false);
                       setTrybDodajRozszerzenia((v) => !v);
                     }}
-                    className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                      trybDodajRozszerzenia ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
+                      trybDodajRozszerzenia ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
                     }`}
                   >
                     Dodaj rozszerzenia
@@ -301,15 +299,15 @@ export default function PrzydzialPage() {
                       setTrybPodzielNaGrupy(false);
                       setTrybPrzydzielGodzinyRozszerzen((v) => !v);
                     }}
-                    className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                      trybPrzydzielGodzinyRozszerzen ? 'bg-violet-600 text-white hover:bg-violet-700 ring-2 ring-violet-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
+                      trybPrzydzielGodzinyRozszerzen ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
                     }`}
                   >
                     Przydziel godziny rozszerzeń
                   </button>
                 </>
               )}
-              <span className="hidden sm:inline text-gray-400 text-sm mx-1">|</span>
+              <span className="hidden sm:inline text-ink-faint text-sm mx-1">|</span>
               <button
                 type="button"
                 onClick={() => {
@@ -320,8 +318,8 @@ export default function PrzydzialPage() {
                   setTrybUsunGodzine(false);
                   setTrybPodzielNaGrupy((v) => !v);
                 }}
-                className={`px-3 py-2.5 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybPodzielNaGrupy ? 'bg-amber-600 text-white hover:bg-amber-700 ring-2 ring-amber-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
+                  trybPodzielNaGrupy ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
                 }`}
               >
                 Podziel na grupy (1 i 2)
@@ -333,8 +331,8 @@ export default function PrzydzialPage() {
 
       {komunikat && (
         <div
-          className={`p-4 rounded-lg ${
-            komunikat.typ === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          className={`p-4 rounded ${
+            komunikat.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'
           }`}
         >
           {komunikat.tekst}
@@ -343,24 +341,24 @@ export default function PrzydzialPage() {
 
       {/* Okno potwierdzenia resetu – Tak / Nie */}
       {pokazPotwierdzenieReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Czy na pewno?</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
+          <div className="bg-white rounded-card shadow-pop max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-ink">Czy na pewno?</h3>
+            <p className="text-ink-soft text-sm leading-relaxed">
               Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego, godziny dyrektorskie, rozszerzenia, godziny rozszerzeń oraz podziały na grupy.
             </p>
             <div className="flex flex-row gap-3 justify-end pt-2">
               <button
                 type="button"
                 onClick={() => setPokazPotwierdzenieReset(false)}
-                className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
+                className="px-4 py-2.5 bg-surface-2 text-ink rounded hover:bg-line font-medium"
               >
                 Nie
               </button>
               <button
                 type="button"
                 onClick={wykonajReset}
-                className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                className="px-4 py-2.5 bg-danger text-white rounded hover:bg-danger font-medium"
               >
                 Tak
               </button>
@@ -378,7 +376,7 @@ export default function PrzydzialPage() {
             setTypSzkolyId(v);
           }}
           disabled={ladowanieTypow}
-          className="w-full sm:w-[200px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+          className="w-full sm:w-[200px] sm:min-w-0 border border-line-strong rounded px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
           <option value="">{ladowanieTypow ? 'Ładowanie...' : 'Wybierz typ szkoły'}</option>
           {typySzkol.map((typ) => (
@@ -394,7 +392,7 @@ export default function PrzydzialPage() {
             setSelectedLitera('');
           }}
           disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-          className="w-full sm:w-[140px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+          className="w-full sm:w-[140px] sm:min-w-0 border border-line-strong rounded px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
           <option value="">{ladowanieKlas ? 'Ładowanie...' : 'Rocznik'}</option>
           {roczniki.map((r) => (
@@ -409,7 +407,7 @@ export default function PrzydzialPage() {
             setSelectedLitera(v);
           }}
           disabled={!selectedRocznik || literki.length === 0}
-          className="w-full sm:w-[100px] sm:min-w-0 border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+          className="w-full sm:w-[100px] sm:min-w-0 border border-line-strong rounded px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
           <option value="">Klasa</option>
           {literki.map((l) => (
@@ -417,7 +415,7 @@ export default function PrzydzialPage() {
           ))}
         </select>
         {selectedClass && (
-          <span className="text-sm text-gray-600 block sm:inline sm:whitespace-nowrap mt-1 sm:mt-0">
+          <span className="text-sm text-ink-soft block sm:inline sm:whitespace-nowrap mt-1 sm:mt-0">
             Wybrana klasa: <strong>{selectedClass.nazwa}</strong> ({selectedRocznik})
           </span>
         )}
@@ -425,8 +423,8 @@ export default function PrzydzialPage() {
 
       {nazwaTypuSzkoly && (
         <div className="space-y-2 min-w-0">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Plan ramowy MEiN – godziny do wyboru i dyrektorskie</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
+          <h2 className="text-lg sm:text-xl font-semibold text-ink">Plan ramowy MEiN – godziny do wyboru i dyrektorskie</h2>
+          <p className="text-ink-soft text-sm leading-relaxed">
             Wybierz typ szkoły i klasę. Przycisk „Generuj przydział” przydziela godziny do wyboru do przedmiotów po kolei (po latach: I, II, III… lub IV, V, VI…). Możesz też ręcznie dodawać/usuwać godziny w tabeli.
           </p>
           <PlanMeinTabela
