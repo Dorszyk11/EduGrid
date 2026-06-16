@@ -1,11 +1,15 @@
 type Tone = 'ok' | 'warn' | 'danger' | 'neutral';
 
-/** Mapowanie statusu zgodności MEiN na ton semantyczny. */
+/** Mapowanie statusu domenowego na ton semantyczny (zgodność MEiN + obciążenie nauczyciela). */
 const STATUS_TONE: Record<string, Tone> = {
   OK: 'ok',
   'NADWYŻKA': 'warn',
   NADWYZKA: 'warn',
   BRAK: 'danger',
+  'PRZECIĄŻENIE': 'danger',
+  PRZECIAZENIE: 'danger',
+  'NIEDOCIĄŻENIE': 'warn',
+  NIEDOCIAZENIE: 'warn',
 };
 
 const TONE_CLASS: Record<Tone, string> = {

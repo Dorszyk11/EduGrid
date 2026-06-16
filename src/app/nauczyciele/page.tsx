@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import StatusPill from '@/components/ui/StatusPill';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import { buttonClass } from '@/components/ui/Button';
 
 interface NauczycielListItem {
   id: string | number;
@@ -49,23 +54,8 @@ interface NauczycielDetail {
   }>;
 }
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'OK': return 'bg-green-100 text-green-800';
-    case 'PRZECIĄŻENIE': return 'bg-red-100 text-red-800';
-    case 'NIEDOCIĄŻENIE': return 'bg-yellow-100 text-yellow-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-}
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'OK': return '✅';
-    case 'PRZECIĄŻENIE': return '❌';
-    case 'NIEDOCIĄŻENIE': return '⚠️';
-    default: return '';
-  }
-}
+const SELECT_CLASS =
+  'w-full max-w-md border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 /** Unikalna para klasa + rok (do wyboru w select) */
 function uniqueKlasyRok(obciazenie: ObciazenieItem[]): { klasaId: string; klasaNazwa: string; rokSzkolny: string }[] {
@@ -164,25 +154,68 @@ export default function NauczycielePage() {
   const liczbaKlas = new Set(obciazenieFiltrowane.map((o) => o.klasa.id)).size;
   const liczbaPrzedmiotow = new Set(obciazenieFiltrowane.map((o) => o.przedmiot.id)).size;
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Nauczyciele</h1>
-        <Link href="/dashboard" className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">
-          ← Dashboard
+  const kolumny: Column<ObciazenieItem>[] = [
+    {
+      key: 'klasa',
+      header: 'Klasa',
+      render: (o) => (
+        <Link href={`/klasy/${o.klasa.id}`} className="font-medium text-accent hover:text-accent-strong">
+          {o.klasa.nazwa}
         </Link>
-      </div>
+      ),
+    },
+    {
+      key: 'przedmiot',
+      header: 'Przedmiot',
+      render: (o) => (
+        <Link href={`/przedmioty/${o.przedmiot.id}`} className="text-accent hover:text-accent-strong">
+          {o.przedmiot.nazwa}
+        </Link>
+      ),
+    },
+    { key: 'rok', header: 'Rok', align: 'center', render: (o) => (o.rok ? o.rok : '—') },
+    { key: 'godz', header: 'Godz./tyg', align: 'center', render: (o) => o.godziny_tyg },
+    {
+      key: 'akcje',
+      header: '',
+      align: 'right',
+      className: 'w-24',
+      render: (o) =>
+        o.id != null ? (
+          <button
+            type="button"
+            onClick={() => usunPrzypisanie(o.id!)}
+            disabled={usuwanieId === o.id}
+            className="text-sm font-medium text-danger hover:opacity-80 disabled:opacity-50"
+          >
+            {usuwanieId === o.id ? '…' : 'Usuń'}
+          </button>
+        ) : null,
+    },
+  ];
 
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Wybierz nauczyciela, klasę i rok</h2>
+  return (
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader
+        title="Nauczyciele"
+        description="Obciążenie i kwalifikacje wybranego nauczyciela."
+        actions={
+          <Link href="/dashboard" className={buttonClass('secondary')}>
+            ← Dashboard
+          </Link>
+        }
+      />
 
-        {/* 1. Nauczyciel */}
+      <Card className="space-y-4">
+        <h2 className="font-display text-base font-semibold text-ink">Wybierz nauczyciela, klasę i rok</h2>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nauczyciel</label>
+          <label className="block text-sm font-medium text-ink-soft mb-1" htmlFor="sel-nauczyciel">Nauczyciel</label>
           <select
+            id="sel-nauczyciel"
             value={wybranyNauczycielId}
             onChange={(e) => setWybranyNauczycielId(e.target.value)}
-            className="w-full max-w-md border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500"
+            className={SELECT_CLASS}
             disabled={ladowanieListy}
           >
             <option value="">— wybierz nauczyciela —</option>
@@ -195,22 +228,22 @@ export default function NauczycielePage() {
         </div>
 
         {ladowanieSzczegoly && (
-          <p className="text-sm text-gray-500">Ładowanie obciążenia nauczyciela…</p>
+          <p className="text-sm text-ink-faint">Ładowanie obciążenia nauczyciela…</p>
         )}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+          <div className="rounded border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
             {error}
           </div>
         )}
 
-        {/* 2. Klasa i rok (na podstawie obciążenia wybranego nauczyciela) */}
         {daneNauczyciela && opcjeKlasyRok.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Klasa i rok szkolny</label>
+            <label className="block text-sm font-medium text-ink-soft mb-1" htmlFor="sel-klasa-rok">Klasa i rok szkolny</label>
             <select
+              id="sel-klasa-rok"
               value={wybranaKlasaRok}
               onChange={(e) => setWybranaKlasaRok(e.target.value)}
-              className="w-full max-w-md border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500"
+              className={SELECT_CLASS}
             >
               <option value="">— wybierz klasę i rok —</option>
               {opcjeKlasyRok.map((opt) => {
@@ -226,186 +259,123 @@ export default function NauczycielePage() {
         )}
 
         {daneNauczyciela && opcjeKlasyRok.length === 0 && daneNauczyciela.obciazenie.length === 0 && (
-          <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded">
+          <p className="rounded bg-warn-bg p-3 text-sm text-warn">
             Ten nauczyciel nie ma przypisanych godzin w rozkładzie. Przydziel godziny w module Przydział.
           </p>
         )}
-      </div>
+      </Card>
 
-      {/* Widok nauczyciel + przedmiot per klasa + sumarycznie */}
       {daneNauczyciela && (
-        <div className="space-y-6">
-          {/* 1. Widok nauczyciel (szczegóły) */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Nauczyciel</h2>
-            <div>
-              <p className="text-xl font-medium">
-                {daneNauczyciela.nauczyciel.imie} {daneNauczyciela.nauczyciel.nazwisko}
+        <div className="space-y-5">
+          {/* Szczegóły nauczyciela */}
+          <Card>
+            <h2 className="font-display text-base font-semibold text-ink mb-3">Nauczyciel</h2>
+            <p className="text-xl font-medium text-ink">
+              {daneNauczyciela.nauczyciel.imie} {daneNauczyciela.nauczyciel.nazwisko}
+            </p>
+            {(daneNauczyciela.nauczyciel.email || daneNauczyciela.nauczyciel.telefon) && (
+              <p className="text-ink-soft mt-1">
+                {[daneNauczyciela.nauczyciel.email, daneNauczyciela.nauczyciel.telefon].filter(Boolean).join(' • ')}
               </p>
-              {(daneNauczyciela.nauczyciel.email || daneNauczyciela.nauczyciel.telefon) && (
-                <p className="text-gray-600 mt-1">
-                  {[daneNauczyciela.nauczyciel.email, daneNauczyciela.nauczyciel.telefon].filter(Boolean).join(' • ')}
-                </p>
-              )}
-              {(daneNauczyciela.nauczyciel.etat != null || daneNauczyciela.nauczyciel.max_obciazenie != null) && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Etat: {daneNauczyciela.nauczyciel.etat ?? '—'} • Max obciążenie: {daneNauczyciela.nauczyciel.max_obciazenie ?? '—'}h/tyg
-                </p>
-              )}
-            </div>
-          </div>
+            )}
+            {(daneNauczyciela.nauczyciel.etat != null || daneNauczyciela.nauczyciel.max_obciazenie != null) && (
+              <p className="text-sm text-ink-faint mt-1 tabular">
+                Etat: {daneNauczyciela.nauczyciel.etat ?? '—'} • Max obciążenie: {daneNauczyciela.nauczyciel.max_obciazenie ?? '—'}h/tyg
+              </p>
+            )}
+          </Card>
 
           {/* Podsumowanie obciążenia (z API) */}
           {daneNauczyciela.podsumowanie && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Podsumowanie obciążenia</h2>
+            <Card>
+              <h2 className="font-display text-base font-semibold text-ink mb-4">Podsumowanie obciążenia</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Godziny tygodniowo</p>
-                  <p className="text-2xl font-bold text-blue-900">{daneNauczyciela.podsumowanie.suma_godzin_tyg}</p>
+                <div className="rounded border border-line bg-surface-2 p-4">
+                  <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
+                  <p className="text-2xl font-bold text-ink tabular">{daneNauczyciela.podsumowanie.suma_godzin_tyg}</p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Procent obciążenia</p>
-                  <p className="text-2xl font-bold text-purple-900">{daneNauczyciela.podsumowanie.procent_obciazenia}%</p>
+                <div className="rounded border border-line bg-surface-2 p-4">
+                  <p className="text-sm text-ink-soft">Procent obciążenia</p>
+                  <p className="text-2xl font-bold text-ink tabular">{daneNauczyciela.podsumowanie.procent_obciazenia}%</p>
                 </div>
-                <div className={`p-4 rounded-lg ${getStatusColor(daneNauczyciela.podsumowanie.status)}`}>
-                  <p className="text-sm font-semibold">Status</p>
-                  <p className="text-xl font-bold">
-                    {getStatusIcon(daneNauczyciela.podsumowanie.status)} {daneNauczyciela.podsumowanie.status}
-                  </p>
+                <div className="rounded border border-line bg-surface-2 p-4">
+                  <p className="text-sm text-ink-soft mb-1">Status</p>
+                  <StatusPill status={daneNauczyciela.podsumowanie.status} />
                 </div>
               </div>
               {daneNauczyciela.podsumowanie.roznica !== 0 && (
-                <div className={`mt-4 p-3 rounded-lg ${
-                  daneNauczyciela.podsumowanie.roznica > 0 ? 'bg-red-50 text-red-800' : 'bg-yellow-50 text-yellow-800'
+                <div className={`mt-4 rounded p-3 text-sm ${
+                  daneNauczyciela.podsumowanie.roznica > 0 ? 'bg-danger-bg text-danger' : 'bg-warn-bg text-warn'
                 }`}>
                   <p className="font-semibold">
                     {daneNauczyciela.podsumowanie.roznica > 0 ? 'Przekroczono' : 'Niedociążenie'} o {Math.abs(daneNauczyciela.podsumowanie.roznica)} godz./tyg
                   </p>
                 </div>
               )}
-              <div className="mt-4 flex gap-6 text-sm text-gray-600">
-                <span>Liczba klas: <span className="font-semibold">{daneNauczyciela.podsumowanie.liczba_klas}</span></span>
-                <span>Liczba przedmiotów: <span className="font-semibold">{daneNauczyciela.podsumowanie.liczba_przedmiotow}</span></span>
+              <div className="mt-4 flex gap-6 text-sm text-ink-soft">
+                <span>Liczba klas: <span className="font-semibold text-ink tabular">{daneNauczyciela.podsumowanie.liczba_klas}</span></span>
+                <span>Liczba przedmiotów: <span className="font-semibold text-ink tabular">{daneNauczyciela.podsumowanie.liczba_przedmiotow}</span></span>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Kwalifikacje */}
           {daneNauczyciela.kwalifikacje && daneNauczyciela.kwalifikacje.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Kwalifikacje</h2>
+            <Card>
+              <h2 className="font-display text-base font-semibold text-ink mb-4">Kwalifikacje</h2>
               <div className="space-y-2">
                 {daneNauczyciela.kwalifikacje.map((kwal, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                  <div key={index} className="flex items-center justify-between rounded border border-line bg-surface-2 p-3">
                     <div>
-                      <p className="font-semibold">{kwal.przedmiot?.nazwa}</p>
+                      <p className="font-semibold text-ink">{kwal.przedmiot?.nazwa}</p>
                       {(kwal.specjalizacja || kwal.stopien) && (
-                        <p className="text-sm text-gray-600">{[kwal.specjalizacja, kwal.stopien].filter(Boolean).join(' • ')}</p>
+                        <p className="text-sm text-ink-soft">{[kwal.specjalizacja, kwal.stopien].filter(Boolean).join(' • ')}</p>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
 
-          {/* 2. Przedmiot per klasa */}
+          {/* Przedmiot per klasa */}
           {obciazenieFiltrowane.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <Card padding="md">
+              <h2 className="font-display text-base font-semibold text-ink mb-4">
                 Przedmiot per klasa
                 {wybranaKlasaRok && (
-                  <span className="text-sm font-normal text-gray-500 ml-2">
+                  <span className="text-sm font-normal text-ink-faint ml-2">
                     — {opcjeKlasyRok.find((o) => `${o.klasaId}::${o.rokSzkolny}` === wybranaKlasaRok)?.klasaNazwa},{' '}
                     {rokSzkolnySel}
                   </span>
                 )}
               </h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Klasa
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Przedmiot
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rok
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Godz./tyg
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                        {' '}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {obciazenieFiltrowane.map((obc, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Link
-                            href={`/klasy/${obc.klasa.id}`}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            {obc.klasa.nazwa}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Link
-                            href={`/przedmioty/${obc.przedmiot.id}`}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            {obc.przedmiot.nazwa}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-gray-700">
-                          {obc.rok ? obc.rok : '—'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">{obc.godziny_tyg}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          {obc.id != null ? (
-                            <button
-                              type="button"
-                              onClick={() => usunPrzypisanie(obc.id!)}
-                              disabled={usuwanieId === obc.id}
-                              className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-                            >
-                              {usuwanieId === obc.id ? '…' : 'Usuń'}
-                            </button>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              <DataTable
+                columns={kolumny}
+                rows={obciazenieFiltrowane}
+                getRowKey={(_, i) => i}
+              />
+            </Card>
           )}
 
-          {/* 3. Sumarycznie */}
-          {daneNauczyciela && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Sumarycznie</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Godziny tygodniowo</p>
-                  <p className="text-2xl font-bold text-blue-900">{sumaGodzinTyg}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Liczba klas</p>
-                  <p className="text-2xl font-bold text-gray-900">{liczbaKlas}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Liczba przedmiotów</p>
-                  <p className="text-2xl font-bold text-gray-900">{liczbaPrzedmiotow}</p>
-                </div>
+          {/* Sumarycznie */}
+          <Card>
+            <h2 className="font-display text-base font-semibold text-ink mb-4">Sumarycznie</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded border border-line bg-surface-2 p-4">
+                <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
+                <p className="text-2xl font-bold text-ink tabular">{sumaGodzinTyg}</p>
+              </div>
+              <div className="rounded border border-line bg-surface-2 p-4">
+                <p className="text-sm text-ink-soft">Liczba klas</p>
+                <p className="text-2xl font-bold text-ink tabular">{liczbaKlas}</p>
+              </div>
+              <div className="rounded border border-line bg-surface-2 p-4">
+                <p className="text-sm text-ink-soft">Liczba przedmiotów</p>
+                <p className="text-2xl font-bold text-ink tabular">{liczbaPrzedmiotow}</p>
               </div>
             </div>
-          )}
+          </Card>
         </div>
       )}
     </div>
