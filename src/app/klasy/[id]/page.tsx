@@ -52,7 +52,10 @@ export default function KlasaPage() {
             localStorage.setItem(STORAGE_PREFIX + klasaId, JSON.stringify(api.przydzial ?? {}));
             localStorage.setItem(STORAGE_DORADZTWO + klasaId, JSON.stringify(api.doradztwo ?? {}));
             localStorage.setItem(STORAGE_DYREKTOR + klasaId, JSON.stringify(api.dyrektor ?? {}));
-          } catch (_) {}
+          } catch (err) {
+            // localStorage to nietrwały cache (źródło prawdy: API) — pomijamy błąd zapisu, nie połykamy po cichu
+            console.debug('Pominięto zapis cache localStorage (klasa):', err);
+          }
         }
         const daneZApi = {
           przydzial: api.przydzial,
