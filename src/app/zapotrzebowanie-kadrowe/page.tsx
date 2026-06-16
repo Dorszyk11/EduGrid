@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ROK_SZKOLNY_WSZYSTKIE } from '@/lib/siatkaSzkoly';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
 
 interface TypSzkoly {
   id: string;
@@ -67,6 +69,8 @@ interface DaneApi {
   zatrudnienieWgPrzedmiotu: WierszZatrudnienia[];
   podsumowanieCalejSzkoly?: PodsumowanieCalejSzkoly;
 }
+
+const SELECT_CLASS = 'w-full border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink';
 
 export default function ZapotrzebowanieKadrowePage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
@@ -164,158 +168,100 @@ export default function ZapotrzebowanieKadrowePage() {
   }, [dane, ukryjBezGodzin]);
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          Nauczyciele wg przedmiotów
-        </h1>
-        <p className="text-gray-600 text-sm sm:text-base max-w-3xl">
-          W tabeli przedmiotów każdy wiersz liczy nauczycieli <strong>tylko dla
-          tego przedmiotu</strong>. Ten sam nauczyciel może prowadzić kilka
-          przedmiotów (np. matematykę i fizykę) — wtedy w dwóch wierszach widać
-          po jednej osobie, ale <strong>w całej szkole są tylko dwie osoby</strong>.
-          Poniższe podsumowanie to pokazuje.
-        </p>
-      </header>
+    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 space-y-6">
+      <PageHeader
+        title="Nauczyciele wg przedmiotów"
+        description="Ilu nauczycieli potrzeba na każdy przedmiot — z uwzględnieniem łączonych ról."
+      />
+      <p className="text-sm text-ink-soft max-w-3xl leading-relaxed">
+        W tabeli przedmiotów każdy wiersz liczy nauczycieli <strong className="text-ink">tylko dla
+        tego przedmiotu</strong>. Ten sam nauczyciel może prowadzić kilka
+        przedmiotów (np. matematykę i fizykę) — wtedy w dwóch wierszach widać
+        po jednej osobie, ale <strong className="text-ink">w całej szkole są tylko dwie osoby</strong>.
+        Poniższe podsumowanie to pokazuje.
+      </p>
 
-      <section className="flex flex-wrap gap-4 items-end bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+      <Card className="flex flex-wrap gap-4 items-end" padding="sm">
         <div className="min-w-[200px] flex-1">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
-            Typ szkoły
-          </label>
-          <select
-            value={typSzkolyId}
-            onChange={(e) => setTypSzkolyId(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          >
+          <label className="block text-xs font-medium text-ink-faint mb-1" htmlFor="z-typ">Typ szkoły</label>
+          <select id="z-typ" value={typSzkolyId} onChange={(e) => setTypSzkolyId(e.target.value)} className={SELECT_CLASS}>
             <option value="">— wybierz —</option>
             {typySzkol.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nazwa}
-              </option>
+              <option key={t.id} value={t.id}>{t.nazwa}</option>
             ))}
           </select>
         </div>
         <div className="min-w-[220px] flex-1">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
-            Rok / zakres
-          </label>
-          <select
-            value={rokSzkolny}
-            onChange={(e) => setRokSzkolny(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value={ROK_SZKOLNY_WSZYSTKIE}>
-              Wszystkie oddziały (najnowszy rok w komórce)
-            </option>
+          <label className="block text-xs font-medium text-ink-faint mb-1" htmlFor="z-rok">Rok / zakres</label>
+          <select id="z-rok" value={rokSzkolny} onChange={(e) => setRokSzkolny(e.target.value)} className={SELECT_CLASS}>
+            <option value={ROK_SZKOLNY_WSZYSTKIE}>Wszystkie oddziały (najnowszy rok w komórce)</option>
             {dostepneLata.map((r) => (
-              <option key={r} value={r}>
-                Rok szkolny {r}
-              </option>
+              <option key={r} value={r}>Rok szkolny {r}</option>
             ))}
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-ink-soft cursor-pointer">
           <input
             type="checkbox"
             checked={ukryjBezGodzin}
             onChange={(e) => setUkryjBezGodzin(e.target.checked)}
+            className="accent-accent"
           />
           Ukryj przedmioty bez godzin w rozkładzie
         </label>
-      </section>
+      </Card>
 
       {blad && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm">
+        <div className="rounded border border-danger/30 bg-danger-bg text-danger px-4 py-3 text-sm">
           {blad}
         </div>
       )}
 
-      {ladowanie && (
-        <div className="h-32 rounded-xl bg-gray-100 animate-pulse" aria-hidden />
-      )}
+      {ladowanie && <div className="h-32 rounded-card bg-surface-2 animate-pulse" aria-hidden />}
 
       {!ladowanie && dane && typSzkolyId && (
         <>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-faint">
             {dane.nazwaTypuSzkoly ? `${dane.nazwaTypuSzkoly} · ` : ''}
-            {dane.trybWszystkieLata
-              ? 'Wszystkie oddziały typu'
-              : `Rok szkolny ${dane.rokSzkolny}`}
+            {dane.trybWszystkieLata ? 'Wszystkie oddziały typu' : `Rok szkolny ${dane.rokSzkolny}`}
             {' · '}
-            {dane.klasy.length} oddziałów
+            <span className="tabular">{dane.klasy.length}</span> oddziałów
           </p>
 
           {dane.podsumowanieCalejSzkoly && (
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-xl border-2 border-blue-200 bg-blue-50 px-4 py-3">
-                <p className="text-xs font-medium text-blue-900 uppercase tracking-wide">
-                  Nauczycieli w rozkładzie
-                </p>
-                <p className="text-2xl font-bold text-blue-950 tabular-nums">
-                  {dane.podsumowanieCalejSzkoly.roznychNauczycieliWRozkladzie}
-                </p>
-                <p className="text-xs text-blue-800 mt-1">
-                  Różne osoby we wszystkich przedmiotach (np. 2 = polski + mat/fiz
-                  u jednej osoby)
-                </p>
+              <div className="rounded-card border border-accent/30 bg-accent-weak px-4 py-3">
+                <p className="text-xs font-medium text-accent-strong uppercase tracking-wide">Nauczycieli w rozkładzie</p>
+                <p className="text-2xl font-bold text-ink tabular">{dane.podsumowanieCalejSzkoly.roznychNauczycieliWRozkladzie}</p>
+                <p className="text-xs text-ink-soft mt-1">Różne osoby we wszystkich przedmiotach (np. 2 = polski + mat/fiz u jednej osoby)</p>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Suma godzin / tydzień
-                </p>
-                <p className="text-2xl font-bold text-gray-900 tabular-nums">
-                  {dane.podsumowanieCalejSzkoly.lacznaSumaGodzinTygodniowo} h
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Wszystkie zajęcia z macierzy (÷{hEtat} → min.{' '}
-                  {dane.podsumowanieCalejSzkoly.minimalnaOsobZLacznychGodzin}{' '}
-                  osób przy pełnym wykorzystaniu etatu)
-                </p>
+              <div className="rounded-card border border-line bg-surface px-4 py-3">
+                <p className="text-xs font-medium text-ink-faint uppercase tracking-wide">Suma godzin / tydzień</p>
+                <p className="text-2xl font-bold text-ink tabular">{dane.podsumowanieCalejSzkoly.lacznaSumaGodzinTygodniowo} h</p>
+                <p className="text-xs text-ink-faint mt-1">Wszystkie zajęcia z macierzy (÷{hEtat} → min. {dane.podsumowanieCalejSzkoly.minimalnaOsobZLacznychGodzin} osób przy pełnym wykorzystaniu etatu)</p>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Suma „potrzeb” z wierszy
-                </p>
-                <p className="text-2xl font-bold text-gray-900 tabular-nums">
-                  {dane.podsumowanieCalejSzkoly.naiwnaSumaPotrzebZPrzedmiotow}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Gdyby każdy przedmiot liczyć osobno (bez łączenia mat + fiz)
-                </p>
+              <div className="rounded-card border border-line bg-surface px-4 py-3">
+                <p className="text-xs font-medium text-ink-faint uppercase tracking-wide">Suma „potrzeb” z wierszy</p>
+                <p className="text-2xl font-bold text-ink tabular">{dane.podsumowanieCalejSzkoly.naiwnaSumaPotrzebZPrzedmiotow}</p>
+                <p className="text-xs text-ink-faint mt-1">Gdyby każdy przedmiot liczyć osobno (bez łączenia mat + fiz)</p>
               </div>
-              <div
-                className={`rounded-xl border px-4 py-3 ${
-                  dane.podsumowanieCalejSzkoly.laczoneRolePrzedmiotow > 0
-                    ? 'border-amber-300 bg-amber-50'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                  Łączone role
-                </p>
-                <p className="text-2xl font-bold tabular-nums text-gray-900">
-                  {dane.podsumowanieCalejSzkoly.laczoneRolePrzedmiotow}
-                </p>
-                <p className="text-xs text-gray-600 mt-1">
-                  Tyle „stanowisk z wierszy” pokrywa ta sama osoba na kilku
-                  przedmiotach
-                </p>
+              <div className={`rounded-card border px-4 py-3 ${dane.podsumowanieCalejSzkoly.laczoneRolePrzedmiotow > 0 ? 'border-warn/40 bg-warn-bg' : 'border-line bg-surface'}`}>
+                <p className="text-xs font-medium text-ink-soft uppercase tracking-wide">Łączone role</p>
+                <p className="text-2xl font-bold tabular text-ink">{dane.podsumowanieCalejSzkoly.laczoneRolePrzedmiotow}</p>
+                <p className="text-xs text-ink-soft mt-1">Tyle „stanowisk z wierszy” pokrywa ta sama osoba na kilku przedmiotach</p>
               </div>
             </section>
           )}
 
-          <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Ile nauczycieli — wg przedmiotu
-              </h2>
-              <p className="text-xs text-gray-500 mt-1">
-                <strong>W rozkładzie</strong> w wierszu = ile różnych osób uczy{' '}
-                <em>tego</em> przedmiotu.                 Godziny w tabeli poniżej uwzględniają też plan MEiN i przydział (jak
+          <section className="rounded-card border border-line bg-surface shadow-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-line bg-surface-2">
+              <h2 className="font-display text-base font-semibold text-ink">Ile nauczycieli — wg przedmiotu</h2>
+              <p className="text-xs text-ink-faint mt-1">
+                <strong className="text-ink-soft">W rozkładzie</strong> w wierszu = ile różnych osób uczy{' '}
+                <em>tego</em> przedmiotu. Godziny w tabeli poniżej uwzględniają też plan MEiN i przydział (jak
                 w Dyspozycji), gdy w rozkładzie jeszcze nikogo nie ma.{' '}
-                <strong>Potrzeba</strong> = max( suma godzin
-                ÷ {hEtat}, max wpisów w jednym oddziale). <strong>Brakuje</strong> w
+                <strong className="text-ink-soft">Potrzeba</strong> = max( suma godzin
+                ÷ {hEtat}, max wpisów w jednym oddziale). <strong className="text-ink-soft">Brakuje</strong> w
                 wierszu = tylko w obrębie tego przedmiotu — nie oznacza, że w szkole
                 brakuje kolejnej osoby, jeśli ktoś inny już prowadzi inny przedmiot.
               </p>
@@ -323,7 +269,7 @@ export default function ZapotrzebowanieKadrowePage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200">
+                  <tr className="text-left text-xs uppercase tracking-wide text-ink-faint border-b border-line">
                     <th className="px-4 py-3 font-medium">Przedmiot</th>
                     <th className="px-3 py-3 font-medium text-right">Σ h/tyg</th>
                     <th className="px-3 py-3 font-medium text-center">Oddziały</th>
@@ -337,55 +283,33 @@ export default function ZapotrzebowanieKadrowePage() {
                 <tbody>
                   {zatrudnienieWidok.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={8} className="px-4 py-8 text-center text-ink-faint">
                         Brak danych — sprawdź rozkład godzin lub odznacz filtr ukrywania.
                       </td>
                     </tr>
                   ) : (
                     zatrudnienieWidok.map((z) => (
-                      <tr
-                        key={z.przedmiotId}
-                        className="border-b border-gray-100 hover:bg-gray-50/80"
-                      >
-                        <td className="px-4 py-2.5 font-medium text-gray-900">
-                          <Link
-                            href={`/przedmioty/${z.przedmiotId}`}
-                            className="text-blue-700 hover:underline"
-                          >
-                            {z.przedmiotNazwa}
-                          </Link>
+                      <tr key={z.przedmiotId} className="border-b border-line hover:bg-surface-2">
+                        <td className="px-4 py-2.5 font-medium text-ink">
+                          <Link href={`/przedmioty/${z.przedmiotId}`} className="text-accent hover:text-accent-strong">{z.przedmiotNazwa}</Link>
                         </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums">
-                          {z.sumaGodzinTygodniowo}
-                        </td>
-                        <td className="px-3 py-2.5 text-center tabular-nums">
-                          {z.oddzialyZZajeciami}
-                        </td>
-                        <td className="px-3 py-2.5 text-center tabular-nums">
-                          {z.roznychNauczycieliWRozkladzie}
-                        </td>
-                        <td className="px-3 py-2.5 text-center tabular-nums">
+                        <td className="px-3 py-2.5 text-right tabular">{z.sumaGodzinTygodniowo}</td>
+                        <td className="px-3 py-2.5 text-center tabular">{z.oddzialyZZajeciami}</td>
+                        <td className="px-3 py-2.5 text-center tabular">{z.roznychNauczycieliWRozkladzie}</td>
+                        <td className="px-3 py-2.5 text-center tabular">
                           {z.maxRownoleglychWpisowWJednymOddziale > 1 ? (
-                            <span className="font-semibold text-amber-800">
-                              {z.maxRownoleglychWpisowWJednymOddziale}
-                            </span>
+                            <span className="font-semibold text-warn">{z.maxRownoleglychWpisowWJednymOddziale}</span>
                           ) : (
                             z.maxRownoleglychWpisowWJednymOddziale
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-center tabular-nums text-gray-600">
-                          {z.etatyZSumyGodzin}
-                        </td>
-                        <td className="px-3 py-2.5 text-center tabular-nums font-semibold">
-                          {z.sugerowanaPotrzebaNauczycieli}
-                        </td>
+                        <td className="px-3 py-2.5 text-center tabular text-ink-soft">{z.etatyZSumyGodzin}</td>
+                        <td className="px-3 py-2.5 text-center tabular font-semibold text-ink">{z.sugerowanaPotrzebaNauczycieli}</td>
                         <td className="px-4 py-2.5 text-center">
                           {z.brakujeNauczycieli > 0 ? (
-                            <span className="inline-flex items-center justify-center min-w-[2rem] rounded-full bg-red-100 text-red-800 font-bold text-sm px-2 py-0.5">
-                              {z.brakujeNauczycieli}
-                            </span>
+                            <span className="inline-flex items-center justify-center min-w-[2rem] rounded-full bg-danger-bg text-danger font-bold text-sm px-2 py-0.5">{z.brakujeNauczycieli}</span>
                           ) : (
-                            <span className="text-gray-400">0</span>
+                            <span className="text-ink-faint">0</span>
                           )}
                         </td>
                       </tr>
@@ -396,12 +320,10 @@ export default function ZapotrzebowanieKadrowePage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Wszystkie oddziały — godziny tygodniowo
-              </h2>
-              <p className="text-xs text-gray-500 mt-1">
+          <section className="rounded-card border border-line bg-surface shadow-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-line bg-surface-2">
+              <h2 className="font-display text-base font-semibold text-ink">Wszystkie oddziały — godziny tygodniowo</h2>
+              <p className="text-xs text-ink-faint mt-1">
                 Liczba po slashu = tyle wpisów (nauczycieli) w rozkładzie w tej
                 komórce. Pomarańczowa komórka = godziny z planu/przydziału, ale brak
                 nauczyciela w rozkładzie. Pusty = brak zajęć.
@@ -410,110 +332,65 @@ export default function ZapotrzebowanieKadrowePage() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm border-collapse">
                 <thead>
-                  <tr className="bg-gray-100">
-                    <th className="sticky left-0 z-10 bg-gray-100 border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700 min-w-[140px]">
-                      Przedmiot
-                    </th>
+                  <tr className="bg-surface-2">
+                    <th className="sticky left-0 z-10 bg-surface-2 border border-line px-3 py-2 text-left font-semibold text-ink-soft min-w-[140px]">Przedmiot</th>
                     {dane.klasy.map((k) => (
-                      <th
-                        key={k.id}
-                        className="border border-gray-200 px-2 py-2 text-center font-semibold text-gray-700 whitespace-nowrap"
-                        title={k.profil || undefined}
-                      >
+                      <th key={k.id} className="border border-line px-2 py-2 text-center font-semibold text-ink-soft whitespace-nowrap" title={k.profil || undefined}>
                         <span className="block">{k.nazwa}</span>
-                        {k.profil && (
-                          <span className="block font-normal text-gray-500 text-[10px] leading-tight">
-                            {k.profil}
-                          </span>
-                        )}
+                        {k.profil && <span className="block font-normal text-ink-faint text-[10px] leading-tight">{k.profil}</span>}
                       </th>
                     ))}
-                    <th className="border border-gray-200 px-3 py-2 text-center font-semibold bg-gray-200 text-gray-800">
-                      Σ
-                    </th>
+                    <th className="border border-line px-3 py-2 text-center font-semibold bg-line text-ink">Σ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {macierzWidok.map((w, ri) => (
-                    <tr
-                      key={w.przedmiotId}
-                      className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}
-                    >
-                      <td className="sticky left-0 z-10 border border-gray-200 px-3 py-2 font-medium bg-inherit">
-                        <Link
-                          href={`/przedmioty/${w.przedmiotId}`}
-                          className="text-blue-700 hover:underline"
-                        >
-                          {w.przedmiotNazwa}
-                        </Link>
+                    <tr key={w.przedmiotId} className={ri % 2 === 0 ? 'bg-surface' : 'bg-surface-2'}>
+                      <td className="sticky left-0 z-10 border border-line px-3 py-2 font-medium bg-inherit">
+                        <Link href={`/przedmioty/${w.przedmiotId}`} className="text-accent hover:text-accent-strong">{w.przedmiotNazwa}</Link>
                       </td>
                       {w.klasy.map((kom) => (
                         <td
                           key={kom.klasaId}
-                          className={`border border-gray-200 px-2 py-2 text-center tabular-nums ${
+                          className={`border border-line px-2 py-2 text-center tabular ${
                             kom.godzinyTygodniowo === 0
-                              ? 'text-gray-300 bg-gray-50'
+                              ? 'text-ink-faint bg-surface-2'
                               : kom.brakWRozkladzie
-                                ? 'text-amber-950 bg-amber-50'
-                                : 'text-gray-900'
+                                ? 'text-warn bg-warn-bg'
+                                : 'text-ink'
                           }`}
-                          title={
-                            kom.brakWRozkladzie
-                              ? `Plan/przydział: ${kom.godzinyZPlanuPrzydzialu ?? kom.godzinyTygodniowo} h/tyg., brak wpisu w rozkładzie`
-                              : undefined
-                          }
+                          title={kom.brakWRozkladzie ? `Plan/przydział: ${kom.godzinyZPlanuPrzydzialu ?? kom.godzinyTygodniowo} h/tyg., brak wpisu w rozkładzie` : undefined}
                         >
                           {kom.godzinyTygodniowo > 0 ? (
                             <>
-                              <span className="font-semibold">
-                                {kom.godzinyTygodniowo}h
-                              </span>
-                              {kom.brakWRozkladzie && (
-                                <span className="block text-[10px] text-amber-800 font-medium">
-                                  brak w rozkł.
-                                </span>
+                              <span className="font-semibold">{kom.godzinyTygodniowo}h</span>
+                              {kom.brakWRozkladzie && <span className="block text-[10px] text-warn font-medium">brak w rozkł.</span>}
+                              {!kom.brakWRozkladzie && kom.liczbaNauczycieli > 1 && (
+                                <span className="block text-[10px] text-warn font-medium">/ {kom.liczbaNauczycieli} naucz.</span>
                               )}
-                              {!kom.brakWRozkladzie &&
-                                kom.liczbaNauczycieli > 1 && (
-                                  <span className="block text-[10px] text-amber-800 font-medium">
-                                    / {kom.liczbaNauczycieli} naucz.
-                                  </span>
-                                )}
                             </>
                           ) : (
                             '—'
                           )}
                         </td>
                       ))}
-                      <td className="border border-gray-200 px-2 py-2 text-center font-semibold bg-gray-100 tabular-nums">
-                        {w.sumaGodzinTygodniowo}h
-                      </td>
+                      <td className="border border-line px-2 py-2 text-center font-semibold bg-surface-2 tabular">{w.sumaGodzinTygodniowo}h</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-gray-200 font-semibold text-gray-900">
-                    <td className="sticky left-0 z-10 bg-gray-200 border border-gray-300 px-3 py-2">
-                      Suma w oddziale
-                    </td>
+                  <tr className="bg-line font-semibold text-ink">
+                    <td className="sticky left-0 z-10 bg-line border border-line-strong px-3 py-2">Suma w oddziale</td>
                     {dane.klasy.map((k) => {
                       const suma = macierzWidok.reduce(
-                        (s, w) =>
-                          s +
-                          (w.klasy.find((x) => x.klasaId === k.id)
-                            ?.godzinyTygodniowo || 0),
+                        (s, w) => s + (w.klasy.find((x) => x.klasaId === k.id)?.godzinyTygodniowo || 0),
                         0
                       );
                       return (
-                        <td
-                          key={k.id}
-                          className="border border-gray-300 px-2 py-2 text-center tabular-nums"
-                        >
-                          {suma}h
-                        </td>
+                        <td key={k.id} className="border border-line-strong px-2 py-2 text-center tabular">{suma}h</td>
                       );
                     })}
-                    <td className="border border-gray-300 px-2 py-2 text-center tabular-nums bg-gray-300">
+                    <td className="border border-line-strong px-2 py-2 text-center tabular bg-line-strong">
                       {macierzWidok.reduce((s, w) => s + w.sumaGodzinTygodniowo, 0)}h
                     </td>
                   </tr>
@@ -525,7 +402,7 @@ export default function ZapotrzebowanieKadrowePage() {
       )}
 
       {!ladowanie && typSzkolyId && dane && dane.klasy.length === 0 && (
-        <p className="text-gray-500 text-sm">
+        <p className="text-ink-faint text-sm">
           Brak oddziałów dla wybranego typu i roku. Spróbuj „Wszystkie oddziały”
           albo inny rok szkolny.
         </p>
