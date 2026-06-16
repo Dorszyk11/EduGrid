@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface TypSzkoly {
   id: string | number;
@@ -288,18 +289,20 @@ export default function PanelAdminaPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Panel admina</h1>
+      <div className="mb-6">
+        <PageHeader title="Panel admina" />
+      </div>
 
       {msg && (
         <div
-          className={`mb-6 px-4 py-3 rounded-lg ${
-            msg.type === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          className={`mb-6 px-4 py-3 rounded ${
+            msg.type === 'ok' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'
           }`}
         >
           {msg.text}
           {msg.type === 'ok' && msg.text.includes('Klasa') && (
             <span className="block mt-2">
-              <Link href="/klasy" className="text-green-700 underline font-medium">
+              <Link href="/klasy" className="text-ok underline font-medium">
                 Przejdź do listy klas →
               </Link>
             </span>
@@ -308,30 +311,30 @@ export default function PanelAdminaPage() {
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-gray-500">Ładowanie…</div>
+        <div className="py-12 text-center text-ink-faint">Ładowanie…</div>
       ) : (
         <div className="space-y-12">
           {/* Szkoły – ukryte (display: none) */}
-          <section className="hidden bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Typy szkół</h2>
-              <p className="text-sm text-gray-600 mt-0.5">Dodaj nowy typ szkoły (nazwa, liczba lat, kod MEiN).</p>
+          <section className="hidden bg-surface rounded-card shadow-card border border-line overflow-hidden">
+            <div className="px-5 py-4 bg-surface-2 border-b border-line">
+              <h2 className="text-lg font-semibold text-ink">Typy szkół</h2>
+              <p className="text-sm text-ink-soft mt-0.5">Dodaj nowy typ szkoły (nazwa, liczba lat, kod MEiN).</p>
             </div>
             <div className="p-5 space-y-5">
               <div className="hidden">
                 <form onSubmit={handleAddSzkola} className="flex flex-wrap gap-3 items-end">
                   <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Nazwa</span>
+                    <span className="text-sm font-medium text-ink-soft">Nazwa</span>
                     <input
                       type="text"
                       value={formSzkola.nazwa}
                       onChange={(e) => setFormSzkola((s) => ({ ...s, nazwa: e.target.value }))}
                       placeholder="np. Liceum ogólnokształcące"
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-64"
+                      className="rounded border border-line-strong px-3 py-2 w-64"
                     />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Liczba lat</span>
+                    <span className="text-sm font-medium text-ink-soft">Liczba lat</span>
                     <input
                       type="number"
                       min={1}
@@ -339,23 +342,23 @@ export default function PanelAdminaPage() {
                       value={formSzkola.liczba_lat}
                       onChange={(e) => setFormSzkola((s) => ({ ...s, liczba_lat: e.target.value }))}
                       placeholder="4"
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-24"
+                      className="rounded border border-line-strong px-3 py-2 w-24"
                     />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-gray-700">Kod MEiN</span>
+                    <span className="text-sm font-medium text-ink-soft">Kod MEiN</span>
                     <input
                       type="text"
                       value={formSzkola.kod_mein}
                       onChange={(e) => setFormSzkola((s) => ({ ...s, kod_mein: e.target.value }))}
                       placeholder="LO"
-                      className="rounded-lg border border-gray-300 px-3 py-2 w-28"
+                      className="rounded border border-line-strong px-3 py-2 w-28"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={submittingSzkola}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                    className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-strong font-medium disabled:opacity-50"
                   >
                     {submittingSzkola ? 'Dodawanie…' : 'Dodaj szkołę'}
                   </button>
@@ -364,25 +367,25 @@ export default function PanelAdminaPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50/80">
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwa</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Kod MEiN</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Lata</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
+                    <tr className="border-b border-line bg-surface-2">
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Nazwa</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Kod MEiN</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Lata</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft text-right w-24">Akcje</th>
                     </tr>
                   </thead>
                   <tbody>
                     {szkoly.map((s) => (
-                      <tr key={String(s.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                        <td className="px-4 py-2 font-medium text-gray-900">{s.nazwa}</td>
-                        <td className="px-4 py-2 text-gray-600">{s.kod_mein ?? '–'}</td>
-                        <td className="px-4 py-2 text-gray-600">{s.liczba_lat ?? '–'}</td>
+                      <tr key={String(s.id)} className="border-b border-line last:border-0 hover:bg-surface-2">
+                        <td className="px-4 py-2 font-medium text-ink">{s.nazwa}</td>
+                        <td className="px-4 py-2 text-ink-soft">{s.kod_mein ?? '–'}</td>
+                        <td className="px-4 py-2 text-ink-soft">{s.liczba_lat ?? '–'}</td>
                         <td className="px-4 py-2 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteSzkola(s)}
                             disabled={deletingId === String(s.id)}
-                            className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
+                            className="text-sm text-danger hover:bg-danger-bg px-2 py-1 rounded disabled:opacity-50"
                           >
                             {deletingId === String(s.id) ? '…' : 'Usuń'}
                           </button>
@@ -392,28 +395,28 @@ export default function PanelAdminaPage() {
                   </tbody>
                 </table>
                 {szkoly.length === 0 && (
-                  <p className="py-6 text-center text-gray-500 text-sm">Brak typów szkół. Dodaj pierwszy powyżej.</p>
+                  <p className="py-6 text-center text-ink-faint text-sm">Brak typów szkół. Dodaj pierwszy powyżej.</p>
                 )}
               </div>
             </div>
           </section>
 
           {/* Klasy */}
-          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Dodawanie klas</h2>
-              <p className="text-sm text-gray-600 mt-0.5">
+          <section className="bg-surface rounded-card shadow-card border border-line overflow-hidden">
+            <div className="px-5 py-4 bg-surface-2 border-b border-line">
+              <h2 className="text-lg font-semibold text-ink">Dodawanie klas</h2>
+              <p className="text-sm text-ink-soft mt-0.5">
                 Jedna klasa = jeden cykl (np. technikum 5 lat → rok początku 2022, rok końca 2027). Wybierz typ szkoły – na tej podstawie obliczy się koniec cyklu (początek + liczba lat).
               </p>
             </div>
             <div className="p-5 space-y-5">
               <form onSubmit={handleAddKlasa} className="flex flex-wrap gap-4 items-end">
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Rodzaj szkoły (typ)</span>
+                  <span className="text-sm font-medium text-ink-soft">Rodzaj szkoły (typ)</span>
                   <select
                     value={formKlasa.typSzkolyId}
                     onChange={(e) => setFormKlasa((prev) => ({ ...prev, typSzkolyId: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-64"
+                    className="rounded border border-line-strong px-3 py-2 w-64"
                   >
                     <option value="">— wybierz typ szkoły —</option>
                     {szkoly.map((s) => (
@@ -426,11 +429,11 @@ export default function PanelAdminaPage() {
                 {liczbaLat > 0 && (
                   <>
                     <label className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-gray-700">Rok początku cyklu</span>
+                      <span className="text-sm font-medium text-ink-soft">Rok początku cyklu</span>
                       <select
                         value={formKlasa.rokPoczatku}
                         onChange={(e) => setFormKlasa((s) => ({ ...s, rokPoczatku: e.target.value }))}
-                        className="rounded-lg border border-gray-300 px-3 py-2 w-24"
+                        className="rounded border border-line-strong px-3 py-2 w-24"
                       >
                         <option value="">—</option>
                         {opcjeRokuPoczatku().map((y) => (
@@ -440,17 +443,17 @@ export default function PanelAdminaPage() {
                     </label>
                     {rokKonca != null && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-gray-500">Rok końca cyklu</span>
-                        <span className="text-sm font-semibold text-gray-700">{rokKonca}</span>
-                        <span className="text-xs text-gray-500">(zakres: {formKlasa.rokPoczatku}–{rokKonca})</span>
+                        <span className="text-sm font-medium text-ink-faint">Rok końca cyklu</span>
+                        <span className="text-sm font-semibold text-ink-soft">{rokKonca}</span>
+                        <span className="text-xs text-ink-faint">(zakres: {formKlasa.rokPoczatku}–{rokKonca})</span>
                       </div>
                     )}
                     <label className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-gray-700">Litera (np. A, B, C)</span>
+                      <span className="text-sm font-medium text-ink-soft">Litera (np. A, B, C)</span>
                       <select
                         value={formKlasa.litera}
                         onChange={(e) => setFormKlasa((s) => ({ ...s, litera: e.target.value }))}
-                        className="rounded-lg border border-gray-300 px-3 py-2 w-20"
+                        className="rounded border border-line-strong px-3 py-2 w-20"
                       >
                         {LITERY_KLAS.map((l) => (
                           <option key={l} value={l}>{l}</option>
@@ -458,19 +461,19 @@ export default function PanelAdminaPage() {
                       </select>
                     </label>
                     <label className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-gray-700">Profil (opcjonalnie)</span>
+                      <span className="text-sm font-medium text-ink-soft">Profil (opcjonalnie)</span>
                       <input
                         type="text"
                         value={formKlasa.profil}
                         onChange={(e) => setFormKlasa((s) => ({ ...s, profil: e.target.value }))}
                         placeholder="np. matematyczno-fizyczny"
-                        className="rounded-lg border border-gray-300 px-3 py-2 w-48"
+                        className="rounded border border-line-strong px-3 py-2 w-48"
                       />
                     </label>
                     <button
                       type="submit"
                       disabled={submittingKlasa || !formKlasa.rokPoczatku}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                      className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-strong font-medium disabled:opacity-50"
                     >
                       {submittingKlasa ? 'Dodawanie…' : 'Dodaj klasę'}
                     </button>
@@ -478,38 +481,38 @@ export default function PanelAdminaPage() {
                 )}
               </form>
               {formKlasa.typSzkolyId && liczbaLat === 0 && (
-                <p className="text-sm text-amber-600">Wybrany typ szkoły nie ma ustawionej liczby lat – ustaw ją w sekcji Typy szkół.</p>
+                <p className="text-sm text-warn">Wybrany typ szkoły nie ma ustawionej liczby lat – ustaw ją w sekcji Typy szkół.</p>
               )}
               <div className="overflow-x-auto mt-6">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50/80">
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwa</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Typ szkoły</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Rok szkolny (zakres)</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Profil</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
+                    <tr className="border-b border-line bg-surface-2">
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Nazwa</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Typ szkoły</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Rok szkolny (zakres)</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Profil</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft text-right w-24">Akcje</th>
                     </tr>
                   </thead>
                   <tbody>
                     {klasy.map((k) => (
-                      <tr key={String(k.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                        <td className="px-4 py-2 font-medium text-gray-900">{k.nazwa}</td>
-                        <td className="px-4 py-2 text-gray-600">{k.typ_szkoly?.nazwa ?? '–'}</td>
-                        <td className="px-4 py-2 text-gray-600">{k.rok_szkolny}</td>
-                        <td className="px-4 py-2 text-gray-600">{k.profil ?? '–'}</td>
+                      <tr key={String(k.id)} className="border-b border-line last:border-0 hover:bg-surface-2">
+                        <td className="px-4 py-2 font-medium text-ink">{k.nazwa}</td>
+                        <td className="px-4 py-2 text-ink-soft">{k.typ_szkoly?.nazwa ?? '–'}</td>
+                        <td className="px-4 py-2 text-ink-soft">{k.rok_szkolny}</td>
+                        <td className="px-4 py-2 text-ink-soft">{k.profil ?? '–'}</td>
                         <td className="px-4 py-2 text-right">
                           {k.can_manage !== false ? (
                             <button
                               type="button"
                               onClick={() => handleDeleteKlasa(k)}
                               disabled={deletingKlasaId === String(k.id)}
-                              className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
+                              className="text-sm text-danger hover:bg-danger-bg px-2 py-1 rounded disabled:opacity-50"
                             >
                               {deletingKlasaId === String(k.id) ? '…' : 'Usuń'}
                             </button>
                           ) : (
-                            <span className="text-sm text-gray-400" title="Tylko konto twórcy może usunąć tę klasę">–</span>
+                            <span className="text-sm text-ink-faint" title="Tylko konto twórcy może usunąć tę klasę">–</span>
                           )}
                         </td>
                       </tr>
@@ -517,44 +520,44 @@ export default function PanelAdminaPage() {
                   </tbody>
                 </table>
                 {klasy.length === 0 && (
-                  <p className="py-6 text-center text-gray-500 text-sm">Brak klas. Dodaj pierwszą powyżej.</p>
+                  <p className="py-6 text-center text-ink-faint text-sm">Brak klas. Dodaj pierwszą powyżej.</p>
                 )}
               </div>
             </div>
           </section>
 
           {/* Nauczyciele */}
-          <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Nauczyciele</h2>
-              <p className="text-sm text-gray-600 mt-0.5">
+          <section className="bg-surface rounded-card shadow-card border border-line overflow-hidden">
+            <div className="px-5 py-4 bg-surface-2 border-b border-line">
+              <h2 className="text-lg font-semibold text-ink">Nauczyciele</h2>
+              <p className="text-sm text-ink-soft mt-0.5">
                 Dodaj nauczyciela: imię, nazwisko, limit godzin i specjalizację (przedmioty z listy).
               </p>
             </div>
             <div className="p-5 space-y-5">
               <form onSubmit={handleAddNauczyciel} className="flex flex-wrap gap-4 items-end">
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Imię</span>
+                  <span className="text-sm font-medium text-ink-soft">Imię</span>
                   <input
                     type="text"
                     value={formNauczyciel.imie}
                     onChange={(e) => setFormNauczyciel((s) => ({ ...s, imie: e.target.value }))}
                     placeholder="np. Jan"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-40"
+                    className="rounded border border-line-strong px-3 py-2 w-40"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Nazwisko</span>
+                  <span className="text-sm font-medium text-ink-soft">Nazwisko</span>
                   <input
                     type="text"
                     value={formNauczyciel.nazwisko}
                     onChange={(e) => setFormNauczyciel((s) => ({ ...s, nazwisko: e.target.value }))}
                     placeholder="np. Kowalski"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-44"
+                    className="rounded border border-line-strong px-3 py-2 w-44"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-gray-700">Limit godzin (tyg.)</span>
+                  <span className="text-sm font-medium text-ink-soft">Limit godzin (tyg.)</span>
                   <input
                     type="number"
                     min={0}
@@ -565,18 +568,18 @@ export default function PanelAdminaPage() {
                       setFormNauczyciel((s) => ({ ...s, limitGodzin: parseFloat(e.target.value) || 18 }))
                     }
                     placeholder="18"
-                    className="rounded-lg border border-gray-300 px-3 py-2 w-24"
+                    className="rounded border border-line-strong px-3 py-2 w-24"
                   />
                 </label>
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-gray-700">Specjalizacja (przedmioty)</span>
+                  <span className="text-sm font-medium text-ink-soft">Specjalizacja (przedmioty)</span>
                   {przedmioty.length === 0 ? (
-                    <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded border border-amber-200 w-48 max-w-full">
+                    <p className="text-xs text-warn bg-warn-bg px-2 py-1.5 rounded border border-line w-48 max-w-full">
                       Brak przedmiotów w bazie – nie można wybrać specjalizacji, dopóki nie pojawią się rekordy przedmiotów (np. z migracji lub seed).
                     </p>
                   ) : (
-                    <div className="rounded border border-gray-300 bg-gray-50/50 w-48">
-                      <div className="p-1 flex flex-wrap gap-x-1 gap-y-0 max-h-20 overflow-y-auto border-b border-gray-200">
+                    <div className="rounded border border-line-strong bg-surface-2 w-48">
+                      <div className="p-1 flex flex-wrap gap-x-1 gap-y-0 max-h-20 overflow-y-auto border-b border-line">
                         {przedmioty
                           .filter((p) =>
                             !searchPrzedmioty.trim() ||
@@ -585,7 +588,7 @@ export default function PanelAdminaPage() {
                           .map((p) => (
                           <label
                             key={String(p.id)}
-                            className="flex items-center gap-1 py-0.5 px-1 rounded hover:bg-gray-100 cursor-pointer text-[11px] text-gray-800"
+                            className="flex items-center gap-1 py-0.5 px-1 rounded hover:bg-surface-2 cursor-pointer text-[11px] text-ink"
                           >
                             <input
                               type="checkbox"
@@ -599,7 +602,7 @@ export default function PanelAdminaPage() {
                                     : s.przedmiotyIds.filter((x) => x !== id),
                                 }));
                               }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                              className="rounded border-line-strong text-accent focus:ring-accent w-3 h-3"
                             />
                             <span>{p.nazwa}</span>
                           </label>
@@ -610,10 +613,10 @@ export default function PanelAdminaPage() {
                         placeholder="Szukaj przedmiotu…"
                         value={searchPrzedmioty}
                         onChange={(e) => setSearchPrzedmioty(e.target.value)}
-                        className="w-full px-2 py-1 text-xs rounded-b focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-2 py-1 text-xs rounded-b focus:ring-1 focus:ring-accent focus:border-accent"
                       />
                       {formNauczyciel.przedmiotyIds.length > 0 && (
-                        <p className="text-[10px] text-gray-500 px-1 pb-1 pt-0.5 border-t border-gray-200">
+                        <p className="text-[10px] text-ink-faint px-1 pb-1 pt-0.5 border-t border-line">
                           Wybrano: {formNauczyciel.przedmiotyIds.length}
                         </p>
                       )}
@@ -623,7 +626,7 @@ export default function PanelAdminaPage() {
                 <button
                   type="submit"
                   disabled={submittingNauczyciel}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                  className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-strong font-medium disabled:opacity-50"
                 >
                   {submittingNauczyciel ? 'Dodawanie…' : 'Dodaj nauczyciela'}
                 </button>
@@ -631,21 +634,21 @@ export default function PanelAdminaPage() {
               <div className="overflow-x-auto mt-6">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50/80">
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Imię</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Nazwisko</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Limit godz.</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600">Specjalizacja</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-600 text-right w-24">Akcje</th>
+                    <tr className="border-b border-line bg-surface-2">
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Imię</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Nazwisko</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Limit godz.</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft">Specjalizacja</th>
+                      <th className="px-4 py-2 text-sm font-medium text-ink-soft text-right w-24">Akcje</th>
                     </tr>
                   </thead>
                   <tbody>
                     {nauczyciele.map((n) => (
-                      <tr key={String(n.id)} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                        <td className="px-4 py-2 font-medium text-gray-900">{n.imie}</td>
-                        <td className="px-4 py-2 font-medium text-gray-900">{n.nazwisko}</td>
-                        <td className="px-4 py-2 text-gray-700">{n.max_obciazenie ?? 18}</td>
-                        <td className="px-4 py-2 text-gray-600">
+                      <tr key={String(n.id)} className="border-b border-line last:border-0 hover:bg-surface-2">
+                        <td className="px-4 py-2 font-medium text-ink">{n.imie}</td>
+                        <td className="px-4 py-2 font-medium text-ink">{n.nazwisko}</td>
+                        <td className="px-4 py-2 text-ink-soft">{n.max_obciazenie ?? 18}</td>
+                        <td className="px-4 py-2 text-ink-soft">
                           {n.przedmioty?.length
                             ? n.przedmioty.map((p) => p.nazwa ?? p.id).join(', ')
                             : '–'}
@@ -655,7 +658,7 @@ export default function PanelAdminaPage() {
                             type="button"
                             onClick={() => handleDeleteNauczyciel(n)}
                             disabled={deletingNauczycielId === String(n.id)}
-                            className="text-sm text-red-600 hover:bg-red-50 px-2 py-1 rounded disabled:opacity-50"
+                            className="text-sm text-danger hover:bg-danger-bg px-2 py-1 rounded disabled:opacity-50"
                           >
                             {deletingNauczycielId === String(n.id) ? '…' : 'Usuń'}
                           </button>
@@ -665,7 +668,7 @@ export default function PanelAdminaPage() {
                   </tbody>
                 </table>
                 {nauczyciele.length === 0 && (
-                  <p className="py-6 text-center text-gray-500 text-sm">Brak nauczycieli. Dodaj pierwszego powyżej.</p>
+                  <p className="py-6 text-center text-ink-faint text-sm">Brak nauczycieli. Dodaj pierwszego powyżej.</p>
                 )}
               </div>
             </div>
