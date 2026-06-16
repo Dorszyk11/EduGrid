@@ -255,8 +255,18 @@ export default function DyspozycjaPage() {
       fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(selectedClass.id)}`, { cache: 'no-store' }).then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed')))),
       fetch('/api/przedmioty', { cache: 'no-store' }).then((r) => r.json()),
     ])
-      .then(([data, przedmiotyRes]) => {
-        const d = data as any;
+      .then(([data, przedmiotyRes]: [unknown, unknown]) => {
+        const d = data as {
+          przydzial?: Record<string, Record<string, number>>;
+          dyrektor?: Record<string, Record<string, number>>;
+          doradztwo?: Record<string, Record<string, number>>;
+          rozszerzenia?: string[];
+          rozszerzeniaPrzydzial?: Record<string, Record<string, number>>;
+          podzialNaGrupy?: Record<string, Record<string, boolean>>;
+          przydzialGrupy?: Record<string, Record<string, { 1?: number; 2?: number }>>;
+          dyrektorGrupy?: Record<string, Record<string, { 1?: number; 2?: number }>>;
+          rozszerzeniaGrupy?: Record<string, Record<string, { 1?: number; 2?: number }>>;
+        };
         setPrzydzialData({
           przydzial: d.przydzial && typeof d.przydzial === 'object' ? d.przydzial : {},
           dyrektor: d.dyrektor && typeof d.dyrektor === 'object' ? d.dyrektor : {},
@@ -268,10 +278,15 @@ export default function DyspozycjaPage() {
           dyrektorGrupy: d.dyrektorGrupy && typeof d.dyrektorGrupy === 'object' ? d.dyrektorGrupy : {},
           rozszerzeniaGrupy: d.rozszerzeniaGrupy && typeof d.rozszerzeniaGrupy === 'object' ? d.rozszerzeniaGrupy : {},
         });
-        const pList = Array.isArray(przedmiotyRes) ? przedmiotyRes : (przedmiotyRes as any)?.przedmioty ?? [];
-        setPrzedmioty(pList.map((p: { id: string; nazwa?: string }) => ({ id: String(p.id), nazwa: p.nazwa ?? '' })));
+        const pList = (Array.isArray(przedmiotyRes)
+          ? przedmiotyRes
+          : (przedmiotyRes as { przedmioty?: unknown[] })?.przedmioty ?? []) as Array<{ id: string; nazwa?: string }>;
+        setPrzedmioty(pList.map((p) => ({ id: String(p.id), nazwa: p.nazwa ?? '' })));
       })
-      .catch(() => setPrzydzialData(null))
+      .catch((err) => {
+        console.error('Nie udało się pobrać przydziału/przedmiotów:', err);
+        setPrzydzialData(null);
+      })
       .finally(() => setLadowaniePrzydzial(false));
   }, [selectedClass?.id]);
 
