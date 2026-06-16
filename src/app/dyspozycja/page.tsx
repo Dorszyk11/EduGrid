@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import plansData from '@/utils/import/ramowe-plany.json';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import Button, { buttonClass } from '@/components/ui/Button';
+
+/** Wspólny styl selektora (tokeny). */
+const SELECT_CLASS =
+  'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 interface TypSzkoly {
   id: string;
@@ -432,21 +439,20 @@ export default function DyspozycjaPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dyspozycja</h1>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded inline-flex items-center justify-center w-fit"
-        >
-          ← Dashboard
-        </Link>
-      </div>
+      <PageHeader
+        title="Dyspozycja"
+        actions={
+          <Link href="/dashboard" className={buttonClass('secondary')}>
+            ← Dashboard
+          </Link>
+        }
+      />
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Wybierz szkołę, rok i klasę</h2>
-        <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+      <Card>
+        <h2 className="mb-4 text-sm font-semibold text-ink">Wybierz szkołę, rok i klasę</h2>
+        <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-end gap-3 sm:gap-4 w-full sm:w-auto">
           <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-sm font-medium text-gray-600">Typ szkoły</label>
+            <label className="text-xs font-medium text-ink-soft">Typ szkoły</label>
             <select
               value={typSzkolyId}
               onChange={(e) => {
@@ -455,7 +461,7 @@ export default function DyspozycjaPage() {
                 setTypSzkolyId(v);
               }}
               disabled={ladowanieTypow}
-              className="w-full sm:w-[220px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+              className={`${SELECT_CLASS} w-full sm:w-[220px]`}
             >
               <option value="">{ladowanieTypow ? 'Ładowanie...' : '— wybierz typ szkoły —'}</option>
               {typySzkol.map((typ) => (
@@ -464,7 +470,7 @@ export default function DyspozycjaPage() {
             </select>
           </div>
           <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-sm font-medium text-gray-600">Rok szkolny</label>
+            <label className="text-xs font-medium text-ink-soft">Rok szkolny</label>
             <select
               value={selectedRocznik}
               onChange={(e) => {
@@ -474,7 +480,7 @@ export default function DyspozycjaPage() {
                 setSelectedLitera('');
               }}
               disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-              className="w-full sm:w-[160px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+              className={`${SELECT_CLASS} w-full sm:w-[160px]`}
             >
               <option value="">{ladowanieKlas ? 'Ładowanie...' : '— rocznik —'}</option>
               {roczniki.map((r) => (
@@ -483,7 +489,7 @@ export default function DyspozycjaPage() {
             </select>
           </div>
           <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-sm font-medium text-gray-600">Klasa</label>
+            <label className="text-xs font-medium text-ink-soft">Klasa</label>
             <select
               value={selectedLitera}
               onChange={(e) => {
@@ -492,7 +498,7 @@ export default function DyspozycjaPage() {
                 setSelectedLitera(v);
               }}
               disabled={!selectedRocznik || literki.length === 0}
-              className="w-full sm:w-[120px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+              className={`${SELECT_CLASS} w-full sm:w-[120px]`}
             >
               <option value="">— klasa —</option>
               {literki.map((l) => (
@@ -502,81 +508,81 @@ export default function DyspozycjaPage() {
           </div>
           {selectedClass && selectedRok && (
             <div className="flex flex-col gap-1 min-w-0">
-              <label className="text-sm font-medium text-gray-600">Rok (w cyklu)</label>
-              <div className="px-3 py-2.5 text-base text-gray-800 bg-gray-50 rounded-lg border border-gray-200">
-                {selectedRok} <span className="text-gray-500 text-sm">(na podstawie aktualnej daty)</span>
+              <label className="text-xs font-medium text-ink-soft">Rok (w cyklu)</label>
+              <div className="rounded border border-line bg-surface-2 px-3 py-2 text-sm text-ink">
+                {selectedRok} <span className="text-ink-faint text-xs">(na podstawie aktualnej daty)</span>
               </div>
             </div>
           )}
         </div>
         {selectedClass && (
-          <p className="mt-4 text-sm text-gray-600">
-            Wybrana klasa: <strong>{selectedClass.nazwa}</strong> ({selectedRocznik})
+          <p className="mt-4 text-sm text-ink-soft">
+            Wybrana klasa: <strong className="text-ink">{selectedClass.nazwa}</strong> ({selectedRocznik})
             {selectedClass.id && (
-              <span className="text-gray-400 ml-2">· id: {selectedClass.id}</span>
+              <span className="text-ink-faint ml-2">· id: {selectedClass.id}</span>
             )}
           </p>
         )}
-      </div>
+      </Card>
 
       {selectedRok && przedmiotyDlaRoku.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <Card>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-1">
+              <h2 className="mb-1 text-sm font-semibold text-ink">
                 Przedmioty i godziny — rok {selectedRok}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-faint">
                 Dane z przydziału dla wybranej klasy (baza + godz. do wyboru + dyrektorskie + rozszerzenia/doradztwo).
               </p>
             </div>
-            <button
+            <Button
               type="button"
+              variant={trybPrzydziel ? 'primary' : 'secondary'}
               onClick={() => setTrybPrzydziel((v) => !v)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${trybPrzydziel ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
             >
               {trybPrzydziel ? 'Anuluj wybór kafelka' : 'Przydziel nauczyciela'}
-            </button>
+            </Button>
           </div>
           {trybPrzydziel && (
-            <p className="text-sm text-blue-600 mb-2">Kliknij kafelek w kolumnie „Do przydzielenia”, aby przypisać nauczyciela.</p>
+            <p className="text-sm text-accent mb-2">Kliknij kafelek w kolumnie „Do przydzielenia”, aby przypisać nauczyciela.</p>
           )}
           {ladowaniePrzydzial && (
-            <p className="text-sm text-amber-600 mb-2">Ładowanie przydziału…</p>
+            <p className="text-sm text-warn mb-2">Ładowanie przydziału…</p>
           )}
           <div className="overflow-x-auto max-w-2xl">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
+            <table className="min-w-full text-sm">
+              <thead className="bg-surface-2">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-ink-soft uppercase tracking-wide">
                     Przedmiot
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-ink-soft uppercase tracking-wide w-24">
                     Godz./tyg
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-ink-soft uppercase tracking-wide w-28">
                     Do przydzielenia
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {przedmiotyDlaRoku.map((row, index) => {
                   const doPrz = row.doPrzydzielenia;
                   const bgClass =
                     doPrz === 0
-                      ? 'bg-green-100 text-green-900'
+                      ? 'bg-ok-bg text-ok'
                       : doPrz === 1
-                        ? 'bg-yellow-100 text-yellow-900'
+                        ? 'bg-warn-bg text-warn'
                         : doPrz >= 2
-                          ? 'bg-red-100 text-red-900'
-                          : 'bg-gray-50 text-gray-700';
+                          ? 'bg-danger-bg text-danger'
+                          : 'bg-surface-2 text-ink-soft';
                   const klikalny = trybPrzydziel;
                   return (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-900">{row.nazwa}</td>
-                      <td className="px-4 py-2 text-right text-gray-700">{row.godziny}</td>
+                    <tr key={index} className="border-t border-line hover:bg-surface-2">
+                      <td className="px-4 py-2 text-ink">{row.nazwa}</td>
+                      <td className="px-4 py-2 text-right text-ink-soft">{row.godziny}</td>
                       <td
-                        className={`px-4 py-2 text-right font-medium ${bgClass} ${klikalny ? 'cursor-pointer hover:ring-2 hover:ring-blue-400 ring-offset-1' : ''}`}
+                        className={`px-4 py-2 text-right font-medium ${bgClass} ${klikalny ? 'cursor-pointer hover:ring-2 hover:ring-accent ring-offset-1' : ''}`}
                         role={klikalny ? 'button' : undefined}
                         onClick={klikalny ? () => otworzModalPrzydziel(row) : undefined}
                       >
@@ -588,22 +594,22 @@ export default function DyspozycjaPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-sm text-gray-500">
+          <p className="mt-3 text-sm text-ink-faint">
             Suma: {przedmiotyDlaRoku.reduce((s, r) => s + r.godziny, 0)} godz./tyg
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Modal przydzielenia nauczyciela */}
       {modalRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Przydziel nauczyciela</h3>
-            <p className="text-sm text-gray-600">
-              Przedmiot: <strong>{modalRow.nazwa}</strong>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
+          <div className="bg-surface rounded-card shadow-pop border border-line max-w-md w-full p-6 space-y-4">
+            <h3 className="text-base font-semibold text-ink">Przydziel nauczyciela</h3>
+            <p className="text-sm text-ink-soft">
+              Przedmiot: <strong className="text-ink">{modalRow.nazwa}</strong>
             </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ilość godzin (tyg.)</label>
+              <label className="block text-xs font-medium text-ink-soft mb-1">Ilość godzin (tyg.)</label>
               <input
                 type="range"
                 min={0.5}
@@ -611,17 +617,17 @@ export default function DyspozycjaPage() {
                 step={0.5}
                 value={modalGodziny}
                 onChange={(e) => setModalGodziny(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-2 bg-line rounded-lg appearance-none cursor-pointer accent-accent"
               />
-              <span className="inline-block mt-1 text-sm font-medium text-gray-800">{modalGodziny}</span>
+              <span className="inline-block mt-1 text-sm font-medium text-ink">{modalGodziny}</span>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nauczyciel (ze specjalizacją)</label>
+              <label className="block text-xs font-medium text-ink-soft mb-1">Nauczyciel (ze specjalizacją)</label>
               <select
                 value={modalNauczycielId}
                 onChange={(e) => setModalNauczycielId(e.target.value)}
                 disabled={nauczycieleLoading}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                className={`${SELECT_CLASS} w-full`}
               >
                 <option value="">{nauczycieleLoading ? 'Ładowanie...' : '— wybierz nauczyciela —'}</option>
                 {!nauczycieleLoading && nauczycieleDlaPrzedmiotu(przedmiotIdDlaNazwy(modalRow.nazwa)).map((n) => (
@@ -631,30 +637,26 @@ export default function DyspozycjaPage() {
                 ))}
               </select>
               {przedmiotIdDlaNazwy(modalRow.nazwa) && nauczycieleDlaPrzedmiotu(przedmiotIdDlaNazwy(modalRow.nazwa)).length === 0 && (
-                <p className="text-xs text-amber-600 mt-1">Brak nauczycieli ze specjalizacją do tego przedmiotu.</p>
+                <p className="text-xs text-warn mt-1">Brak nauczycieli ze specjalizacją do tego przedmiotu.</p>
               )}
             </div>
             {komunikatPrzydziel && (
-              <div className={`p-2 rounded text-sm ${komunikatPrzydziel.typ === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <div className={`p-2 rounded text-sm ${komunikatPrzydziel.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'}`}>
                 {komunikatPrzydziel.tekst}
               </div>
             )}
             <div className="flex gap-3 justify-end pt-2">
-              <button
-                type="button"
-                onClick={zamknijModalPrzydziel}
-                className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
-              >
+              <Button type="button" variant="secondary" onClick={zamknijModalPrzydziel}>
                 Anuluj
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
                 onClick={zapiszPrzydziel}
                 disabled={zapisywanie || !modalNauczycielId || modalGodziny <= 0}
-                className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {zapisywanie ? 'Zapisywanie…' : 'Zapisz'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
