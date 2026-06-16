@@ -33,10 +33,11 @@
   --navy-2: #1e293b;      /* slate-800 */
   --navy-line: #334155;   /* slate-700 — linie na granacie */
 
-  /* Statusy domenowe (zgodność MEiN: OK / NADWYŻKA / BRAK) */
-  --ok: #059669;     --ok-bg: #ecfdf5;
+  /* Statusy domenowe (zgodność MEiN: OK / NADWYŻKA / BRAK).
+     Wartości 700 — AA dla małego tekstu na tincie ORAZ białego tekstu na solidzie. */
+  --ok: #047857;     --ok-bg: #ecfdf5;
   --warn: #b45309;   --warn-bg: #fffbeb;
-  --danger: #dc2626; --danger-bg: #fef2f2;
+  --danger: #b91c1c; --danger-bg: #fef2f2;
 
   /* Typografia (webfonty przez next/font z fallbackiem systemowym) */
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
