@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import plansData from '@/utils/import/ramowe-plany.json';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import { buttonClass } from '@/components/ui/Button';
 
 interface TypSzkoly {
   id: string;
@@ -21,6 +24,8 @@ type HoursByGrade = Record<string, number>;
 type SubjectRow = { subject?: string; hours_by_grade?: HoursByGrade; director_discretion_hours?: unknown };
 type PlanItem = { plan_id?: string; school_type: string; cycle: string; table_structure?: { grades?: string[] }; grades?: string[]; subjects: SubjectRow[] };
 const allPlans: PlanItem[] = (plansData as { plans?: PlanItem[] }).plans ?? [];
+
+const SELECT_CLASS = 'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 function getGradesFromPlan(plan: PlanItem): string[] {
   return plan.table_structure?.grades ?? plan.grades ?? [];
@@ -163,7 +168,7 @@ export default function RealizacjaPage() {
         setTypySzkol(mapped);
         const zap = getZapamietanyTypSzkoly();
         if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
-      } catch (e) {
+      } catch {
         if (ok) setTypySzkol([]);
       } finally {
         if (ok) setLadowanieTypow(false);
@@ -304,23 +309,24 @@ export default function RealizacjaPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Realizacja</h1>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium text-gray-800 inline-flex items-center justify-center w-fit"
-        >
-          ← Dashboard
-        </Link>
-      </div>
+    <div className="p-4 sm:p-6 space-y-5 max-w-full overflow-hidden">
+      <PageHeader
+        title="Realizacja"
+        description="Zrealizowane godziny względem planu dla wybranej klasy."
+        actions={
+          <Link href="/dashboard" className={buttonClass('secondary')}>
+            ← Dashboard
+          </Link>
+        }
+      />
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Wybierz klasę</h2>
+      <Card>
+        <h2 className="font-display text-base font-semibold text-ink mb-4">Wybierz klasę</h2>
         <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
           <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-sm font-medium text-gray-600">Typ szkoły</label>
+            <label className="text-sm font-medium text-ink-soft" htmlFor="r-typ">Typ szkoły</label>
             <select
+              id="r-typ"
               value={typSzkolyId}
               onChange={(e) => {
                 const v = e.target.value;
@@ -328,17 +334,18 @@ export default function RealizacjaPage() {
                 setTypSzkolyId(v);
               }}
               disabled={ladowanieTypow}
-              className="w-full sm:w-[220px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+              className={`w-full sm:w-[220px] ${SELECT_CLASS}`}
             >
-              <option value="">{ladowanieTypow ? 'Ładowanie...' : '— wybierz typ szkoły —'}</option>
+              <option value="">{ladowanieTypow ? 'Ładowanie…' : '— wybierz typ szkoły —'}</option>
               {typySzkol.map((typ) => (
                 <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-sm font-medium text-gray-600">Rok szkolny</label>
+            <label className="text-sm font-medium text-ink-soft" htmlFor="r-rocznik">Rok szkolny</label>
             <select
+              id="r-rocznik"
               value={selectedRocznik}
               onChange={(e) => {
                 const v = e.target.value;
@@ -347,17 +354,18 @@ export default function RealizacjaPage() {
                 setSelectedLitera('');
               }}
               disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-              className="w-full sm:w-[160px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+              className={`w-full sm:w-[160px] ${SELECT_CLASS}`}
             >
-              <option value="">{ladowanieKlas ? 'Ładowanie...' : '— rocznik —'}</option>
+              <option value="">{ladowanieKlas ? 'Ładowanie…' : '— rocznik —'}</option>
               {roczniki.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-sm font-medium text-gray-600">Klasa</label>
+            <label className="text-sm font-medium text-ink-soft" htmlFor="r-klasa">Klasa</label>
             <select
+              id="r-klasa"
               value={selectedLitera}
               onChange={(e) => {
                 const v = e.target.value;
@@ -365,7 +373,7 @@ export default function RealizacjaPage() {
                 setSelectedLitera(v);
               }}
               disabled={!selectedRocznik || literki.length === 0}
-              className="w-full sm:w-[120px] border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-white disabled:opacity-60"
+              className={`w-full sm:w-[120px] ${SELECT_CLASS}`}
             >
               <option value="">— klasa —</option>
               {literki.map((l) => (
@@ -375,149 +383,153 @@ export default function RealizacjaPage() {
           </div>
         </div>
         {selectedClass && (
-          <p className="mt-4 text-sm text-gray-600">
-            Wybrana klasa: <strong>{selectedClass.nazwa}</strong> ({selectedRocznik})
-            {selectedClass.id && <span className="text-gray-400 ml-2">· id: {selectedClass.id}</span>}
+          <p className="mt-4 text-sm text-ink-soft">
+            Wybrana klasa: <strong className="text-ink">{selectedClass.nazwa}</strong> ({selectedRocznik})
+            {selectedClass.id && <span className="text-ink-faint ml-2 tabular">· id: {selectedClass.id}</span>}
           </p>
         )}
-      </div>
+      </Card>
 
       {ladowaniePlanu && selectedClass && (
-        <div className="bg-white rounded-lg shadow p-6 flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-500 border-t-transparent mx-auto" />
-            <p className="mt-3 text-gray-600">Ładowanie planu...</p>
+        <Card>
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-line border-t-accent" />
+              <p className="mt-3 text-ink-soft">Ładowanie planu…</p>
+            </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {!ladowaniePlanu && selectedClass && plan && rokiPlanu.length > 0 && planRzeczywisty.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Plan do realizacji — Klasa {selectedClass.nazwa} ({selectedRocznik})
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Domyślnie 0 — w nawiasie docelowa liczba godzin.
-                  {trybDodajRealizacje && ' Klik = dodaj godzinę, prawy przycisk = usuń realizację.'}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTrybDodajRealizacje((v) => !v)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${trybDodajRealizacje ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                >
-                  {trybDodajRealizacje ? 'Zrealizowane (klikaj komórki)' : 'Dodaj realizację'}
-                </button>
-                <button
-                  type="button"
-                  onClick={zapiszRealizacje}
-                  disabled={zapisywanie}
-                  className="px-4 py-2 rounded-lg font-medium bg-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {zapisywanie ? 'Zapisywanie…' : 'Zapisz realizację'}
-                </button>
-              </div>
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-ink">
+                Plan do realizacji — Klasa {selectedClass.nazwa} ({selectedRocznik})
+              </h2>
+              <p className="text-sm text-ink-soft mt-1">
+                Domyślnie 0 — w nawiasie docelowa liczba godzin.
+                {trybDodajRealizacje && ' Klik = dodaj godzinę, prawy przycisk = usuń realizację.'}
+              </p>
             </div>
-            {komunikatZapis && (
-              <div className={`mb-4 p-3 rounded-lg text-sm ${komunikatZapis.typ === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {komunikatZapis.tekst}
-              </div>
-            )}
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Przedmiot
-                    </th>
-                    {rokiPlanu.map((rok) => (
-                      <th key={rok} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-l border-gray-200">
-                        {rok}
-                      </th>
-                    ))}
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-l border-gray-200">
-                      Razem
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {planRzeczywisty.map((row, index) => {
-                    const sumaDocelowa = rokiPlanu.reduce((s, r) => s + (row.godzinyByGrade[r] ?? 0), 0);
-                    const sumaZrealizowana = rokiPlanu.reduce((s, r) => s + (realizacjaGodziny[String(index)]?.[r] ?? 0), 0);
-                    return (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-900 font-medium whitespace-nowrap border-r border-gray-100">
-                          {row.nazwa}
-                        </td>
-                        {rokiPlanu.map((rok) => {
-                          const docelowe = row.godzinyByGrade[rok] ?? 0;
-                          const zrealizowane = realizacjaGodziny[String(index)]?.[rok] ?? 0;
-                          const brakuje = docelowe - zrealizowane;
-                          const moznaDodac = trybDodajRealizacje;
-                          const moznaUsunac = trybDodajRealizacje && zrealizowane > 0;
-                          const klikalna = moznaDodac || moznaUsunac;
-                          const kolorKomorki =
-                            zrealizowane > docelowe
-                              ? 'bg-blue-200 text-blue-900'
-                              : zrealizowane === docelowe
-                                ? 'bg-green-200 text-green-900'
-                                : brakuje === 1
-                                  ? 'bg-amber-200 text-amber-900'
-                                  : 'bg-red-200 text-red-900';
-                          return (
-                            <td
-                              key={rok}
-                              className={`px-4 py-3 text-center border-l border-gray-100 min-w-[4rem] ${kolorKomorki} ${klikalna ? 'cursor-pointer hover:opacity-90' : ''}`}
-                              role={klikalna ? 'button' : undefined}
-                              onClick={moznaDodac ? () => dodajGodzineRealizacji(index, rok) : undefined}
-                              onContextMenu={(e) => {
-                                if (moznaUsunac) {
-                                  e.preventDefault();
-                                  usunGodzineRealizacji(index, rok);
-                                }
-                              }}
-                            >
-                              {zrealizowane} ({docelowe})
-                            </td>
-                          );
-                        })}
-                        {(() => {
-                          const brakujeRazem = sumaDocelowa - sumaZrealizowana;
-                          const kolorRazem =
-                            sumaZrealizowana > sumaDocelowa
-                              ? 'bg-blue-200 text-blue-900 font-medium'
-                              : sumaZrealizowana === sumaDocelowa
-                                ? 'bg-green-200 text-green-900 font-medium'
-                                : brakujeRazem === 1
-                                  ? 'bg-amber-200 text-amber-900 font-medium'
-                                  : 'bg-red-200 text-red-900 font-medium';
-                          return (
-                            <td className={`px-4 py-3 text-center font-medium border-l border-gray-200 ${kolorRazem}`}>
-                              {sumaZrealizowana} ({sumaDocelowa})
-                            </td>
-                          );
-                        })()}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTrybDodajRealizacje((v) => !v)}
+                className={trybDodajRealizacje
+                  ? 'inline-flex items-center justify-center rounded px-3.5 py-2 text-sm font-medium bg-ok text-white hover:opacity-90 transition-colors'
+                  : buttonClass('primary')}
+              >
+                {trybDodajRealizacje ? 'Zrealizowane (klikaj komórki)' : 'Dodaj realizację'}
+              </button>
+              <button
+                type="button"
+                onClick={zapiszRealizacje}
+                disabled={zapisywanie}
+                className={buttonClass('secondary')}
+              >
+                {zapisywanie ? 'Zapisywanie…' : 'Zapisz realizację'}
+              </button>
             </div>
           </div>
+          {komunikatZapis && (
+            <div className={`mb-4 p-3 rounded text-sm ${komunikatZapis.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'}`}>
+              {komunikatZapis.tekst}
+            </div>
+          )}
+          <div className="overflow-x-auto rounded-card border border-line">
+            <table className="min-w-full border-collapse text-sm">
+              <thead className="bg-surface-2">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-line">
+                    Przedmiot
+                  </th>
+                  {rokiPlanu.map((rok) => (
+                    <th key={rok} className="px-4 py-3 text-center text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-l border-line">
+                      {rok}
+                    </th>
+                  ))}
+                  <th className="px-4 py-3 text-center text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-l border-line">
+                    Razem
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {planRzeczywisty.map((row, index) => {
+                  const sumaDocelowa = rokiPlanu.reduce((s, r) => s + (row.godzinyByGrade[r] ?? 0), 0);
+                  const sumaZrealizowana = rokiPlanu.reduce((s, r) => s + (realizacjaGodziny[String(index)]?.[r] ?? 0), 0);
+                  return (
+                    <tr key={index} className="border-b border-line last:border-0 hover:bg-surface-2">
+                      <td className="px-4 py-3 text-ink font-medium whitespace-nowrap border-r border-line">
+                        {row.nazwa}
+                      </td>
+                      {rokiPlanu.map((rok) => {
+                        const docelowe = row.godzinyByGrade[rok] ?? 0;
+                        const zrealizowane = realizacjaGodziny[String(index)]?.[rok] ?? 0;
+                        const brakuje = docelowe - zrealizowane;
+                        const moznaDodac = trybDodajRealizacje;
+                        const moznaUsunac = trybDodajRealizacje && zrealizowane > 0;
+                        const klikalna = moznaDodac || moznaUsunac;
+                        const kolorKomorki =
+                          zrealizowane > docelowe
+                            ? 'bg-accent-weak text-accent-strong'
+                            : zrealizowane === docelowe
+                              ? 'bg-ok-bg text-ok'
+                              : brakuje === 1
+                                ? 'bg-warn-bg text-warn'
+                                : 'bg-danger-bg text-danger';
+                        return (
+                          <td
+                            key={rok}
+                            className={`px-4 py-3 text-center border-l border-line min-w-[4rem] tabular ${kolorKomorki} ${klikalna ? 'cursor-pointer hover:opacity-90' : ''}`}
+                            role={klikalna ? 'button' : undefined}
+                            onClick={moznaDodac ? () => dodajGodzineRealizacji(index, rok) : undefined}
+                            onContextMenu={(e) => {
+                              if (moznaUsunac) {
+                                e.preventDefault();
+                                usunGodzineRealizacji(index, rok);
+                              }
+                            }}
+                          >
+                            {zrealizowane} ({docelowe})
+                          </td>
+                        );
+                      })}
+                      {(() => {
+                        const brakujeRazem = sumaDocelowa - sumaZrealizowana;
+                        const kolorRazem =
+                          sumaZrealizowana > sumaDocelowa
+                            ? 'bg-accent-weak text-accent-strong font-medium'
+                            : sumaZrealizowana === sumaDocelowa
+                              ? 'bg-ok-bg text-ok font-medium'
+                              : brakujeRazem === 1
+                                ? 'bg-warn-bg text-warn font-medium'
+                                : 'bg-danger-bg text-danger font-medium';
+                        return (
+                          <td className={`px-4 py-3 text-center font-medium border-l border-line tabular ${kolorRazem}`}>
+                            {sumaZrealizowana} ({sumaDocelowa})
+                          </td>
+                        );
+                      })()}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       {!ladowaniePlanu && selectedClass && plan && rokiPlanu.length === 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-amber-800">Brak planu MEiN dla wybranego typu szkoły. Sprawdź konfigurację ramowych planów.</p>
+        <div className="rounded-card border border-warn/30 bg-warn-bg p-4">
+          <p className="text-warn">Brak planu MEiN dla wybranego typu szkoły. Sprawdź konfigurację ramowych planów.</p>
         </div>
       )}
 
       {!ladowaniePlanu && selectedClass && !plan && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-amber-800">Nie znaleziono planu dla typu „{nazwaTypuSzkoly}”.</p>
+        <div className="rounded-card border border-warn/30 bg-warn-bg p-4">
+          <p className="text-warn">Nie znaleziono planu dla typu „{nazwaTypuSzkoly}”.</p>
         </div>
       )}
     </div>
