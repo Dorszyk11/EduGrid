@@ -38,9 +38,9 @@
   --warn: #b45309;   --warn-bg: #fffbeb;
   --danger: #dc2626; --danger-bg: #fef2f2;
 
-  /* Typografia (webfonty doczytane osobno; fallback systemowy) */
-  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Typografia (webfonty przez next/font z fallbackiem systemowym) */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
 
   /* Promienie / cienie — enterprise: crisp, oszczędne */
