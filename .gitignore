@@ -40,3 +40,7 @@ next-env.d.ts
 
 # Temporary files
 /temp
+
+# Playwright MCP artefakty
+.playwright-mcp/
+*.playwright-mcp.png
