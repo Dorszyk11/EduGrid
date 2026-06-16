@@ -4,8 +4,8 @@ export interface Column<T> {
   key: string;
   header: ReactNode;
   align?: 'left' | 'right' | 'center';
-  /** Render komórki dla wiersza. */
-  render: (row: T) => ReactNode;
+  /** Render komórki dla wiersza (index = pozycja w widocznej liście). */
+  render: (row: T, index: number) => ReactNode;
   className?: string;
 }
 
@@ -85,7 +85,7 @@ export default function DataTable<T>({
               >
                 {columns.map((c) => (
                   <td key={c.key} className={`px-3 py-2.5 text-ink ${alignClass[c.align ?? 'left']} ${c.className ?? ''}`}>
-                    {c.render(row)}
+                    {c.render(row, i)}
                   </td>
                 ))}
               </tr>

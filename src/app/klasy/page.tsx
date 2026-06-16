@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly } from '@/utils/typSzkolyStorage';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import { buttonClass } from '@/components/ui/Button';
 
 interface TypSzkoly {
   id: string;
@@ -30,7 +34,7 @@ export default function KlasyPage() {
       .then((data) => {
         if (data?.error) return;
         const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
-        const mapped = list.map((t: any) => ({ id: String(t.id), nazwa: t.nazwa || 'Brak nazwy' }));
+        const mapped = (list as Array<{ id: string | number; nazwa?: string }>).map((t) => ({ id: String(t.id), nazwa: t.nazwa || 'Brak nazwy' }));
         setTypySzkol(mapped);
         const zap = getZapamietanyTypSzkoly();
         if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
@@ -62,31 +66,57 @@ export default function KlasyPage() {
     }
   };
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Klasy</h1>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
-        >
-          ← Dashboard
+  const kolumny: Column<Klasa>[] = [
+    { key: 'lp', header: 'Lp.', render: (_, i) => <span className="text-ink-faint">{i + 1}</span> },
+    {
+      key: 'nazwa',
+      header: 'Nazwa',
+      render: (k) => (
+        <Link href={`/klasy/${k.id}`} className="font-medium text-accent hover:text-accent-strong">
+          {k.nazwa}
         </Link>
-      </div>
+      ),
+    },
+    { key: 'typ', header: 'Typ szkoły', render: (k) => <span className="text-ink-soft">{k.typ_szkoly?.nazwa ?? '–'}</span> },
+    { key: 'rok', header: 'Rok szkolny (zakres cyklu)', render: (k) => <span className="text-ink-soft">{k.rok_szkolny}</span> },
+    { key: 'profil', header: 'Profil', render: (k) => <span className="text-ink-faint">{k.profil ?? '–'}</span> },
+    {
+      key: 'akcje',
+      header: 'Akcje',
+      align: 'right',
+      render: (k) => (
+        <Link href={`/klasy/${k.id}`} className="text-accent hover:text-accent-strong">
+          Szczegóły
+        </Link>
+      ),
+    },
+  ];
 
-      {/* Filtry */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Filtruj po typie szkoły</h2>
+  return (
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader
+        title="Klasy"
+        description="Oddziały konta wraz z typem szkoły i rokiem cyklu."
+        actions={
+          <Link href="/dashboard" className={buttonClass('secondary')}>
+            ← Dashboard
+          </Link>
+        }
+      />
+
+      <Card className="space-y-3">
+        <h2 className="font-display text-base font-semibold text-ink">Filtruj po typie szkoły</h2>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Typ szkoły</label>
+          <label className="block text-sm font-medium text-ink-soft mb-1" htmlFor="filtr-typ">Typ szkoły</label>
           <select
+            id="filtr-typ"
             value={typSzkolyId}
             onChange={(e) => {
               const v = e.target.value;
               zapiszTypSzkoly(v);
               setTypSzkolyId(v);
             }}
-            className="w-full max-w-md border rounded px-3 py-2"
+            className="w-full max-w-md border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink"
           >
             <option value="">Wszystkie typy</option>
             {typySzkol.map((t) => (
@@ -94,81 +124,27 @@ export default function KlasyPage() {
             ))}
           </select>
         </div>
-      </div>
+      </Card>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-          {error}
-        </div>
-      )}
-
-      {/* Lista klas */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold">Lista klas ({klasy.length})</h2>
-        </div>
-
-        {ladowanie ? (
-          <div className="p-8 text-center text-gray-500">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2">Ładowanie...</p>
-          </div>
-        ) : klasy.length === 0 ? (
-          <div className="p-8 text-center text-gray-600">
-            <p className="mb-2">Brak klas dla wybranego typu szkoły.</p>
-            <p className="text-sm text-gray-500">
-              Dodaj klasy w{' '}
-              <Link href="/panel-admin" className="text-blue-600 hover:underline">
-                panelu admina
-              </Link>
-              {' '}(sekcja „Dodawanie klas”) lub wybierz inny typ szkoły powyżej.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lp.</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nazwa</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ szkoły</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rok szkolny (zakres cyklu)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profil</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Akcje</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {klasy.map((k, index) => (
-                  <tr key={k.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        href={`/klasy/${k.id}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        {k.nazwa}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {k.typ_szkoly?.nazwa ?? '–'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{k.rok_szkolny}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{k.profil ?? '–'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <Link
-                        href={`/klasy/${k.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        Szczegóły
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <section className="space-y-3">
+        <h2 className="font-display text-base font-semibold text-ink">
+          Lista klas <span className="text-ink-faint tabular">({klasy.length})</span>
+        </h2>
+        <DataTable
+          columns={kolumny}
+          rows={klasy}
+          getRowKey={(k) => k.id}
+          loading={ladowanie}
+          error={error}
+          empty={
+            <span>
+              Brak klas dla wybranego typu szkoły. Dodaj klasy w{' '}
+              <Link href="/panel-admin" className="text-accent hover:text-accent-strong">panelu admina</Link>{' '}
+              lub wybierz inny typ powyżej.
+            </span>
+          }
+        />
+      </section>
     </div>
   );
 }
