@@ -61,7 +61,7 @@ function totalDisplay(row: SubjectRow): React.ReactNode {
   if (r !== undefined && r !== '') return <span title="Wartość z tabeli">{r}</span>;
   if (t !== undefined && t !== null) return String(t);
   if (row.hours_to_choose != null) {
-    return <span className="text-gray-500">min. {row.hours_to_choose}</span>;
+    return <span className="text-ink-faint">min. {row.hours_to_choose}</span>;
   }
   return '0';
 }
@@ -531,7 +531,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
   if (plans.length === 0) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800">
+      <div className="bg-amber-50 border border-amber-200 rounded-card p-4 text-amber-800">
         <p className="font-medium">Brak planu ramowego MEiN dla typu „{nazwaTypuSzkoly}”.</p>
         <p className="text-sm mt-1">
           W pliku ramowe-plany.json dostępne są m.in.: Szkoła podstawowa, Liceum ogólnokształcące, Technikum, Branżowa szkoła I stopnia.
@@ -552,9 +552,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   return (
     <div className="space-y-6 w-full">
       {isPodstawowka && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50/50 px-4 py-3">
-          <p className="font-semibold text-gray-800">{schoolTypeName}</p>
-          <p className="text-sm text-gray-600 mt-0.5">
+        <div className="rounded-lg border border-line bg-surface-2 px-4 py-3">
+          <p className="font-semibold text-ink">{schoolTypeName}</p>
+          <p className="text-sm text-ink-soft mt-0.5">
             Podział na etapy: <strong>{etapyTekst}</strong>
           </p>
         </div>
@@ -675,14 +675,14 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         return (
           <Fragment key={plan.plan_id ?? `${plan.school_type}-${plan.cycle}-${idx}`}>
           <section
-            className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm w-full min-w-0"
+            className="bg-surface rounded-lg border border-line overflow-hidden shadow-sm w-full min-w-0"
           >
-            <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-gray-200">
+            <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-line">
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-sm">
                 {isPodstawowka ? (
                   <>
-                    <span className="font-semibold text-gray-800">{cycleLabel}</span>
-                    <span className="text-gray-400 text-xs">
+                    <span className="font-semibold text-ink">{cycleLabel}</span>
+                    <span className="text-ink-faint text-xs">
                       Zał. nr {plan.attachment_no}
                       {(plan.source_pages ?? plan.source_pages_hint)?.length
                         ? ` · str. ${(plan.source_pages ?? plan.source_pages_hint)!.join(', ')}`
@@ -691,16 +691,16 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                   </>
                 ) : (
                   <>
-                    <span className="font-semibold text-gray-800">{plan.school_type}</span>
-                    <span className="text-gray-400">·</span>
-                    <span className="text-gray-600">{plan.cycle}</span>
+                    <span className="font-semibold text-ink">{plan.school_type}</span>
+                    <span className="text-ink-faint">·</span>
+                    <span className="text-ink-soft">{plan.cycle}</span>
                     {plan.scope && (
                       <>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-gray-500">{plan.scope}</span>
+                        <span className="text-ink-faint">·</span>
+                        <span className="text-ink-faint">{plan.scope}</span>
                       </>
                     )}
-                    <span className="text-gray-400 text-xs">
+                    <span className="text-ink-faint text-xs">
                       Zał. nr {plan.attachment_no}
                       {(plan.source_pages ?? plan.source_pages_hint)?.length
                         ? ` · str. ${(plan.source_pages ?? plan.source_pages_hint)!.join(', ')}`
@@ -710,35 +710,35 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                 )}
               </div>
               {unit && (
-                <p className="text-xs text-gray-500 mt-1">Jednostka: {unit}</p>
+                <p className="text-xs text-ink-faint mt-1">Jednostka: {unit}</p>
               )}
             </div>
 
             <div className="overflow-x-auto w-full -mx-2 sm:mx-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               <p className="sr-only">Przewiń tabelę w lewo/prawo na małym ekranie</p>
-              <p className="sm:hidden text-xs text-gray-500 px-2 pt-1 pb-0.5">← Przewiń w poziomie, aby zobaczyć wszystkie kolumny</p>
+              <p className="sm:hidden text-xs text-ink-faint px-2 pt-1 pb-0.5">← Przewiń w poziomie, aby zobaczyć wszystkie kolumny</p>
               <table className="w-full min-w-[480px] text-left border-collapse text-xs sm:text-sm">
                 <thead>
-                  <tr className="border-b-2 border-gray-300">
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 w-10 sm:w-12 border-r border-gray-200 text-left">
+                  <tr className="border-b-2 border-line-strong">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft w-10 sm:w-12 border-r border-line text-left">
                       Lp.
                     </th>
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 min-w-[100px] sm:min-w-[120px] border-r border-gray-200">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft min-w-[100px] sm:min-w-[120px] border-r border-line">
                       Przedmiot
                     </th>
                     {hasGrades &&
                       grades.map((g) => (
                         <th
                           key={g}
-                          className="px-1.5 sm:px-2 py-2.5 sm:py-3 font-semibold text-gray-700 text-center w-12 sm:w-14 border-r border-gray-200"
+                          className="px-1.5 sm:px-2 py-2.5 sm:py-3 font-semibold text-ink-soft text-center w-12 sm:w-14 border-r border-line"
                         >
                           {g}
                         </th>
                       ))}
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 text-right min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
                       Razem
                     </th>
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-gray-700 text-right w-20 sm:w-24 border-l border-gray-200 whitespace-nowrap">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right w-20 sm:w-24 border-l border-line whitespace-nowrap">
                       Zrealizowane godziny
                     </th>
                   </tr>
@@ -748,23 +748,23 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     if (isDirectorRow(entry)) {
                       const tot = entry.director_discretion_hours.total_hours;
                       return (
-                        <tr key={i} className="border-t-2 border-gray-300 font-medium bg-sky-50/50">
+                        <tr key={i} className="border-t-2 border-line-strong font-medium bg-sky-50/50">
                           <td
-                            className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-700 border-r border-gray-200 text-sm"
+                            className="px-2 sm:px-3 py-1.5 sm:py-2 text-ink-soft border-r border-line text-sm"
                             colSpan={hasGrades ? 2 + grades.length : 2}
                           >
                             Godziny do dyspozycji dyrektora
                             {!tylkoOdczyt && klasaId && tot > 0 && (
-                              <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                              <span className="block text-xs font-normal text-ink-faint mt-0.5">
                                 Można je dodać do dowolnego przedmiotu (przyciski „Dyr. +” / „Dyr. −” w komórkach)
                               </span>
                             )}
                           </td>
-                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-gray-800 border-r border-gray-100 min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-ink border-r border-line min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
                             {tot}
                           </td>
                           <td
-                            className={`px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-gray-200 text-xs sm:text-sm ${
+                            className={`px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-line text-xs sm:text-sm ${
                               klasaId && tot > 0
                                 ? assignedDirectorHoursPlan > tot
                                   ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
@@ -831,7 +831,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     /** Limitu hours_to_choose dyrektorskie NIE wypełniają – można przydzielić pełne 4h mimo dyrektorskich. */
                     const remaining = hoursToChoose - assignedSum;
                     const czyRozszerzony = isPrzedmiotRozszerzony(subject);
-                    const obramowanieRozszerzony = czyRozszerzony ? 'border-t-2 border-b-2 border-gray-400' : '';
+                    const obramowanieRozszerzony = czyRozszerzony ? 'border-t-2 border-b-2 border-line-strong' : '';
                     const nazwaPogrubiona = rozszerzeniaSubKeys.has(subKey);
                     const godzinyRozszerzenia = nazwaPogrubiona ? extendedPoolSize : 0;
                     const canAssign = klasaId && hoursToChoose > 0 && remaining > 0;
@@ -899,12 +899,12 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                     const cellTallClass = 'py-2.5 sm:py-3 min-h-[3.25rem]';
                     return (
                       <Fragment key={i}>
-                        <tr className={czyRozszerzony ? 'bg-gray-50/50' : ''}>
-                            <td className={`px-2 sm:px-3 ${cellTallClass} text-gray-500 tabular-nums border-r border-gray-100 w-10 sm:w-12 align-top ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-l-2 border-l-gray-400' : ''}`}>
+                        <tr className={czyRozszerzony ? 'bg-surface-2' : ''}>
+                            <td className={`px-2 sm:px-3 ${cellTallClass} text-ink-faint tabular-nums border-r border-line w-10 sm:w-12 align-top ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-l-2 border-l-gray-400' : ''}`}>
                               {czyRozszerzony ? 'roz.' : row.lp != null ? row.lp : '–'}
                             </td>
                             <td
-                              className={`px-2 sm:px-3 ${cellTallClass} border-r border-gray-100 min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-gray-900' : 'text-gray-800'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded' : ''}`}
+                              className={`px-2 sm:px-3 ${cellTallClass} border-r border-line min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-ink' : 'text-ink'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded' : ''}`}
                           onClick={
                             kafelekNazwaKlikalny
                               ? () => {
@@ -1127,7 +1127,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                             /** Tło dla komórek z godzinami dyrektorskimi. Nie stosuj gdy tryb przydziału/dyrektorski – wtedy bgKlikalny daje zielony/niebieski/sky. */
                             const bgGodzinyDyrektorskie =
                               maGodzinyDyrektorskie && !maPonadprogramowe && !maNadgodzinyDyrektorWKomorce && !kafelekKlikalnyDyrektor && !kafelekKlikalnyGodziny
-                                ? 'bg-sky-50 ring-2 ring-gray-400 rounded'
+                                ? 'bg-sky-50 ring-2 ring-line-strong rounded'
                                 : '';
                             const bgKlikalny =
                               kafelekKlikalny
@@ -1181,7 +1181,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                             return (
                               <td
                                 key={g}
-                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-gray-100 w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded' : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
+                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-line w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded' : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
                                 onContextMenu={onContextMenuUsun}
                                 onClick={
                                   kafelekKlikalnyPodzial
@@ -1269,7 +1269,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                                 ? 'font-semibold text-sky-800'
                                                 : maGodzinyDyrektorskie
                                                   ? 'font-bold text-sky-800'
-                                                  : 'text-gray-700'
+                                                  : 'text-ink-soft'
                                   }`}
                                 >
                                   {czyRozszerzony
@@ -1289,7 +1289,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               </td>
                             );
                           })}
-                        <td className={`${rowHasPodzial ? 'p-0 min-h-[3.25rem]' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right tabular-nums font-medium text-gray-800 border-r border-gray-100 min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28 ${obramowanieRozszerzony}`}>
+                        <td className={`${rowHasPodzial ? 'p-0 min-h-[3.25rem]' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right tabular-nums font-medium text-ink border-r border-line min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28 ${obramowanieRozszerzony}`}>
                           {rowHasPodzial ? (
                             <GroupSplitRazem
                               razemRzeczywiste={razemRzeczywiste}
@@ -1304,7 +1304,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                 ) : razemRzeczywiste}
                               </span>
                               {razemRzeczywiste !== planoweGodziny && (
-                                <span className="block text-xs text-gray-500 mt-0.5 font-normal whitespace-nowrap">
+                                <span className="block text-xs text-ink-faint mt-0.5 font-normal whitespace-nowrap">
                                   planowo {planoweGodziny}
                                 </span>
                               )}
@@ -1314,7 +1314,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           )}
                         </td>
                         <td
-                          className={`${rowHasPodzial ? 'p-0 min-h-[3.25rem]' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right border-l border-gray-200 w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
+                          className={`${rowHasPodzial ? 'p-0 min-h-[3.25rem]' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right border-l border-line w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
                             rowHasPodzial
                               ? ''
                               : klasaId && (planoweGodziny > 0 || godzinyRozszerzenia > 0 || (row.hours_to_choose != null && row.hours_to_choose > 0) || czyRozszerzony)
@@ -1342,7 +1342,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               extensionPoolRemaining={extensionPoolRemaining > 0 ? extensionPoolRemaining : undefined}
                             />
                           ) : rowHasPodzial ? (
-                            <span className="text-gray-400">–</span>
+                            <span className="text-ink-faint">–</span>
                           ) : planoweGodziny > 0 || godzinyRozszerzenia > 0 || row.hours_to_choose != null || czyRozszerzony ? (
                             klasaId ? (
                               <span className="tabular-nums">
@@ -1385,9 +1385,9 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-gray-400 bg-gray-50 font-semibold text-xs sm:text-sm">
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-gray-200 w-10 sm:w-12" />
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-gray-200">
+                  <tr className="border-t-2 border-line-strong bg-surface-2 font-semibold text-xs sm:text-sm">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-line w-10 sm:w-12" />
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-line">
                       Suma godzin w roku
                     </td>
                     {hasGrades &&
@@ -1417,10 +1417,10 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                           </td>
                         );
                       })}
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-gray-500 border-r border-gray-200 min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-r border-line min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
                       –
                     </td>
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-gray-500 border-l border-gray-200">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-l border-line">
                       –
                     </td>
                   </tr>
@@ -1431,30 +1431,30 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
             {przedmiotyLaczne.length > 0 && hasGrades && (
               <section
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm w-full min-w-0 mt-6"
+                className="bg-surface rounded-lg border border-line overflow-hidden shadow-sm w-full min-w-0 mt-6"
                 aria-labelledby={`doradztwo-${plan.plan_id ?? idx}`}
               >
-                <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-gray-200 bg-gray-50/80">
-                  <h3 id={`doradztwo-${plan.plan_id ?? idx}`} className="text-base font-semibold text-gray-800">
+                <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-line bg-surface-2">
+                  <h3 id={`doradztwo-${plan.plan_id ?? idx}`} className="text-base font-semibold text-ink">
                     Zajęcia z zakresu doradztwa zawodowego
                   </h3>
                   {cycleLabel && (
-                    <p className="text-xs text-gray-500 mt-0.5">{cycleLabel}</p>
+                    <p className="text-xs text-ink-faint mt-0.5">{cycleLabel}</p>
                   )}
                 </div>
                 <div className="overflow-x-auto -mx-2 sm:mx-0 p-2 sm:p-0" style={{ WebkitOverflowScrolling: 'touch' }}>
                   <table className="w-full min-w-[320px] text-xs sm:text-sm border-collapse">
                     <thead>
-                      <tr className="border-b-2 border-gray-200 bg-gray-100">
-                        <th className="px-4 py-2 text-left font-semibold text-gray-700 text-xs min-w-[180px]">
+                      <tr className="border-b-2 border-line bg-surface-2">
+                        <th className="px-4 py-2 text-left font-semibold text-ink-soft text-xs min-w-[180px]">
                           Przedmiot
                         </th>
                         {grades.map((g) => (
-                          <th key={g} className="px-2 py-2 text-center font-semibold text-gray-700 text-xs w-24 border-l border-gray-200">
+                          <th key={g} className="px-2 py-2 text-center font-semibold text-ink-soft text-xs w-24 border-l border-line">
                             {g}
                           </th>
                         ))}
-                        <th className="px-4 py-2 text-center font-semibold text-gray-700 text-xs w-28 border-l-2 border-gray-300">
+                        <th className="px-4 py-2 text-center font-semibold text-ink-soft text-xs w-28 border-l-2 border-line-strong">
                           Zrealizowano
                         </th>
                       </tr>
@@ -1467,16 +1467,16 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                         const suma = Object.values(byGrade).reduce((a, b) => a + b, 0);
                         const canDodajOgolem = !!klasaId && suma < totalHours;
                         return (
-                          <tr key={i} className="border-b border-gray-200 last:border-0 bg-white hover:bg-gray-50/50 transition-colors">
-                            <td className="px-4 py-2 font-medium text-gray-800">{row.subject ?? '–'}</td>
+                          <tr key={i} className="border-b border-line last:border-0 bg-surface hover:bg-surface-2 transition-colors">
+                            <td className="px-4 py-2 font-medium text-ink">{row.subject ?? '–'}</td>
                             {grades.map((g) => {
                               const val = byGrade[g] ?? 0;
                               const canDodaj = canDodajOgolem;
                               const canUsun = !!klasaId && val > 0;
                               return (
-                                <td key={g} className="px-2 py-2 text-center border-l border-gray-100 align-top">
+                                <td key={g} className="px-2 py-2 text-center border-l border-line align-top">
                                   <div className="flex flex-col items-center gap-1">
-                                    <span className="tabular-nums font-medium text-gray-800">{val > 0 ? val : '–'}</span>
+                                    <span className="tabular-nums font-medium text-ink">{val > 0 ? val : '–'}</span>
                                     {!tylkoOdczyt && klasaId && (
                                       <span className="inline-flex items-center gap-1 flex-wrap justify-center">
                                         <button
@@ -1484,7 +1484,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                           onClick={() => canDodaj && dodajZrealizowanaGodzine(key, g, totalHours)}
                                           disabled={!canDodaj}
                                           className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ${
-                                            canDodaj ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100' : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
+                                            canDodaj ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100' : 'cursor-not-allowed bg-surface-2 text-ink-faint ring-line'
                                           }`}
                                         >
                                           + Dodaj
@@ -1494,7 +1494,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                                           onClick={() => canUsun && usunZrealizowanaGodzine(key, g)}
                                           disabled={!canUsun}
                                           className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ${
-                                            canUsun ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100' : 'cursor-not-allowed bg-gray-100 text-gray-400 ring-gray-200'
+                                            canUsun ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100' : 'cursor-not-allowed bg-surface-2 text-ink-faint ring-line'
                                           }`}
                                         >
                                           − Usuń
@@ -1506,7 +1506,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
                               );
                             })}
                             <td
-                              className={`px-4 py-2 text-center border-l-2 border-gray-200 align-middle ${
+                              className={`px-4 py-2 text-center border-l-2 border-line align-middle ${
                                 klasaId && totalHours > 0
                                   ? suma > totalHours
                                     ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
@@ -1537,21 +1537,21 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
       {/* Modal: godziny ponadprogramowe (do wyboru lub dyrektorskie ponad pulę) */}
       {modalPonadprogramowa && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
+          <div className="bg-surface rounded-card shadow-pop max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-ink">
               {modalPonadprogramowa.kind === 'optional' ? 'Godziny ponadprogramowe' : 'Godzina dyrektorska ponadprogramowa'}
             </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
+            <p className="text-ink-soft text-sm leading-relaxed">
               {modalPonadprogramowa.kind === 'optional' ? (
                 <>
                   Wszystkie godziny programowe są przydzielone. Czy chcesz dodać godzinę ponadprogramową do przedmiotu „{modalPonadprogramowa.subjectName}”?
                 </>
               ) : (
                 <>
-                  Limit godzin dyrektorskich z planu to <strong className="text-gray-800">{modalPonadprogramowa.totalDirectorHours}</strong>. Czy na pewno
-                  chcesz dodać <strong className="text-gray-800">jedną godzinę dyrektorską ponadprogramową</strong> dla przedmiotu „
-                  {modalPonadprogramowa.subjectName}” (rocznik / klasa: <strong className="text-gray-800">{modalPonadprogramowa.grade}</strong>)?
+                  Limit godzin dyrektorskich z planu to <strong className="text-ink">{modalPonadprogramowa.totalDirectorHours}</strong>. Czy na pewno
+                  chcesz dodać <strong className="text-ink">jedną godzinę dyrektorską ponadprogramową</strong> dla przedmiotu „
+                  {modalPonadprogramowa.subjectName}” (rocznik / klasa: <strong className="text-ink">{modalPonadprogramowa.grade}</strong>)?
                 </>
               )}
             </p>
@@ -1559,7 +1559,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
               <button
                 type="button"
                 onClick={() => setModalPonadprogramowa(null)}
-                className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
+                className="px-4 py-2.5 bg-line text-ink rounded-lg hover:bg-line font-medium"
               >
                 Nie
               </button>
