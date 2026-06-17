@@ -52,10 +52,10 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
-          <p className="mt-4 text-gray-600">Ładowanie...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-accent" />
+          <p className="mt-4 text-ink-soft">Ładowanie...</p>
         </div>
       </div>
     );
@@ -64,21 +64,21 @@ export default function HomePage() {
   if (user) {
     return (
       <RedirectIfNoTypySzkol>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen flex items-center justify-center bg-bg">
           <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">EduGrid</h1>
-            <p className="text-xl text-gray-600 mb-2">System planowania siatki godzin</p>
-            <p className="text-sm text-gray-500 mb-6">Zalogowano: {[user.imie, user.nazwisko].filter(Boolean).join(' ') || user.email}</p>
+            <h1 className="font-display text-5xl font-bold text-ink mb-4 tracking-tight">EduGrid</h1>
+            <p className="text-xl text-ink-soft mb-2">System planowania siatki godzin</p>
+            <p className="text-sm text-ink-faint mb-6">Zalogowano: {[user.imie, user.nazwisko].filter(Boolean).join(' ') || user.email}</p>
             <div className="flex flex-wrap justify-center gap-3 mb-6">
               <Link
                 href="/dashboard"
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="inline-block px-6 py-3 bg-accent text-white rounded hover:bg-accent-strong transition-colors font-medium"
               >
                 Przejdź do Dashboard
               </Link>
               <Link
                 href="/panel-admin"
-                className="inline-block px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                className="inline-block px-6 py-3 bg-ink text-white rounded hover:bg-navy transition-colors font-medium"
               >
                 Panel Administracyjny
               </Link>
@@ -86,7 +86,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => logout()}
-              className="text-sm text-gray-500 hover:text-gray-700 underline"
+              className="text-sm text-ink-faint hover:text-ink-soft underline"
             >
               Wyloguj
             </button>
@@ -97,36 +97,36 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">EduGrid</h1>
-          <p className="text-sm text-gray-600 mt-1">System planowania siatki godzin</p>
+    <div className="min-h-screen flex items-center justify-center bg-bg p-4">
+      <div className="w-full max-w-md bg-surface rounded-card shadow-card border border-line overflow-hidden">
+        <div className="px-6 py-5 border-b border-line">
+          <h1 className="font-display text-2xl font-bold text-ink tracking-tight">EduGrid</h1>
+          <p className="text-sm text-ink-soft mt-1">System planowania siatki godzin</p>
         </div>
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-line">
           <button
             type="button"
             onClick={() => { setTab('login'); setError(''); }}
-            className={`flex-1 py-3 text-sm font-medium ${tab === 'login' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-3 text-sm font-medium ${tab === 'login' ? 'text-accent border-b-2 border-accent' : 'text-ink-faint hover:text-ink-soft'}`}
           >
             Logowanie
           </button>
           <button
             type="button"
             onClick={() => { setTab('register'); setError(''); }}
-            className={`flex-1 py-3 text-sm font-medium ${tab === 'register' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-3 text-sm font-medium ${tab === 'register' ? 'text-accent border-b-2 border-accent' : 'text-ink-faint hover:text-ink-soft'}`}
           >
             Zakładanie konta
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+            <div className="p-3 rounded bg-danger-bg text-danger text-sm">
               {error}
             </div>
           )}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-ink-soft mb-1">
               Email
             </label>
             <input
@@ -136,11 +136,11 @@ export default function HomePage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-ink-soft mb-1">
               Hasło
             </label>
             <input
@@ -151,10 +151,10 @@ export default function HomePage() {
               required
               autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
               minLength={tab === 'register' ? 8 : undefined}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
             />
             {tab === 'register' && (
-              <p className="mt-1 text-xs text-gray-500">Minimum 8 znaków</p>
+              <p className="mt-1 text-xs text-ink-faint">Minimum 8 znaków</p>
             )}
             {tab === 'login' && (
               <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
@@ -162,16 +162,16 @@ export default function HomePage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-line-strong text-accent focus:ring-accent"
                 />
-                <span className="text-sm text-gray-700">Zapamiętaj mnie na tym urządzeniu</span>
+                <span className="text-sm text-ink-soft">Zapamiętaj mnie na tym urządzeniu</span>
               </label>
             )}
           </div>
           {tab === 'register' && (
             <>
               <div>
-                <label htmlFor="imie" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="imie" className="block text-sm font-medium text-ink-soft mb-1">
                   Imię
                 </label>
                 <input
@@ -181,11 +181,11 @@ export default function HomePage() {
                   onChange={(e) => setImie(e.target.value)}
                   required={tab === 'register'}
                   autoComplete="given-name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
                 />
               </div>
               <div>
-                <label htmlFor="nazwisko" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="nazwisko" className="block text-sm font-medium text-ink-soft mb-1">
                   Nazwisko
                 </label>
                 <input
@@ -195,7 +195,7 @@ export default function HomePage() {
                   onChange={(e) => setNazwisko(e.target.value)}
                   required={tab === 'register'}
                   autoComplete="family-name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
                 />
               </div>
             </>
@@ -203,7 +203,7 @@ export default function HomePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="w-full py-3 px-4 bg-accent text-white rounded hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {submitting ? 'Proszę czekać...' : tab === 'login' ? 'Zaloguj się' : 'Załóż konto'}
           </button>

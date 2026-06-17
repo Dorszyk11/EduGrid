@@ -49,10 +49,10 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-bg">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900" />
-          <p className="mt-4 text-gray-600">Ładowanie...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-accent" />
+          <p className="mt-4 text-ink-soft">Ładowanie...</p>
         </div>
       </div>
     );
@@ -60,10 +60,10 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
 
   if (status === 'redirect') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-bg">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
-          <p className="mt-4 text-gray-600">Przekierowanie do planów MEiN...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-accent" />
+          <p className="mt-4 text-ink-soft">Przekierowanie do planów MEiN...</p>
         </div>
       </div>
     );
