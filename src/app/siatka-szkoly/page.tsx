@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Icon from '@/components/ui/Icon';
+
+const SELECT_CLASS = 'w-full rounded border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
 
 interface TypSzkoly {
   id: string;
@@ -111,18 +117,18 @@ export default function SiatkaSzkolyPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="font-display text-3xl font-bold text-ink tracking-tight">Siatka godzin szkoły</h1>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 bg-line hover:bg-line-strong rounded"
-        >
-          ← Powrót do dashboardu
-        </button>
-      </div>
+      <PageHeader
+        title="Siatka godzin szkoły"
+        actions={
+          <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+            <Icon name="back" size={16} />
+            Dashboard
+          </Button>
+        }
+      />
 
       {/* Formularz filtrowania */}
-      <div className="bg-surface rounded shadow-card p-6">
+      <Card>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-ink-soft mb-1">
@@ -131,7 +137,7 @@ export default function SiatkaSzkolyPage() {
             <select
               value={typSzkolyId}
               onChange={(e) => setTypSzkolyId(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              className={SELECT_CLASS}
             >
               <option value="">Wybierz typ szkoły</option>
               {typySzkol.map(typ => (
@@ -149,7 +155,7 @@ export default function SiatkaSzkolyPage() {
               value={rokSzkolny}
               onChange={(e) => setRokSzkolny(e.target.value)}
               placeholder="2024/2025"
-              className="w-full border rounded px-3 py-2"
+              className={SELECT_CLASS}
             />
           </div>
 
@@ -166,7 +172,7 @@ export default function SiatkaSzkolyPage() {
             </label>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Komunikat błędu */}
       {error && (

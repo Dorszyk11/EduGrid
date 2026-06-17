@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Icon from '@/components/ui/Icon';
 import plansData from '@/utils/import/ramowe-plany.json';
 
 type HoursByGrade = Record<string, number>;
@@ -83,9 +84,10 @@ export default function PlanyMeinPage() {
       <div className="mb-6">
         <Link
           href="/przydzial"
-          className="inline-flex items-center gap-1 text-ink-soft hover:text-ink font-medium"
+          className="inline-flex items-center gap-1.5 text-ink-soft hover:text-ink font-medium"
         >
-          ← Powrót do Przydziału
+          <Icon name="back" size={16} />
+          Powrót do Przydziału
         </Link>
       </div>
       <h1 className="font-display text-2xl font-bold text-ink tracking-tight mb-1">Plany MEiN</h1>

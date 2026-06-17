@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import ImportMeinPdf from '@/components/import/ImportMeinPdf';
+import Button from '@/components/ui/Button';
+import Icon from '@/components/ui/Icon';
 
 export default function ImportMeinPdfPage() {
   const [dismissed, setDismissed] = useState(false);
@@ -10,8 +12,8 @@ export default function ImportMeinPdfPage() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
         <div className="max-w-md rounded-card bg-surface p-6 shadow-pop">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warn-bg text-2xl">
-            ⚠️
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warn-bg text-warn">
+            <Icon name="warning" size={24} />
           </div>
           <h2 className="text-lg font-semibold text-ink">Import MEiN – opcja w budowie</h2>
           <p className="mt-2 text-ink-soft">
@@ -19,13 +21,9 @@ export default function ImportMeinPdfPage() {
             działać poprawnie. Obecnie możesz przeglądać plany w zakładce <strong>Plany MEiN</strong>.
           </p>
           <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setDismissed(true)}
-              className="rounded bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong"
-            >
+            <Button type="button" onClick={() => setDismissed(true)}>
               Rozumiem, przejdź dalej
-            </button>
+            </Button>
           </div>
         </div>
       </div>
