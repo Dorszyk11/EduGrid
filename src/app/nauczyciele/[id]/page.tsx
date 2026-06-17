@@ -1,272 +1,188 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
+import Button, { buttonClass } from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import AsyncSection from '@/components/ui/AsyncSection';
+import StatusPill from '@/components/ui/StatusPill';
+import Icon from '@/components/ui/Icon';
+import { useResource } from '@/lib/hooks/useResource';
+import { useConfirm } from '@/lib/hooks/useConfirm';
+import { useToast } from '@/components/ui/Toast';
+import type { NauczycielSzczegoly } from '@/types/api';
+
+type ObciazenieRow = NauczycielSzczegoly['obciazenie'][number];
 
 export default function NauczycielPage() {
   const params = useParams();
-  const router = useRouter();
   const nauczycielId = params.id as string;
-
-  const [dane, setDane] = useState<any>(null);
-  const [ladowanie, setLadowanie] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  const { confirm, dialog } = useConfirm();
   const [usuwanieId, setUsuwanieId] = useState<string | number | null>(null);
 
-  useEffect(() => {
-    if (nauczycielId) {
-      pobierzDane();
-    }
+  const { data, loading, error, reload } = useResource<NauczycielSzczegoly>(async (signal) => {
+    const res = await fetch(`/api/nauczyciele/${nauczycielId}`, { signal });
+    if (!res.ok) throw new Error(`Błąd pobierania (HTTP ${res.status})`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    return json;
   }, [nauczycielId]);
 
-  const pobierzDane = async () => {
-    setLadowanie(true);
-    setError(null);
+  const usunPrzypisanie = async (rozkladId: string | number) => {
+    const ok = await confirm({
+      title: 'Usunąć przypisanie?',
+      description: 'Przypisanie godzin zostanie usunięte z obciążenia nauczyciela.',
+      confirmLabel: 'Usuń',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setUsuwanieId(rozkladId);
     try {
-      const response = await fetch(`/api/nauczyciele/${nauczycielId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      setDane(data);
-    } catch (err) {
-      console.error('Błąd przy pobieraniu danych nauczyciela:', err);
-      setError(err instanceof Error ? err.message : 'Nieznany błąd');
-    } finally {
-      setLadowanie(false);
-    }
-  };
-
-  const usunPrzypisanie = async (rozkładId: string | number) => {
-    setUsuwanieId(rozkładId);
-    setError(null);
-    try {
-      const res = await fetch(`/api/nauczyciele/obciazenie/${rozkładId}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Błąd usuwania');
-      await pobierzDane();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Błąd usuwania');
+      const res = await fetch(`/api/nauczyciele/obciazenie/${rozkladId}`, { method: 'DELETE' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Błąd usuwania');
+      toast.success('Przypisanie usunięte.');
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Błąd usuwania');
     } finally {
       setUsuwanieId(null);
     }
   };
 
-  if (ladowanie) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
-            <p className="mt-4 text-ink-soft">Ładowanie danych nauczyciela...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-danger-bg border border-danger rounded p-4">
-          <p className="text-danger font-semibold">Błąd:</p>
-          <p className="text-danger">{error}</p>
-          <button
-            onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-danger text-white rounded hover:bg-danger"
+  const columns: Column<ObciazenieRow>[] = [
+    {
+      key: 'klasa',
+      header: 'Klasa',
+      render: (o) => (
+        <Link href={`/klasy/${o.klasa.id}`} className="font-medium text-accent hover:underline">
+          {o.klasa.nazwa}
+        </Link>
+      ),
+    },
+    {
+      key: 'przedmiot',
+      header: 'Przedmiot',
+      render: (o) => (
+        <Link href={`/przedmioty/${o.przedmiot.id}`} className="text-accent hover:underline">
+          {o.przedmiot.nazwa}
+        </Link>
+      ),
+    },
+    { key: 'rok', header: 'Rok', align: 'center', render: (o) => o.rok ?? '—' },
+    {
+      key: 'godz',
+      header: 'Godz./tyg',
+      align: 'center',
+      render: (o) => <span className="tabular-nums">{o.godziny_tyg}</span>,
+    },
+    { key: 'rokszk', header: 'Rok szkolny', align: 'center', render: (o) => o.rok_szkolny },
+    {
+      key: 'akcje',
+      header: '',
+      align: 'right',
+      render: (o) =>
+        o.id != null ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger hover:bg-danger-bg hover:text-danger"
+            onClick={() => usunPrzypisanie(o.id!)}
+            disabled={usuwanieId === o.id}
           >
-            Wróć
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!dane) {
-    return null;
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OK':
-        return 'bg-ok-bg text-ok';
-      case 'PRZECIĄŻENIE':
-        return 'bg-danger-bg text-danger';
-      case 'NIEDOCIĄŻENIE':
-        return 'bg-warn-bg text-warn';
-      default:
-        return 'bg-surface-2 text-ink';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'OK':
-        return '✅';
-      case 'PRZECIĄŻENIE':
-        return '❌';
-      case 'NIEDOCIĄŻENIE':
-        return '⚠️';
-      default:
-        return '';
-    }
-  };
+            <Icon name="trash" size={14} />
+            {usuwanieId === o.id ? 'Usuwanie…' : 'Usuń'}
+          </Button>
+        ) : null,
+    },
+  ];
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Nagłówek */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-ink tracking-tight">
-            {dane.nauczyciel.imie} {dane.nauczyciel.nazwisko}
-          </h1>
-          <p className="text-ink-soft mt-1">
-            {dane.nauczyciel.email} • {dane.nauczyciel.telefon}
-          </p>
-          <p className="text-sm text-ink-faint mt-1">
-            Etat: {dane.nauczyciel.etat} • Max obciążenie: {dane.nauczyciel.max_obciazenie}h/tyg
-          </p>
-        </div>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 bg-line hover:bg-line-strong rounded"
-        >
-          ← Wróć do dashboardu
-        </Link>
-      </div>
+    <div className="space-y-6 p-6">
+      <AsyncSection loading={loading} error={error} loadingLabel="Ładowanie danych nauczyciela...">
+        {data && (
+          <>
+            <PageHeader
+              title={`${data.nauczyciel.imie} ${data.nauczyciel.nazwisko}`}
+              description={[data.nauczyciel.email, data.nauczyciel.telefon].filter(Boolean).join(' • ')}
+              actions={
+                <Link href="/nauczyciele" className={buttonClass('ghost')}>
+                  <Icon name="back" size={16} />
+                  Nauczyciele
+                </Link>
+              }
+            />
 
-      {/* Podsumowanie obciążenia */}
-      <div className="bg-surface rounded shadow-card p-6">
-        <h2 className="text-xl font-semibold mb-4">Podsumowanie obciążenia</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-surface-2 p-4 rounded">
-            <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
-            <p className="text-2xl font-bold">{dane.podsumowanie.suma_godzin_tyg}</p>
-          </div>
-          <div className="bg-surface-2 p-4 rounded">
-            <p className="text-sm text-ink-soft">Procent obciążenia</p>
-            <p className="text-2xl font-bold">{dane.podsumowanie.procent_obciazenia}%</p>
-          </div>
-          <div className={`p-4 rounded ${getStatusColor(dane.podsumowanie.status)}`}>
-            <p className="text-sm font-semibold">Status</p>
-            <p className="text-xl font-bold">
-              {getStatusIcon(dane.podsumowanie.status)} {dane.podsumowanie.status}
-            </p>
-          </div>
-        </div>
-        {dane.podsumowanie.roznica !== 0 && (
-          <div className={`mt-4 p-3 rounded ${
-            dane.podsumowanie.roznica > 0 ? 'bg-danger-bg text-danger' : 'bg-warn-bg text-warn'
-          }`}>
-            <p className="font-semibold">
-              {dane.podsumowanie.roznica > 0 ? 'Przekroczono' : 'Niedociążenie'} o {Math.abs(dane.podsumowanie.roznica)} godzin tygodniowo
-            </p>
-          </div>
-        )}
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="text-sm text-ink-soft">
-            Liczba klas: <span className="font-semibold">{dane.podsumowanie.liczba_klas}</span>
-          </div>
-          <div className="text-sm text-ink-soft">
-            Liczba przedmiotów: <span className="font-semibold">{dane.podsumowanie.liczba_przedmiotow}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Kwalifikacje */}
-      {dane.kwalifikacje.length > 0 && (
-        <div className="bg-surface rounded shadow-card p-6">
-          <h2 className="text-xl font-semibold mb-4">Kwalifikacje</h2>
-          <div className="space-y-2">
-            {dane.kwalifikacje.map((kwal: any, index: number) => (
-              <div key={index} className="flex items-center justify-between bg-surface-2 p-3 rounded">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Card>
+                <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-ink">
+                  {data.podsumowanie.suma_godzin_tyg}
+                </p>
+              </Card>
+              <Card>
+                <p className="text-sm text-ink-soft">Procent obciążenia</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-ink">
+                  {data.podsumowanie.procent_obciazenia}%
+                </p>
+              </Card>
+              <Card className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold">{kwal.przedmiot.nazwa}</p>
-                  <p className="text-sm text-ink-soft">{kwal.specjalizacja} • {kwal.stopien}</p>
+                  <p className="text-sm text-ink-soft">Status</p>
+                  <p className="mt-1 text-xs text-ink-faint">
+                    Etat: {data.nauczyciel.etat ?? '—'} • Max {data.nauczyciel.max_obciazenie ?? '—'} h/tyg
+                  </p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                <StatusPill status={data.podsumowanie.status} />
+              </Card>
+            </div>
 
-      {/* Obciążenie szczegółowe */}
-      <div className="bg-surface rounded shadow-card p-6">
-        <h2 className="text-xl font-semibold mb-4">Obciążenie szczegółowe</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-line">
-            <thead className="bg-surface-2">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">
-                  Klasa
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">
-                  Przedmiot
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-ink-faint uppercase tracking-wider">
-                  Rok
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-ink-faint uppercase tracking-wider">
-                  Godz./tyg
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-ink-faint uppercase tracking-wider">
-                  Rok szkolny
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-ink-faint uppercase tracking-wider w-24">
-                  {' '}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-surface divide-y divide-line">
-              {dane.obciazenie.map((obc: any, index: number) => (
-                <tr key={index} className="hover:bg-surface-2">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link
-                      href={`/klasy/${obc.klasa.id}`}
-                      className="text-accent hover:text-accent-strong font-medium"
-                    >
-                      {obc.klasa.nazwa}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link
-                      href={`/przedmioty/${obc.przedmiot.id}`}
-                      className="text-accent hover:text-accent-strong"
-                    >
-                      {obc.przedmiot.nazwa}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-ink-soft">
-                    {obc.rok ? obc.rok : '—'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {obc.godziny_tyg}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {obc.rok_szkolny}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    {obc.id != null ? (
-                      <button
-                        type="button"
-                        onClick={() => usunPrzypisanie(obc.id)}
-                        disabled={usuwanieId === obc.id}
-                        className="text-danger hover:text-danger text-sm font-medium disabled:opacity-50"
-                      >
-                        {usuwanieId === obc.id ? '…' : 'Usuń'}
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            {data.podsumowanie.roznica !== 0 && (
+              <div
+                className={`rounded-card border p-3 text-sm ${
+                  data.podsumowanie.roznica > 0
+                    ? 'border-danger bg-danger-bg text-danger'
+                    : 'border-warn bg-warn-bg text-warn'
+                }`}
+              >
+                {data.podsumowanie.roznica > 0 ? 'Przekroczono' : 'Niedociążenie'} o{' '}
+                {Math.abs(data.podsumowanie.roznica)} godzin tygodniowo.
+              </div>
+            )}
+
+            {data.kwalifikacje.length > 0 && (
+              <Card>
+                <h2 className="mb-3 text-lg font-semibold text-ink">Kwalifikacje</h2>
+                <ul className="space-y-2">
+                  {data.kwalifikacje.map((kwal, i) => (
+                    <li key={i} className="flex items-center justify-between rounded bg-surface-2 px-3 py-2">
+                      <span className="font-medium text-ink">{kwal.przedmiot.nazwa}</span>
+                      <span className="text-sm text-ink-soft">
+                        {[kwal.specjalizacja, kwal.stopien].filter(Boolean).join(' • ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold text-ink">Obciążenie szczegółowe</h2>
+              <DataTable
+                columns={columns}
+                rows={data.obciazenie}
+                getRowKey={(o, i) => o.id ?? i}
+                empty="Brak przypisanych godzin."
+              />
+            </div>
+          </>
+        )}
+      </AsyncSection>
+      {dialog}
     </div>
   );
 }

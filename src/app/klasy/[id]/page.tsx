@@ -6,6 +6,11 @@ import Link from 'next/link';
 import KafelkiRealizacji, { type DaneRealizacji } from '@/components/dashboard/KafelkiRealizacji';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
 import { obliczRealizacjaZPrzydzialu } from '@/utils/realizacjaZPrzydzialu';
+import PageHeader from '@/components/ui/PageHeader';
+import Button, { buttonClass } from '@/components/ui/Button';
+import AsyncSection from '@/components/ui/AsyncSection';
+import Icon from '@/components/ui/Icon';
+import type { KlasaSzczegoly } from '@/types/api';
 
 const STORAGE_PREFIX = 'przydzial-wyboru-';
 const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
@@ -16,7 +21,7 @@ export default function KlasaPage() {
   const router = useRouter();
   const klasaId = params.id as string;
 
-  const [dane, setDane] = useState<any>(null);
+  const [dane, setDane] = useState<KlasaSzczegoly | null>(null);
   const [ladowanie, setLadowanie] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zgodnoscDane, setZgodnoscDane] = useState<DaneRealizacji | null>(null);
@@ -25,6 +30,7 @@ export default function KlasaPage() {
     if (klasaId) {
       pobierzDane();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [klasaId]);
 
   // Po załadowaniu klasy: pobierz przydział z API, zapisz do localStorage, policz realizację (jak na dashboardzie)
@@ -97,29 +103,23 @@ export default function KlasaPage() {
   if (ladowanie) {
     return (
       <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
-            <p className="mt-4 text-ink-soft">Ładowanie danych klasy...</p>
-          </div>
-        </div>
+        <AsyncSection loading loadingLabel="Ładowanie danych klasy...">
+          {null}
+        </AsyncSection>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-danger-bg border border-danger rounded p-4">
-          <p className="text-danger font-semibold">Błąd:</p>
-          <p className="text-danger">{error}</p>
-          <button
-            onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-danger text-white rounded hover:bg-danger"
-          >
-            Wróć
-          </button>
-        </div>
+      <div className="space-y-4 p-6">
+        <AsyncSection loading={false} error={error}>
+          {null}
+        </AsyncSection>
+        <Button variant="secondary" onClick={() => router.back()}>
+          <Icon name="back" size={16} />
+          Wróć
+        </Button>
       </div>
     );
   }
@@ -128,38 +128,34 @@ export default function KlasaPage() {
     return null;
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Nagłówek */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-ink tracking-tight">Klasa {dane.klasa.nazwa}</h1>
-          {dane.klasa.profil && (
-            <p className="text-ink-soft mt-1">Profil: {dane.klasa.profil}</p>
-          )}
-          <p className="text-sm text-ink-faint mt-1">
-            {dane.klasa.typ_szkoly.nazwa} • Rok szkolny: {dane.klasa.rok_szkolny}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/klasy"
-            className="px-4 py-2 bg-line hover:bg-line-strong rounded font-medium"
-          >
-            ← Wróć do klas
-          </Link>
-          <Link
-            href="/przydzial"
-            className="px-4 py-2 bg-accent text-white hover:bg-accent-strong rounded font-medium"
-          >
-            Przydział
-          </Link>
-        </div>
-      </div>
+  const profil = dane.klasa.profil;
+  const opis = [
+    profil ? `Profil: ${profil}` : null,
+    `${dane.klasa.typ_szkoly.nazwa} • Rok szkolny: ${dane.klasa.rok_szkolny}`,
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
-      {/* Realizacja wymagań MEiN – jak na dashboardzie */}
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeader
+        title={`Klasa ${dane.klasa.nazwa}`}
+        description={opis}
+        actions={
+          <>
+            <Link href="/klasy" className={buttonClass('ghost')}>
+              <Icon name="back" size={16} />
+              Wróć do klas
+            </Link>
+            <Link href="/przydzial" className={buttonClass('primary')}>
+              Przydział
+            </Link>
+          </>
+        }
+      />
+
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-ink">Realizacja wymagań MEiN</h2>
+        <h2 className="text-lg font-semibold text-ink">Realizacja wymagań MEiN</h2>
         <KafelkiRealizacji
           dane={zgodnoscDane}
           ladowanie={false}
@@ -167,18 +163,15 @@ export default function KlasaPage() {
         />
       </div>
 
-      {/* Plan ramowy MEiN – jak na dashboardzie (tylko odczyt) */}
       {dane.klasa.typ_szkoly?.nazwa && (
-        <div className="space-y-2 min-w-0">
-          <h2 className="text-xl font-semibold text-ink">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
-          <p className="text-ink-soft text-sm leading-relaxed">
+        <div className="min-w-0 space-y-2">
+          <h2 className="text-lg font-semibold text-ink">
+            Plan ramowy MEiN – przedmioty i wymagane godziny w latach
+          </h2>
+          <p className="text-sm leading-relaxed text-ink-soft">
             Wymagania MEiN dla typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
           </p>
-          <PlanMeinTabela
-            nazwaTypuSzkoly={dane.klasa.typ_szkoly.nazwa}
-            klasaId={klasaId}
-            tylkoOdczyt
-          />
+          <PlanMeinTabela nazwaTypuSzkoly={dane.klasa.typ_szkoly.nazwa} klasaId={klasaId} tylkoOdczyt />
         </div>
       )}
     </div>
