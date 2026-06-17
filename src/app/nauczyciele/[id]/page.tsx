@@ -141,6 +141,11 @@ export default function NauczycielPage() {
               </Card>
             </div>
 
+            <p className="text-sm text-ink-soft">
+              Liczba klas: <strong className="text-ink">{data.podsumowanie.liczba_klas}</strong> • Liczba przedmiotów:{' '}
+              <strong className="text-ink">{data.podsumowanie.liczba_przedmiotow}</strong>
+            </p>
+
             {data.podsumowanie.roznica !== 0 && (
               <div
                 className={`rounded-card border p-3 text-sm ${

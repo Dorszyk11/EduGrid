@@ -160,7 +160,7 @@ function RaportObciazen({ data }: { data: RaportObciazenia }) {
                     <td className={`${TD} text-center font-medium tabular-nums`}>{obc.aktualneObciazenie}h</td>
                     <td className={`${TD} text-center tabular-nums`}>{obc.maxObciazenie}h</td>
                     <td className={`${TD} text-center tabular-nums`}>{obc.procentWykorzystania.toFixed(1)}%</td>
-                    <td className={`${TD} text-center tabular-nums`}>{obc.przypisania || 0}</td>
+                    <td className={`${TD} text-center tabular-nums`}>{obc.liczbaPrzypisan || 0}</td>
                     <td className={`${TD} text-center`}>
                       <StatusPill status={status.key} label={status.label} />
                     </td>

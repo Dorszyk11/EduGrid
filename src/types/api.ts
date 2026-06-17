@@ -33,7 +33,7 @@ export interface RaportObciazenia {
     aktualneObciazenie: number;
     maxObciazenie: number;
     procentWykorzystania: number;
-    przypisania: number;
+    liczbaPrzypisan: number;
   }>;
   statystyki: {
     lacznie: number;
