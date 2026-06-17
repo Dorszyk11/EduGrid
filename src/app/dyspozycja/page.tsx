@@ -7,6 +7,20 @@ import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapisz
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Button, { buttonClass } from '@/components/ui/Button';
+import PrzydzielModal from '@/components/dyspozycja/PrzydzielModal';
+import {
+  type PlanItem,
+  getGradesFromPlan,
+  subjectKey,
+  isPrzedmiotLaczny,
+  isPrzedmiotRozszerzony,
+  pominWyswietlanie,
+  matchSchoolType,
+  cycleFilterZNazwy,
+  isSubjectRow,
+  sumGrupy,
+  aktualnyRokWCykle,
+} from '@/lib/dyspozycja/plan';
 
 /** Wspólny styl selektora (tokeny). */
 const SELECT_CLASS =
@@ -24,87 +38,7 @@ interface KlasaItem {
   typ_szkoly: { id: string; nazwa?: string } | null;
 }
 
-type HoursByGrade = Record<string, number>;
-type SubjectRow = { subject?: string; hours_by_grade?: HoursByGrade; director_discretion_hours?: unknown };
-type PlanItem = { plan_id?: string; school_type: string; cycle: string; table_structure?: { grades?: string[] }; grades?: string[]; subjects: SubjectRow[] };
 const allPlans: PlanItem[] = (plansData as { plans?: PlanItem[] }).plans ?? [];
-
-function getGradesFromPlan(plan: PlanItem): string[] {
-  return plan.table_structure?.grades ?? plan.grades ?? [];
-}
-
-/** Klucz jak w PlanMeinTabela – używany w przydziale. */
-function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
-
-const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
-function isPrzedmiotLaczny(subjectName: string): boolean {
-  return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
-}
-
-function isPrzedmiotRozszerzony(subjectName: string): boolean {
-  return /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/i.test((subjectName || '').trim());
-}
-
-/** Nie pokazywać w tabeli dyspozycji. */
-function pominWyswietlanie(subjectName: string): boolean {
-  const s = (subjectName || '').trim().toLowerCase();
-  return s.includes('doradztwa zawodowego') || /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/.test(s);
-}
-
-/** Dopasowanie nazwy typu (np. "Technikum, Klasy I–V") do school_type z planu. */
-function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
-  const a = (nazwaTypu || '').trim().toLowerCase();
-  const b = (schoolType || '').trim().toLowerCase();
-  if (!a || !b) return false;
-  if (a === b) return true;
-  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
-  return false;
-}
-
-function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
-  const n = (nazwaTypu || '').toLowerCase();
-  if (n.includes('i–iii') || n.includes('i-iii') || n.includes('1–3') || n.includes('1-3')) return 'Klasy I–III';
-  if (n.includes('iv–viii') || n.includes('iv-viii') || n.includes('4–8') || n.includes('4-8')) return 'Klasy IV–VIII';
-  if (n.includes('i–v') || n.includes('i-v') || n.includes('1–5') || n.includes('1-5')) return 'Klasy I–V';
-  if (n.includes('i–iv') || n.includes('i-iv') || n.includes('1–4') || n.includes('1-4')) return 'Klasy I–IV';
-  if (n.includes('vii–viii') || n.includes('vii-viii') || n.includes('7–8') || n.includes('7-8')) return 'Klasy VII–VIII';
-  return undefined;
-}
-
-function isSubjectRow(row: SubjectRow): row is SubjectRow & { subject: string } {
-  return 'subject' in row && typeof (row as { subject?: string }).subject === 'string';
-}
-
-/** Suma godzin z obu grup: { 1: n1, 2: n2 } → n1 + n2 */
-function sumGrupy(gr: { 1?: number; 2?: number } | undefined): number {
-  if (!gr) return 0;
-  return (gr[1] ?? 0) + (gr[2] ?? 0);
-}
-
-/**
- * Rok w cyklu (I, II, III…) na podstawie rzeczywistej daty i cyklu klasy.
- * Klasa 1: wrzesień rok_poczatku – lipiec rok_poczatku+1
- * Klasa 2: sierpień rok_poczatku+1 – lipiec rok_poczatku+2
- * Klasa N: sierpień rok_poczatku+(N-1) – lipiec rok_poczatku+N
- */
-function aktualnyRokWCykle(rokSzkolny: string, rokiPlanu: string[]): string {
-  const m = rokSzkolny.match(/^(\d{4})[-/]\d{4}$/);
-  const rokPoczatku = m ? parseInt(m[1], 10) : null;
-  if (rokPoczatku == null || Number.isNaN(rokPoczatku) || rokiPlanu.length === 0) return rokiPlanu[0] ?? '';
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1; // 1–12
-  let yearIndex: number;
-  if (currentMonth >= 8) {
-    yearIndex = currentYear - rokPoczatku;
-  } else {
-    yearIndex = currentYear - rokPoczatku - 1;
-  }
-  yearIndex = Math.max(0, Math.min(yearIndex, rokiPlanu.length - 1));
-  return rokiPlanu[yearIndex] ?? rokiPlanu[0] ?? '';
-}
 
 export default function DyspozycjaPage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
@@ -601,66 +535,29 @@ export default function DyspozycjaPage() {
       )}
 
       {/* Modal przydzielenia nauczyciela */}
-      {modalRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
-          <div className="bg-surface rounded-card shadow-pop border border-line max-w-md w-full p-6 space-y-4">
-            <h3 className="text-base font-semibold text-ink">Przydziel nauczyciela</h3>
-            <p className="text-sm text-ink-soft">
-              Przedmiot: <strong className="text-ink">{modalRow.nazwa}</strong>
-            </p>
-            <div>
-              <label className="block text-xs font-medium text-ink-soft mb-1">Ilość godzin (tyg.)</label>
-              <input
-                type="range"
-                min={0.5}
-                max={Math.min(10, Math.max(0.5, Math.floor(modalRow.doPrzydzielenia * 2) / 2 || 0.5))}
-                step={0.5}
-                value={modalGodziny}
-                onChange={(e) => setModalGodziny(Number(e.target.value))}
-                className="w-full h-2 bg-line rounded-lg appearance-none cursor-pointer accent-accent"
-              />
-              <span className="inline-block mt-1 text-sm font-medium text-ink">{modalGodziny}</span>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-ink-soft mb-1">Nauczyciel (ze specjalizacją)</label>
-              <select
-                value={modalNauczycielId}
-                onChange={(e) => setModalNauczycielId(e.target.value)}
-                disabled={nauczycieleLoading}
-                className={`${SELECT_CLASS} w-full`}
-              >
-                <option value="">{nauczycieleLoading ? 'Ładowanie...' : '— wybierz nauczyciela —'}</option>
-                {!nauczycieleLoading && nauczycieleDlaPrzedmiotu(przedmiotIdDlaNazwy(modalRow.nazwa)).map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.imie} {n.nazwisko}
-                  </option>
-                ))}
-              </select>
-              {przedmiotIdDlaNazwy(modalRow.nazwa) && nauczycieleDlaPrzedmiotu(przedmiotIdDlaNazwy(modalRow.nazwa)).length === 0 && (
-                <p className="text-xs text-warn mt-1">Brak nauczycieli ze specjalizacją do tego przedmiotu.</p>
-              )}
-            </div>
-            {komunikatPrzydziel && (
-              <div className={`p-2 rounded text-sm ${komunikatPrzydziel.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'}`}>
-                {komunikatPrzydziel.tekst}
-              </div>
-            )}
-            <div className="flex gap-3 justify-end pt-2">
-              <Button type="button" variant="secondary" onClick={zamknijModalPrzydziel}>
-                Anuluj
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={zapiszPrzydziel}
-                disabled={zapisywanie || !modalNauczycielId || modalGodziny <= 0}
-              >
-                {zapisywanie ? 'Zapisywanie…' : 'Zapisz'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {modalRow &&
+        (() => {
+          const przId = przedmiotIdDlaNazwy(modalRow.nazwa);
+          const dostepni = nauczycieleDlaPrzedmiotu(przId);
+          const maxGodziny = Math.min(10, Math.max(0.5, Math.floor(modalRow.doPrzydzielenia * 2) / 2 || 0.5));
+          return (
+            <PrzydzielModal
+              nazwaPrzedmiotu={modalRow.nazwa}
+              godziny={modalGodziny}
+              maxGodziny={maxGodziny}
+              onGodzinyChange={setModalGodziny}
+              nauczycielId={modalNauczycielId}
+              onNauczycielChange={setModalNauczycielId}
+              dostepniNauczyciele={dostepni}
+              nauczycieleLoading={nauczycieleLoading}
+              brakDopasowanych={!!przId && dostepni.length === 0}
+              komunikat={komunikatPrzydziel}
+              zapisywanie={zapisywanie}
+              onSave={zapiszPrzydziel}
+              onClose={zamknijModalPrzydziel}
+            />
+          );
+        })()}
     </div>
   );
 }
