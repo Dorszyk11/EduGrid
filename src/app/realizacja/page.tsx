@@ -7,6 +7,17 @@ import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapisz
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import { buttonClass } from '@/components/ui/Button';
+import {
+  type PlanItem,
+  type PlanRow,
+  getGradesFromPlan,
+  matchSchoolType,
+  cycleFilterZNazwy,
+  isSubjectRow,
+  pominWyswietlanie,
+  subjectKey,
+  obliczPlanRzeczywisty,
+} from '@/lib/ramowePlany';
 
 interface TypSzkoly {
   id: string;
@@ -20,64 +31,9 @@ interface KlasaItem {
   typ_szkoly: { id: string; nazwa?: string } | null;
 }
 
-type HoursByGrade = Record<string, number>;
-type SubjectRow = { subject?: string; hours_by_grade?: HoursByGrade; director_discretion_hours?: unknown };
-type PlanItem = { plan_id?: string; school_type: string; cycle: string; table_structure?: { grades?: string[] }; grades?: string[]; subjects: SubjectRow[] };
 const allPlans: PlanItem[] = (plansData as { plans?: PlanItem[] }).plans ?? [];
 
 const SELECT_CLASS = 'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
-
-function getGradesFromPlan(plan: PlanItem): string[] {
-  return plan.table_structure?.grades ?? plan.grades ?? [];
-}
-
-function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
-
-const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
-function isPrzedmiotLaczny(subjectName: string): boolean {
-  return PRZEDMIOTY_LACZNE_CYKL.some((n) => (subjectName || '').trim() === n);
-}
-
-function isPrzedmiotRozszerzony(subjectName: string): boolean {
-  return /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/i.test((subjectName || '').trim());
-}
-
-function pominWyswietlanie(subjectName: string): boolean {
-  const s = (subjectName || '').trim().toLowerCase();
-  return s.includes('doradztwa zawodowego') || /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/.test(s);
-}
-
-/** Dopasowanie nazwy typu (np. "Technikum, Klasy I–V") do school_type z planu. */
-function matchSchoolType(nazwaTypu: string, schoolType: string): boolean {
-  const a = (nazwaTypu || '').trim().toLowerCase();
-  const b = (schoolType || '').trim().toLowerCase();
-  if (!a || !b) return false;
-  if (a === b) return true;
-  if (a.startsWith(b) && (a.length === b.length || a.charAt(b.length) === ',')) return true;
-  return false;
-}
-
-function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
-  const n = (nazwaTypu || '').toLowerCase();
-  if (n.includes('i–iii') || n.includes('i-iii') || n.includes('1–3') || n.includes('1-3')) return 'Klasy I–III';
-  if (n.includes('iv–viii') || n.includes('iv-viii') || n.includes('4–8') || n.includes('4-8')) return 'Klasy IV–VIII';
-  if (n.includes('i–v') || n.includes('i-v') || n.includes('1–5') || n.includes('1-5')) return 'Klasy I–V';
-  if (n.includes('i–iv') || n.includes('i-iv') || n.includes('1–4') || n.includes('1-4')) return 'Klasy I–IV';
-  if (n.includes('vii–viii') || n.includes('vii-viii') || n.includes('7–8') || n.includes('7-8')) return 'Klasy VII–VIII';
-  return undefined;
-}
-
-function isSubjectRow(row: SubjectRow): row is SubjectRow & { subject: string } {
-  return 'subject' in row && typeof (row as { subject?: string }).subject === 'string';
-}
-
-/** Jedna linia planu: przedmiot + godziny w każdym roku. */
-interface PlanRow {
-  nazwa: string;
-  godzinyByGrade: Record<string, number>;
-}
 
 export default function RealizacjaPage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
@@ -125,36 +81,7 @@ export default function RealizacjaPage() {
     rozszerzenia: [],
     rozszerzeniaPrzydzial: {},
   };
-  const planRzeczywisty: PlanRow[] =
-    plan
-      ? plan.subjects
-          .filter(isSubjectRow)
-          .filter((row) => !pominWyswietlanie(row.subject ?? ''))
-          .map((row) => {
-            const nazwa = row.subject ?? '—';
-            const subKey = subjectKey(plan.plan_id, nazwa);
-            const godzinyByGrade: Record<string, number> = {};
-            for (const rok of rokiPlanu) {
-              const base = row.hours_by_grade?.[rok] ?? 0;
-              const p = danePrzydzialu.przydzial?.[subKey]?.[rok] ?? 0;
-              const d = danePrzydzialu.dyrektor?.[subKey]?.[rok] ?? 0;
-              let godziny: number;
-              if (isPrzedmiotLaczny(nazwa)) {
-                godziny = danePrzydzialu.doradztwo?.[subKey]?.[rok] ?? 0;
-              } else if (isPrzedmiotRozszerzony(nazwa)) {
-                const planPrefix = (plan.plan_id ?? 'plan') + '_';
-                godziny = (danePrzydzialu.rozszerzenia ?? [])
-                  .filter((k) => k.startsWith(planPrefix))
-                  .reduce((s, k) => s + (danePrzydzialu.rozszerzeniaPrzydzial?.[k]?.[rok] ?? 0), 0);
-              } else {
-                const rozsz = danePrzydzialu.rozszerzenia?.includes(subKey) ? (danePrzydzialu.rozszerzeniaPrzydzial?.[subKey]?.[rok] ?? 0) : 0;
-                godziny = base + p + d + rozsz;
-              }
-              godzinyByGrade[rok] = godziny;
-            }
-            return { nazwa, godzinyByGrade };
-          })
-      : [];
+  const planRzeczywisty: PlanRow[] = plan ? obliczPlanRzeczywisty(plan, rokiPlanu, danePrzydzialu) : [];
 
   useEffect(() => {
     let ok = true;
