@@ -14,7 +14,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testTimeout: 30000,
   transformIgnorePatterns: [
-    'node_modules/(?!(@payloadcms|payload)/)',
+    'node_modules/(?!(@payloadcms|payload|lucide-react)/)',
   ],
 };
 

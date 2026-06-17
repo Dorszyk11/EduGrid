@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthContext'
 import AuthAwareLayout from '@/components/layout/AuthAwareLayout'
+import { ToastProvider } from '@/components/ui/Toast'
 
 // Body: Inter (czytelność danych). Display: Space Grotesk (techniczny, „siatkowy").
 const inter = Inter({
@@ -31,7 +32,9 @@ export default function RootLayout({
     <html lang="pl" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
         <AuthProvider>
-          <AuthAwareLayout>{children}</AuthAwareLayout>
+          <ToastProvider>
+            <AuthAwareLayout>{children}</AuthAwareLayout>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
