@@ -490,101 +490,107 @@
         },
         {
           "lp": 4,
+          "subject": "Filozofia / plastyka / muzyka / język łaciński i kultura antyczna",
+          "hours_by_grade": { "I": 1, "II": 0, "III": 0, "IV": 0, "V": 0 },
+          "total_hours": 1
+        },
+        {
+          "lp": 5,
           "subject": "Historia",
           "hours_by_grade": { "I": 1, "II": 1, "III": 2, "IV": 2, "V": 1 },
           "total_hours": 7
         },
         {
-          "lp": 5,
+          "lp": 6,
           "subject": "Edukacja obywatelska",
           "hours_by_grade": { "I": 0, "II": 1, "III": 1, "IV": 1, "V": 0 },
           "total_hours": 3
         },
         {
-          "lp": 6,
+          "lp": 7,
           "subject": "Biznes i zarządzanie",
           "hours_by_grade": { "I": 1, "II": 1, "III": 0, "IV": 0, "V": 0 },
           "total_hours": 2
         },
         {
-          "lp": 7,
+          "lp": 8,
           "subject": "Geografia",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
           "hours_to_choose": 4,
           "total_hours": 4
         },
         {
-          "lp": 8,
+          "lp": 9,
           "subject": "Biologia",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
           "hours_to_choose": 4,
           "total_hours": 4
         },
         {
-          "lp": 9,
+          "lp": 10,
           "subject": "Chemia",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
           "hours_to_choose": 4,
           "total_hours": 4
         },
         {
-          "lp": 10,
+          "lp": 11,
           "subject": "Fizyka",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
           "hours_to_choose": 4,
           "total_hours": 4
         },
         {
-          "lp": 11,
+          "lp": 12,
           "subject": "Matematyka",
           "hours_by_grade": { "I": 2, "II": 3, "III": 3, "IV": 3, "V": 3 },
           "total_hours": 14
         },
         {
-          "lp": 12,
+          "lp": 13,
           "subject": "Informatyka",
           "hours_by_grade": { "I": 2, "II": 1, "III": 0, "IV": 0, "V": 0 },
           "total_hours": 3
         },
         {
-          "lp": 13,
+          "lp": 14,
           "subject": "Wychowanie fizyczne",
           "hours_by_grade": { "I": 3, "II": 3, "III": 3, "IV": 3, "V": 3 },
           "total_hours": 15
         },
         {
-          "lp": 14,
+          "lp": 15,
           "subject": "Edukacja dla bezpieczeństwa",
           "hours_by_grade": { "I": 1, "II": 0, "III": 0, "IV": 0, "V": 0 },
           "total_hours": 1
         },
         {
-          "lp": 15,
+          "lp": 16,
           "subject": "Zajęcia z wychowawcą",
           "hours_by_grade": { "I": 1, "II": 1, "III": 1, "IV": 1, "V": 1 },
           "total_hours": 5
         },
         {
-          "lp": 16,
+          "lp": 17,
           "subject": "Przedmioty w zakresie rozszerzonym",
           "hours_by_grade": { "I": 1, "II": 1, "III": 2, "IV": 2, "V": 2 },
           "total_hours": 8
         },
         {
-          "lp": 17,
+          "lp": 18,
           "subject": "Kształcenie zawodowe",
           "hours_by_grade": { "I": 11, "II": 12, "III": 13, "IV": 13, "V": 7 },
           "total_hours": 56
         },
         {
-          "lp": 18,
+          "lp": 19,
           "subject": "Zajęcia z zakresu doradztwa zawodowego",
           "hours_by_grade": { "I": 0, "II": 0, "III": 0, "IV": 0, "V": 0 },
           "total_hours": 10,
           "hours_to_choose": 10
         },
         {
-          "lp": 19,
+          "lp": 20,
           "subject": "Dodatkowe godziny języków obcych w szkołach dwujęzycznych",
           "hours_by_grade": { "I": 2, "II": 2, "III": 2, "IV": 2, "V": 1 },
           "total_hours": 9
