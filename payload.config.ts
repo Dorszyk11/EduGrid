@@ -74,6 +74,10 @@ export default buildConfig({
         connectionString: uri || undefined,
         max: 2,
         idleTimeoutMillis: 10000,
+        // Bez tego pg czeka na wolne połączenie w nieskończoność: gdy pooler
+        // Supabase jest zimny/zajęty, request (np. /api/typy-szkol) wisi w „pending"
+        // i blokuje guard ładujący całą aplikację. Odrzuć po 10 s → handler złapie błąd.
+        connectionTimeoutMillis: 10000,
       };
       const sslConfig = getDbSslConfig(uri || undefined);
       if (sslConfig) {

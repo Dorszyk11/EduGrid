@@ -21,7 +21,13 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
       return;
     }
 
-    fetch('/api/typy-szkol', { cache: 'no-store' })
+    // Timeout chroni przed zawieszonym żądaniem (zimny pooler DB): zamiast
+    // wiecznego spinnera blokującego całą aplikację, po przekroczeniu czasu
+    // wpuszczamy użytkownika do środka (fail-open).
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    fetch('/api/typy-szkol', { cache: 'no-store', signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
       .then((data) => {
         const hasTypy = Array.isArray(data) && data.length > 0;
@@ -32,7 +38,13 @@ export default function RedirectIfNoTypySzkol({ children }: RedirectIfNoTypySzko
           setStatus('ok');
         }
       })
-      .catch(() => setStatus('ok'));
+      .catch(() => setStatus('ok'))
+      .finally(() => clearTimeout(timeoutId));
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [pathname, router]);
 
   if (status === 'loading') {
