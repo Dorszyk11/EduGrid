@@ -112,20 +112,20 @@ export default function SiatkaSzkolyPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Siatka godzin szkoły</h1>
+        <h1 className="font-display text-3xl font-bold text-ink tracking-tight">Siatka godzin szkoły</h1>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+          className="px-4 py-2 bg-line hover:bg-line-strong rounded"
         >
           ← Powrót do dashboardu
         </button>
       </div>
 
       {/* Formularz filtrowania */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface rounded shadow-card p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink-soft mb-1">
               Typ szkoły *
             </label>
             <select
@@ -141,7 +141,7 @@ export default function SiatkaSzkolyPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink-soft mb-1">
               Rok szkolny
             </label>
             <input
@@ -170,62 +170,62 @@ export default function SiatkaSzkolyPage() {
 
       {/* Komunikat błędu */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div className="bg-danger-bg border border-danger text-danger px-4 py-3 rounded">
           {error}
         </div>
       )}
 
       {/* Tabela siatki */}
       {ladowanie ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-surface rounded shadow-card p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-line rounded w-1/4"></div>
+            <div className="h-4 bg-line rounded w-1/2"></div>
+            <div className="h-4 bg-line rounded w-3/4"></div>
           </div>
         </div>
       ) : dane && dane.macierz.length > 0 ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-surface rounded shadow-card p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">
               Siatka godzin ({przefiltrowanaMacierz.length} przedmiotów, {dane.klasy.length} klas)
             </h2>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-ink-soft">
               Rok szkolny: {dane.rokSzkolny}
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse border border-gray-300">
+            <table className="min-w-full border-collapse border border-line">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase sticky left-0 bg-gray-100 z-10">
+                <tr className="bg-surface-2">
+                  <th className="border border-line px-4 py-3 text-left text-xs font-medium text-ink-soft uppercase sticky left-0 bg-surface-2 z-10">
                     Przedmiot
                   </th>
                   {dane.klasy.map(klasa => (
                     <th
                       key={klasa.id}
-                      className="border border-gray-300 px-3 py-2 text-center text-xs font-medium text-gray-700"
+                      className="border border-line px-3 py-2 text-center text-xs font-medium text-ink-soft"
                       title={klasa.profil || undefined}
                     >
                       <div>{klasa.nazwa}</div>
                       {klasa.profil && (
-                        <div className="text-xs text-gray-500 font-normal">{klasa.profil}</div>
+                        <div className="text-xs text-ink-faint font-normal">{klasa.profil}</div>
                       )}
                     </th>
                   ))}
-                  <th className="border border-gray-300 px-4 py-3 text-center text-xs font-medium text-gray-700 bg-gray-50">
+                  <th className="border border-line px-4 py-3 text-center text-xs font-medium text-ink-soft bg-surface-2">
                     Suma
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {przefiltrowanaMacierz.map((wiersz, index) => (
-                  <tr key={wiersz.przedmiotId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="border border-gray-300 px-4 py-3 text-sm font-medium sticky left-0 bg-inherit z-10">
+                  <tr key={wiersz.przedmiotId} className={index % 2 === 0 ? 'bg-surface' : 'bg-surface-2'}>
+                    <td className="border border-line px-4 py-3 text-sm font-medium sticky left-0 bg-inherit z-10">
                       <Link
                         href={`/przedmioty/${wiersz.przedmiotId}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                        className="text-accent hover:text-accent-strong hover:underline"
                       >
                         {wiersz.przedmiotNazwa}
                       </Link>
@@ -233,55 +233,55 @@ export default function SiatkaSzkolyPage() {
                     {wiersz.klasy.map((klasa) => (
                       <td
                         key={klasa.klasaId}
-                        className={`border border-gray-300 px-3 py-2 text-center text-sm ${
+                        className={`border border-line px-3 py-2 text-center text-sm ${
                           klasa.godzinyTygodniowo === 0
-                            ? 'text-gray-400 bg-gray-100'
-                            : 'text-gray-900'
+                            ? 'text-ink-faint bg-surface-2'
+                            : 'text-ink'
                         }`}
                       >
                         {klasa.godzinyTygodniowo > 0 ? (
                           <div>
                             <div className="font-medium">{klasa.godzinyTygodniowo}h/tyg</div>
-                            <div className="text-xs text-gray-500">{klasa.godzinyRoczne}h/rok</div>
+                            <div className="text-xs text-ink-faint">{klasa.godzinyRoczne}h/rok</div>
                             {klasa.nauczycielNazwa && (
-                              <div className="text-xs text-blue-600 mt-1">
+                              <div className="text-xs text-accent mt-1">
                                 {klasa.nauczycielNazwa}
                                 {klasa.liczbaNauczycieli > 1 && (
-                                  <span className="text-gray-500"> +{klasa.liczbaNauczycieli - 1}</span>
+                                  <span className="text-ink-faint"> +{klasa.liczbaNauczycieli - 1}</span>
                                 )}
                               </div>
                             )}
                             {klasa.liczbaNauczycieli === 0 && (
-                              <div className="text-xs text-red-600 mt-1">Brak nauczyciela</div>
+                              <div className="text-xs text-danger mt-1">Brak nauczyciela</div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-ink-faint">-</span>
                         )}
                       </td>
                     ))}
-                    <td className="border border-gray-300 px-4 py-3 text-center text-sm font-medium bg-gray-50">
+                    <td className="border border-line px-4 py-3 text-center text-sm font-medium bg-surface-2">
                       <div>{wiersz.sumaGodzinTygodniowo}h/tyg</div>
-                      <div className="text-xs text-gray-500">{wiersz.sumaGodzinRocznie}h/rok</div>
+                      <div className="text-xs text-ink-faint">{wiersz.sumaGodzinRocznie}h/rok</div>
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-gray-100 font-semibold">
-                  <td className="border border-gray-300 px-4 py-3 text-sm">Suma</td>
+                <tr className="bg-surface-2 font-semibold">
+                  <td className="border border-line px-4 py-3 text-sm">Suma</td>
                   {dane.klasy.map(klasa => {
                     const suma = przefiltrowanaMacierz.reduce(
                       (sum, w) => sum + (w.klasy.find(k => k.klasaId === klasa.id)?.godzinyTygodniowo || 0),
                       0
                     );
                     return (
-                      <td key={klasa.id} className="border border-gray-300 px-3 py-2 text-center text-sm">
+                      <td key={klasa.id} className="border border-line px-3 py-2 text-center text-sm">
                         {suma}h/tyg
                       </td>
                     );
                   })}
-                  <td className="border border-gray-300 px-4 py-3 text-center text-sm bg-gray-200">
+                  <td className="border border-line px-4 py-3 text-center text-sm bg-line">
                     {przefiltrowanaMacierz.reduce((sum, w) => sum + w.sumaGodzinTygodniowo, 0)}h/tyg
                   </td>
                 </tr>
@@ -290,7 +290,7 @@ export default function SiatkaSzkolyPage() {
           </div>
         </div>
       ) : dane && dane.macierz.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+        <div className="bg-surface rounded shadow-card p-6 text-center text-ink-faint">
           Brak danych do wyświetlenia. Upewnij się, że wybrano typ szkoły i że istnieją przypisania godzin.
         </div>
       ) : null}

@@ -95,8 +95,8 @@ export default function ZarzadzanieSzkolamiPage() {
     <div className="p-6 md:p-8 max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Zarządzanie szkołami</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="font-display text-2xl font-bold text-ink tracking-tight">Zarządzanie szkołami</h1>
+          <p className="text-ink-soft mt-1">
             Typy szkół w bazie. Możesz je usunąć lub dodać w Panelu admina.
           </p>
         </div>
@@ -105,13 +105,13 @@ export default function ZarzadzanieSzkolamiPage() {
             type="button"
             onClick={handleResetAndSchools}
             disabled={resetting}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-warn text-white rounded hover:bg-warn font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {resetting ? 'Resetowanie…' : '🔄 Reset bazy i załaduj szkoły z planów MEiN'}
           </button>
           <Link
             href="/panel-admin"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded hover:bg-accent-strong font-medium"
           >
             <span>➕</span> Panel admina
           </Link>
@@ -120,8 +120,8 @@ export default function ZarzadzanieSzkolamiPage() {
 
       {message && (
         <div
-          className={`mb-4 px-4 py-3 rounded-lg ${
-            message.type === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          className={`mb-4 px-4 py-3 rounded ${
+            message.type === 'ok' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'
           }`}
         >
           {message.text}
@@ -129,45 +129,45 @@ export default function ZarzadzanieSzkolamiPage() {
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-gray-500">Ładowanie…</div>
+        <div className="py-12 text-center text-ink-faint">Ładowanie…</div>
       ) : error ? (
-        <div className="py-8 px-4 bg-red-50 text-red-800 rounded-xl">{error}</div>
+        <div className="py-8 px-4 bg-danger-bg text-danger rounded-card">{error}</div>
       ) : szkoly.length === 0 ? (
-        <div className="py-12 px-4 bg-gray-50 rounded-xl text-center text-gray-600">
+        <div className="py-12 px-4 bg-surface-2 rounded-card text-center text-ink-soft">
           Brak typów szkół. Użyj przycisku „Reset bazy i załaduj szkoły z planów MEiN” powyżej
           albo dodaj je w{' '}
-          <Link href="/panel-admin" className="text-blue-600 hover:underline">
+          <Link href="/panel-admin" className="text-accent hover:underline">
             Panel admina
           </Link>
           .
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-card border border-line overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-5 py-3 text-sm font-medium text-gray-600">Nazwa</th>
-                  <th className="px-5 py-3 text-sm font-medium text-gray-600">Kod MEiN</th>
-                  <th className="px-5 py-3 text-sm font-medium text-gray-600">Lata</th>
-                  <th className="px-5 py-3 text-sm font-medium text-gray-600 text-right w-32">Akcje</th>
+                <tr className="border-b border-line bg-surface-2">
+                  <th className="px-5 py-3 text-sm font-medium text-ink-soft">Nazwa</th>
+                  <th className="px-5 py-3 text-sm font-medium text-ink-soft">Kod MEiN</th>
+                  <th className="px-5 py-3 text-sm font-medium text-ink-soft">Lata</th>
+                  <th className="px-5 py-3 text-sm font-medium text-ink-soft text-right w-32">Akcje</th>
                 </tr>
               </thead>
               <tbody>
                 {szkoly.map((s) => (
                   <tr
                     key={String(s.id)}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50"
+                    className="border-b border-line last:border-0 hover:bg-surface-2/50"
                   >
-                    <td className="px-5 py-3 font-medium text-gray-900">{s.nazwa}</td>
-                    <td className="px-5 py-3 text-gray-600">{s.kod_mein ?? '–'}</td>
-                    <td className="px-5 py-3 text-gray-600">{s.liczba_lat ?? '–'}</td>
+                    <td className="px-5 py-3 font-medium text-ink">{s.nazwa}</td>
+                    <td className="px-5 py-3 text-ink-soft">{s.kod_mein ?? '–'}</td>
+                    <td className="px-5 py-3 text-ink-soft">{s.liczba_lat ?? '–'}</td>
                     <td className="px-5 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => handleDelete(s)}
                         disabled={deletingId === s.id}
-                        className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-sm text-danger hover:bg-danger-bg rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {deletingId === s.id ? 'Usuwanie…' : 'Usuń'}
                       </button>

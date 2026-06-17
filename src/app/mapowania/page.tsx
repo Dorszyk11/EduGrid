@@ -52,17 +52,17 @@ export default function MapowaniaPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Mapowania nazw MEiN ↔ szkoła</h1>
+        <h1 className="font-display text-3xl font-bold text-ink tracking-tight">Mapowania nazw MEiN ↔ szkoła</h1>
         <div className="flex gap-2">
           <Link
             href="/panel-admin"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-strong"
           >
             ➕ Dodaj mapowanie
           </Link>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+            className="px-4 py-2 bg-line hover:bg-line-strong rounded"
           >
             ← Powrót
           </button>
@@ -70,10 +70,10 @@ export default function MapowaniaPage() {
       </div>
 
       {/* Filtry */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface rounded shadow-card p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink-soft mb-1">
               Typ mapowania
             </label>
             <select
@@ -109,32 +109,32 @@ export default function MapowaniaPage() {
 
       {/* Lista mapowań */}
       {ladowanie ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-surface rounded shadow-card p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-line rounded w-1/4"></div>
+            <div className="h-4 bg-line rounded w-1/2"></div>
+            <div className="h-4 bg-line rounded w-3/4"></div>
           </div>
         </div>
       ) : mapowania.length > 0 ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-surface rounded shadow-card p-6">
           <h2 className="text-xl font-semibold mb-4">
             Mapowania ({mapowania.length})
           </h2>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-line">
+              <thead className="bg-surface-2">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nazwa MEiN</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nazwa w szkole</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uwagi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-faint uppercase">Nazwa MEiN</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-faint uppercase">Nazwa w szkole</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-faint uppercase">Typ</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-ink-faint uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-faint uppercase">Uwagi</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-line">
                 {mapowania.map((mapowanie) => (
-                  <tr key={mapowanie.id} className="hover:bg-gray-50">
+                  <tr key={mapowanie.id} className="hover:bg-surface-2">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {mapowanie.nazwa_mein}
                     </td>
@@ -144,8 +144,8 @@ export default function MapowaniaPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`px-2 py-1 rounded text-xs ${
                         mapowanie.typ === 'przedmiot' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
+                          ? 'bg-accent-weak text-accent-strong' 
+                          : 'bg-ok-bg text-ok'
                       }`}>
                         {mapowanie.typ === 'przedmiot' ? 'Przedmiot' : 'Typ szkoły'}
                       </span>
@@ -153,13 +153,13 @@ export default function MapowaniaPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                       <span className={`px-2 py-1 rounded text-xs ${
                         mapowanie.aktywne 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-ok-bg text-ok' 
+                          : 'bg-surface-2 text-ink'
                       }`}>
                         {mapowanie.aktywne ? 'Aktywne' : 'Nieaktywne'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm text-ink-faint">
                       {mapowanie.uwagi || '-'}
                     </td>
                   </tr>
@@ -169,15 +169,15 @@ export default function MapowaniaPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+        <div className="bg-surface rounded shadow-card p-6 text-center text-ink-faint">
           Brak mapowań. Dodaj pierwsze mapowanie w panelu administracyjnym.
         </div>
       )}
 
       {/* Informacja */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-800 mb-2">ℹ️ Jak działa mapowanie?</h3>
-        <p className="text-sm text-blue-700">
+      <div className="bg-accent-weak border border-line rounded p-4">
+        <h3 className="font-semibold text-accent-strong mb-2">ℹ️ Jak działa mapowanie?</h3>
+        <p className="text-sm text-accent">
           Mapowania pozwalają na automatyczne dopasowanie nazw z dokumentacji MEiN do nazw używanych w szkole.
           Podczas importu siatki godzin MEiN z PDF, system automatycznie użyje mapowań do znalezienia odpowiednich
           przedmiotów i typów szkół w bazie.

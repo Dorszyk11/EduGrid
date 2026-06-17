@@ -72,7 +72,7 @@ function totalDisplay(row: SubjectRow): React.ReactNode {
   }
   if (t !== undefined && t !== null) return String(t);
   if (row.hours_to_choose != null) {
-    return <span className="text-gray-500">min. {row.hours_to_choose}</span>;
+    return <span className="text-ink-faint">min. {row.hours_to_choose}</span>;
   }
   return '–';
 }
@@ -83,13 +83,13 @@ export default function PlanyMeinPage() {
       <div className="mb-6">
         <Link
           href="/przydzial"
-          className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900 font-medium"
+          className="inline-flex items-center gap-1 text-ink-soft hover:text-ink font-medium"
         >
           ← Powrót do Przydziału
         </Link>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Plany MEiN</h1>
-      <p className="text-gray-600 mb-8">
+      <h1 className="font-display text-2xl font-bold text-ink tracking-tight mb-1">Plany MEiN</h1>
+      <p className="text-ink-soft mb-8">
         Ramowe plany nauczania – szkoły, przedmioty i godziny (tygodniowo w klasach oraz razem w cyklu).
       </p>
 
@@ -102,20 +102,20 @@ export default function PlanyMeinPage() {
           return (
             <section
               key={plan.plan_id ?? `${plan.school_type}-${plan.cycle}-${idx}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+              className="bg-surface rounded-card shadow-card border border-line overflow-hidden"
             >
-              <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="px-5 py-4 bg-surface-2 border-b border-line">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-semibold text-gray-900">{plan.school_type}</span>
-                  <span className="text-gray-500">·</span>
-                  <span className="text-gray-700">{plan.cycle}</span>
+                  <span className="font-semibold text-ink">{plan.school_type}</span>
+                  <span className="text-ink-faint">·</span>
+                  <span className="text-ink-soft">{plan.cycle}</span>
                   {plan.scope && (
                     <>
-                      <span className="text-gray-500">·</span>
-                      <span className="text-gray-600">{plan.scope}</span>
+                      <span className="text-ink-faint">·</span>
+                      <span className="text-ink-soft">{plan.scope}</span>
                     </>
                   )}
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-ink-faint text-sm">
                     Załącznik nr {plan.attachment_no}
                     {(plan.source_pages ?? plan.source_pages_hint)?.length
                       ? ` · str. ${(plan.source_pages ?? plan.source_pages_hint)!.join(', ')}`
@@ -123,7 +123,7 @@ export default function PlanyMeinPage() {
                   </span>
                 </div>
                 {unit && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-ink-faint mt-1">
                     Jednostka: {unit}
                   </p>
                 )}
@@ -132,19 +132,19 @@ export default function PlanyMeinPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50/80">
-                      <th className="px-3 py-2.5 text-sm font-medium text-gray-600 w-12">Lp.</th>
-                      <th className="px-3 py-2.5 text-sm font-medium text-gray-600">Przedmiot</th>
+                    <tr className="border-b border-line bg-surface-2">
+                      <th className="px-3 py-2.5 text-sm font-medium text-ink-soft w-12">Lp.</th>
+                      <th className="px-3 py-2.5 text-sm font-medium text-ink-soft">Przedmiot</th>
                       {hasGrades &&
                         grades.map((g) => (
                           <th
                             key={g}
-                            className="px-3 py-2.5 text-sm font-medium text-gray-600 text-center w-16"
+                            className="px-3 py-2.5 text-sm font-medium text-ink-soft text-center w-16"
                           >
                             {g}
                           </th>
                         ))}
-                      <th className="px-3 py-2.5 text-sm font-medium text-gray-600 text-right w-24">
+                      <th className="px-3 py-2.5 text-sm font-medium text-ink-soft text-right w-24">
                         Razem
                       </th>
                     </tr>
@@ -156,7 +156,7 @@ export default function PlanyMeinPage() {
                         return (
                           <tr
                             key={i}
-                            className="border-b border-gray-100 bg-amber-50/50 font-medium"
+                            className="border-b border-line bg-warn-bg font-medium"
                           >
                             <td className="px-3 py-2.5" colSpan={hasGrades ? 2 + grades.length : 2}>
                               Godziny do dyspozycji dyrektora
@@ -172,22 +172,22 @@ export default function PlanyMeinPage() {
                       return (
                         <tr
                           key={i}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50"
+                          className="border-b border-line last:border-0 hover:bg-surface-2"
                         >
-                          <td className="px-3 py-2.5 text-gray-500 tabular-nums">
+                          <td className="px-3 py-2.5 text-ink-faint tabular-nums">
                             {row.lp != null ? row.lp : '–'}
                           </td>
-                          <td className="px-3 py-2.5 text-gray-800">{subject}</td>
+                          <td className="px-3 py-2.5 text-ink">{subject}</td>
                           {hasGrades &&
                             grades.map((g) => (
                               <td
                                 key={g}
-                                className="px-3 py-2.5 text-center tabular-nums text-gray-700"
+                                className="px-3 py-2.5 text-center tabular-nums text-ink-soft"
                               >
                                 {cellDisplay(row, g, false)}
                               </td>
                             ))}
-                          <td className="px-3 py-2.5 text-right tabular-nums text-gray-800">
+                          <td className="px-3 py-2.5 text-right tabular-nums text-ink">
                             {totalDisplay(row)}
                           </td>
                         </tr>

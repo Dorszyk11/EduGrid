@@ -38,21 +38,21 @@ export default function RaportyPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Raporty</h1>
+        <h1 className="font-display text-3xl font-bold text-ink tracking-tight">Raporty</h1>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+          className="px-4 py-2 bg-line hover:bg-line-strong rounded"
         >
           ← Powrót do dashboardu
         </button>
       </div>
 
       {/* Formularz wyboru */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface rounded shadow-card p-6">
         <h2 className="text-xl font-semibold mb-4">Parametry raportu</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink-soft mb-1">
               Typ szkoły *
             </label>
             <select
@@ -68,7 +68,7 @@ export default function RaportyPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink-soft mb-1">
               Rok szkolny
             </label>
             <input
@@ -87,13 +87,13 @@ export default function RaportyPage() {
         {/* Raport zgodności MEiN */}
         <Link
           href={generujLinkRaportu('zgodnosc-mein')}
-          className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${
+          className={`bg-surface rounded shadow-card p-6 hover:shadow-pop transition-shadow ${
             !typSzkolyId ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
           }`}
         >
           <div className="text-4xl mb-3">✅</div>
           <h3 className="text-lg font-semibold mb-2">Raport zgodności MEiN</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-soft">
             Szczegółowy raport zgodności planowanych godzin z wymaganiami MEiN dla każdej klasy i przedmiotu.
           </p>
         </Link>
@@ -101,13 +101,13 @@ export default function RaportyPage() {
         {/* Raport obciążeń nauczycieli */}
         <Link
           href={generujLinkRaportu('obciazenia')}
-          className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${
+          className={`bg-surface rounded shadow-card p-6 hover:shadow-pop transition-shadow ${
             !typSzkolyId ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
           }`}
         >
           <div className="text-4xl mb-3">📊</div>
           <h3 className="text-lg font-semibold mb-2">Raport obciążeń nauczycieli</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-soft">
             Analiza obciążeń godzinowych nauczycieli, wykrywanie przeciążeń i niedociążeń.
           </p>
         </Link>
@@ -115,13 +115,13 @@ export default function RaportyPage() {
         {/* Raport braków kadrowych */}
         <Link
           href={generujLinkRaportu('braki-kadrowe')}
-          className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${
+          className={`bg-surface rounded shadow-card p-6 hover:shadow-pop transition-shadow ${
             !typSzkolyId ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
           }`}
         >
           <div className="text-4xl mb-3">⚠️</div>
           <h3 className="text-lg font-semibold mb-2">Raport braków kadrowych</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-soft">
             Lista przedmiotów i klas bez przypisanych nauczycieli z sugerowanymi rozwiązaniami.
           </p>
         </Link>
@@ -129,13 +129,13 @@ export default function RaportyPage() {
         {/* Raport arkusz organizacyjny */}
         <Link
           href={generujLinkRaportu('arkusz-organizacyjny')}
-          className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${
+          className={`bg-surface rounded shadow-card p-6 hover:shadow-pop transition-shadow ${
             !typSzkolyId ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
           }`}
         >
           <div className="text-4xl mb-3">📄</div>
           <h3 className="text-lg font-semibold mb-2">Arkusz organizacyjny</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-soft">
             Pełny arkusz organizacyjny szkoły z możliwością eksportu do XLS.
           </p>
         </Link>

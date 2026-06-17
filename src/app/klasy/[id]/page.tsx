@@ -99,8 +99,8 @@ export default function KlasaPage() {
       <div className="p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Ładowanie danych klasy...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
+            <p className="mt-4 text-ink-soft">Ładowanie danych klasy...</p>
           </div>
         </div>
       </div>
@@ -110,12 +110,12 @@ export default function KlasaPage() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 font-semibold">Błąd:</p>
-          <p className="text-red-700">{error}</p>
+        <div className="bg-danger-bg border border-danger rounded p-4">
+          <p className="text-danger font-semibold">Błąd:</p>
+          <p className="text-danger">{error}</p>
           <button
             onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="mt-4 px-4 py-2 bg-danger text-white rounded hover:bg-danger"
           >
             Wróć
           </button>
@@ -133,24 +133,24 @@ export default function KlasaPage() {
       {/* Nagłówek */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Klasa {dane.klasa.nazwa}</h1>
+          <h1 className="font-display text-3xl font-bold text-ink tracking-tight">Klasa {dane.klasa.nazwa}</h1>
           {dane.klasa.profil && (
-            <p className="text-gray-600 mt-1">Profil: {dane.klasa.profil}</p>
+            <p className="text-ink-soft mt-1">Profil: {dane.klasa.profil}</p>
           )}
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-ink-faint mt-1">
             {dane.klasa.typ_szkoly.nazwa} • Rok szkolny: {dane.klasa.rok_szkolny}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/klasy"
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium"
+            className="px-4 py-2 bg-line hover:bg-line-strong rounded font-medium"
           >
             ← Wróć do klas
           </Link>
           <Link
             href="/przydzial"
-            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium"
+            className="px-4 py-2 bg-accent text-white hover:bg-accent-strong rounded font-medium"
           >
             Przydział
           </Link>
@@ -159,7 +159,7 @@ export default function KlasaPage() {
 
       {/* Realizacja wymagań MEiN – jak na dashboardzie */}
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-gray-800">Realizacja wymagań MEiN</h2>
+        <h2 className="text-xl font-semibold text-ink">Realizacja wymagań MEiN</h2>
         <KafelkiRealizacji
           dane={zgodnoscDane}
           ladowanie={false}
@@ -170,8 +170,8 @@ export default function KlasaPage() {
       {/* Plan ramowy MEiN – jak na dashboardzie (tylko odczyt) */}
       {dane.klasa.typ_szkoly?.nazwa && (
         <div className="space-y-2 min-w-0">
-          <h2 className="text-xl font-semibold text-gray-800">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
+          <h2 className="text-xl font-semibold text-ink">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
+          <p className="text-ink-soft text-sm leading-relaxed">
             Wymagania MEiN dla typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
           </p>
           <PlanMeinTabela
