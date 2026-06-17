@@ -14,6 +14,11 @@ import {
   isPrzedmiotRozszerzony,
   subjectKey,
 } from '@/lib/przydzial/plany-mein';
+import {
+  getGodzinyRozszerzenia,
+  canPrzydzielacWKomorce,
+  kolorOdProcentuGodzinDodatkowych,
+} from '@/lib/przydzial/reguly';
 
 export type { PlanMein };
 
@@ -104,35 +109,6 @@ function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
   if (n.includes('i–iv') || n.includes('i-iv') || n.includes('1–4') || n.includes('1-4')) return 'Klasy I–IV';
   if (n.includes('vii–viii') || n.includes('vii-viii') || n.includes('7–8') || n.includes('7-8')) return 'Klasy VII–VIII';
   return undefined;
-}
-
-/** W technikum w klasie V nie można dodawać zwykłych „godzin do wyboru” na geografię, biologię, fizykę i chemię. Godziny dyrektorskie i rozszerzone można. */
-const PRZEDMIOTY_BLOKOWANE_V_TECHNIKUM = ['Geografia', 'Biologia', 'Fizyka', 'Chemia'];
-
-/** Godziny w zakresie rozszerzonym dodawane do „Zrealizowane godziny” (np. technikum 8). */
-function getGodzinyRozszerzenia(schoolType: string): number {
-  const st = (schoolType || '').trim().toLowerCase();
-  if (st === 'technikum') return 8;
-  if (st.includes('liceum')) return 8;
-  return 0;
-}
-
-/** Czy można przydzielać w tej komórce. forDirectorOrExtended=true → godziny dyrektorskie/rozszerzone można też na V (geografia, biologia, chemia, fizyka). */
-function canPrzydzielacWKomorce(schoolType: string, grade: string, subjectName: string, forDirectorOrExtended?: boolean): boolean {
-  const st = (schoolType || '').trim().toLowerCase();
-  if (st !== 'technikum') return true;
-  if (grade !== 'V') return true;
-  if (forDirectorOrExtended) return true;
-  return !PRZEDMIOTY_BLOKOWANE_V_TECHNIKUM.includes((subjectName || '').trim());
-}
-
-/** Kolor komórki "Suma godzin w roku" wg % godzin dodatkowych (do wyboru + dyrektorskie) przydzielonych w tym roku. */
-function kolorOdProcentuGodzinDodatkowych(procent: number): string {
-  if (procent <= 25) return 'bg-emerald-100 text-emerald-800 ring-emerald-300';
-  if (procent <= 35) return 'bg-amber-100 text-amber-800 ring-amber-300';
-  if (procent <= 45) return 'bg-red-100 text-red-800 ring-red-300';
-  if (procent <= 55) return 'bg-red-200 text-red-900 ring-red-400';
-  return 'bg-red-400 text-red-950 ring-red-600 font-bold';
 }
 
 export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, trybDodajRozszerzenia = false, trybPrzydzielGodzinyRozszerzen = false, trybPodzielNaGrupy = false, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
