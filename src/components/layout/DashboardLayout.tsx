@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
-        <main className="flex-1 overflow-x-hidden w-full min-w-0 ml-0 lg:ml-64">
+        <main className="page-enter flex-1 overflow-x-hidden w-full min-w-0 ml-0 lg:ml-64">
           {/* Pasek mobile: hamburger + tytuł */}
           <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-surface border-b border-line lg:hidden">
             <button
