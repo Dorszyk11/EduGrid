@@ -3,9 +3,13 @@ import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { processRamowyPlanImport } from '@/utils/import/meinPdfProcessor';
+import { requireUserId } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
+import { DomainError } from '@/lib/errors';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireUserId(request);
     const formData = await request.formData();
     const file = formData.get('pdf') as File;
     const optionsJson = formData.get('options') as string;
@@ -77,6 +81,7 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
+    if (error instanceof DomainError) return errorResponse(error);
     console.error('Błąd importu PDF:', error);
     return NextResponse.json(
       { 

@@ -14,8 +14,16 @@ export const Klasy: CollectionConfig = {
     ],
   },
   access: {
-    read: () => true,
-    create: () => true,
+    read: ({ req }) => {
+      if (!req.user?.id) return false;
+      return {
+        or: [
+          { wlasciciel: { equals: req.user.id } },
+          { wlasciciel: { exists: false } },
+        ],
+      };
+    },
+    create: ({ req }) => Boolean(req.user?.id),
     update: ({ req, data }) => {
       if (!req.user?.id) return false;
       const doc = data as { wlasciciel?: string | number | null };

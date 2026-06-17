@@ -46,7 +46,7 @@ export async function GET() {
     }
 
     return NextResponse.json(
-      { error: 'Błąd serwera', details: msg },
+      { error: 'Błąd serwera' },
       { status: 500 },
     );
   }

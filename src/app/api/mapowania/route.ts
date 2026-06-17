@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { requireUserId } from '@/lib/api/guard';
+import { errorResponse } from '@/lib/api/respond';
 
 /**
  * GET /api/mapowania - Pobiera listę mapowań nazw
@@ -11,6 +13,7 @@ import config from '@/payload.config';
  */
 export async function GET(request: Request) {
   try {
+    await requireUserId(request);
     const { searchParams } = new URL(request.url);
     const typ = searchParams.get('typ');
     const aktywne = searchParams.get('aktywne');
@@ -55,12 +58,6 @@ export async function GET(request: Request) {
       })),
     });
   } catch (error) {
-    console.error('Błąd przy pobieraniu mapowań:', error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
-      },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
