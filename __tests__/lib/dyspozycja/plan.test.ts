@@ -9,7 +9,29 @@ import {
   aktualnyRokWCykle,
   getGradesFromPlan,
   isSubjectRow,
+  obliczPrzedmiotyDlaRoku,
+  type PlanItem,
+  type PrzydzialData,
 } from '@/lib/dyspozycja/plan';
+
+const PUSTY_PRZYDZIAL: PrzydzialData = {
+  przydzial: {},
+  dyrektor: {},
+  doradztwo: {},
+  rozszerzenia: [],
+  rozszerzeniaPrzydzial: {},
+};
+
+const PLAN: PlanItem = {
+  plan_id: 'planA',
+  school_type: 'Technikum',
+  cycle: 'Klasy I–V',
+  table_structure: { grades: ['I'] },
+  subjects: [
+    { subject: 'Matematyka', hours_by_grade: { I: 4 } },
+    { subject: 'Biologia w zakresie rozszerzonym', hours_by_grade: { I: 2 } },
+  ],
+};
 
 describe('subjectKey', () => {
   it('łączy plan_id i nazwę', () => {
@@ -109,5 +131,34 @@ describe('aktualnyRokWCykle', () => {
   });
   it('pusta lista klas → pusty string', () => {
     expect(aktualnyRokWCykle('2024/2028', [], new Date('2025-01-01'))).toBe('');
+  });
+});
+
+describe('obliczPrzedmiotyDlaRoku', () => {
+  it('liczy base + przydział + dyrektor i odejmuje przypisane; ukrywa rozszerzony', () => {
+    const pd: PrzydzialData = {
+      ...PUSTY_PRZYDZIAL,
+      przydzial: { planA_Matematyka: { I: 2 } },
+      dyrektor: { planA_Matematyka: { I: 1 } },
+    };
+    const rows = obliczPrzedmiotyDlaRoku(PLAN, 'I', pd, [{ id: 'm', nazwa: 'Matematyka' }], { m: { I: 3 } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ nazwa: 'Matematyka', godziny: 7, doPrzydzielenia: 4 });
+  });
+
+  it('podział na grupy podwaja bazę i sumuje obie grupy', () => {
+    const pd: PrzydzialData = {
+      ...PUSTY_PRZYDZIAL,
+      podzialNaGrupy: { planA_Matematyka: { I: true } },
+      przydzialGrupy: { planA_Matematyka: { I: { 1: 1, 2: 1 } } },
+    };
+    const rows = obliczPrzedmiotyDlaRoku(PLAN, 'I', pd, [], null);
+    expect(rows[0].godziny).toBe(10); // base 4 ×2 + grupy 2
+    expect(rows[0].doPrzydzielenia).toBe(10);
+  });
+
+  it('brak przydziału → tylko baza z planu', () => {
+    const rows = obliczPrzedmiotyDlaRoku(PLAN, 'I', null, [], null);
+    expect(rows[0].godziny).toBe(4);
   });
 });
