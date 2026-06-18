@@ -1,4 +1,6 @@
 import type { SubjectRow } from '@/lib/przydzial/typy';
+import { buttonClass } from '@/components/ui/Button';
+import KomorkaStatusu from '@/components/ui/KomorkaStatusu';
 
 /**
  * Tabela „Zajęcia z zakresu doradztwa zawodowego" — czysto prezentacyjna.
@@ -35,7 +37,7 @@ export default function TabelaDoradztwa({
 }: TabelaDoradztwaProps) {
   return (
     <section
-      className="bg-surface rounded-lg border border-line overflow-hidden shadow-xs w-full min-w-0 mt-6"
+      className="bg-surface rounded-card border border-line overflow-hidden shadow-xs w-full min-w-0 mt-6"
       aria-labelledby={`doradztwo-${planId ?? idx}`}
     >
       <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-line bg-surface-2">
@@ -87,8 +89,10 @@ export default function TabelaDoradztwa({
                                 type="button"
                                 onClick={() => canDodaj && dodajZrealizowanaGodzine(key, g, totalHours)}
                                 disabled={!canDodaj}
-                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ${
-                                  canDodaj ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100' : 'cursor-not-allowed bg-surface-2 text-ink-faint ring-line'
+                                className={`${buttonClass('ghost', 'sm')} ring-1 ${
+                                  canDodaj
+                                    ? 'bg-ok-bg text-ok ring-ok/30 hover:bg-ok-bg'
+                                    : 'bg-surface-2 text-ink-faint ring-line'
                                 }`}
                               >
                                 + Dodaj
@@ -97,8 +101,10 @@ export default function TabelaDoradztwa({
                                 type="button"
                                 onClick={() => canUsun && usunZrealizowanaGodzine(key, g)}
                                 disabled={!canUsun}
-                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ${
-                                  canUsun ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100' : 'cursor-not-allowed bg-surface-2 text-ink-faint ring-line'
+                                className={`${buttonClass('ghost', 'sm')} ring-1 ${
+                                  canUsun
+                                    ? 'bg-danger-bg text-danger ring-danger/30 hover:bg-danger-bg'
+                                    : 'bg-surface-2 text-ink-faint ring-line'
                                 }`}
                               >
                                 − Usuń
@@ -109,23 +115,20 @@ export default function TabelaDoradztwa({
                       </td>
                     );
                   })}
-                  <td
-                    className={`px-4 py-2 text-center border-l-2 border-line align-middle ${
-                      klasaId && totalHours > 0
-                        ? suma > totalHours
-                          ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded-sm'
-                          : suma === totalHours
-                            ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded-sm'
-                            : totalHours - suma === 1
-                              ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded-sm'
-                              : 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded-sm'
-                        : ''
-                    }`}
-                  >
-                    <span className="tabular-nums font-bold">{suma}</span>
-                    <span className="opacity-90"> z </span>
-                    <span className="tabular-nums font-semibold">{totalHours}</span>
-                    <span className="block text-xs opacity-90 mt-0.5">godz. łącznie</span>
+                  <td className="px-4 py-2 text-center border-l-2 border-line-strong align-middle">
+                    {klasaId && totalHours > 0 ? (
+                      <span className="inline-flex flex-col items-center gap-0.5">
+                        <KomorkaStatusu zrealizowane={suma} docelowe={totalHours} />
+                        <span className="block text-xs text-ink-faint">godz. łącznie</span>
+                      </span>
+                    ) : (
+                      <span className="text-ink">
+                        <span className="tabular-nums font-bold">{suma}</span>
+                        <span className="opacity-90"> z </span>
+                        <span className="tabular-nums font-semibold">{totalHours}</span>
+                        <span className="block text-xs text-ink-faint mt-0.5">godz. łącznie</span>
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

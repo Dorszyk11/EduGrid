@@ -1,6 +1,15 @@
 'use client';
 
 import React from 'react';
+import { statusRealizacji, type TonStatusu } from '@/lib/status-realizacji';
+
+/** Mapa tonu statusu → klasy tła/tekstu połówek „Zrealizowane” (tokeny, status nie samym kolorem). */
+const TON_KOMORKA: Record<TonStatusu, string> = {
+  ok: 'bg-ok-bg font-semibold text-ok ring-1 ring-ok/40 rounded-sm',
+  warn: 'bg-warn-bg font-semibold text-warn ring-1 ring-warn/40 rounded-sm',
+  danger: 'bg-danger-bg font-semibold text-danger ring-1 ring-danger/40 rounded-sm',
+  accent: 'bg-accent-weak font-semibold text-accent-strong ring-1 ring-accent/40 rounded-sm',
+};
 
 interface GroupSplitRazemProps {
   /** Jak kolumna „Razem” bez podziału: pełna suma godzin w wierszu */
@@ -18,7 +27,7 @@ function razemLine(totalHours: number, directorHours: number) {
     return (
       <span className="inline-flex flex-wrap items-center justify-end gap-x-0.5">
         <span className="tabular-nums">{core}</span>
-        <span className="text-sky-600 font-semibold tabular-nums">+{directorHours}d</span>
+        <span className="text-accent-strong font-semibold tabular-nums">+{directorHours}d</span>
       </span>
     );
   }
@@ -33,12 +42,12 @@ export function GroupSplitRazem({ razemRzeczywiste, razemDyrektorskie, planoweGo
         <span className="flex-1 flex items-center justify-end px-2 sm:px-3">
           {razemLine(razemRzeczywiste, razemDyrektorskie)}
         </span>
-        <span className="flex-1 flex items-center justify-end px-2 sm:px-3 border-t border-gray-200">
+        <span className="flex-1 flex items-center justify-end px-2 sm:px-3 border-t border-line">
           {razemLine(razemRzeczywiste, razemDyrektorskie)}
         </span>
       </div>
       {razemRzeczywiste !== planoweGodziny && (
-        <span className="block text-[0.65rem] text-gray-500 px-2 sm:px-3 pb-0.5 text-right font-normal whitespace-nowrap">
+        <span className="block text-[0.65rem] text-ink-faint px-2 sm:px-3 pb-0.5 text-right font-normal whitespace-nowrap">
           planowo {planoweGodziny}
         </span>
       )}
@@ -60,13 +69,10 @@ interface GroupSplitZrealizowaneProps {
   extensionPoolRemaining?: number;
 }
 
+/** Klasy tła/tekstu połówek z jednego źródła progów (status-realizacji). */
 function statusClasses(assigned: number, total: number): string {
   if (total <= 0) return '';
-  const rem = total - assigned;
-  if (rem < 0) return 'bg-blue-200 text-blue-900 font-semibold ring-1 ring-blue-400 rounded-xs';
-  if (rem === 0) return 'bg-green-200 text-green-900 font-semibold ring-1 ring-green-500 rounded-xs';
-  if (rem === 1) return 'bg-amber-200 text-amber-900 font-semibold ring-1 ring-amber-500 rounded-xs';
-  return 'bg-red-200 text-red-900 font-semibold ring-1 ring-red-500 rounded-xs';
+  return TON_KOMORKA[statusRealizacji(assigned, total).ton];
 }
 
 function formatProgress(assigned: number, total: number): string {
@@ -95,7 +101,7 @@ export function GroupSplitZrealizowane({
       <span className={`flex-1 flex items-center justify-end px-2 sm:px-3 ${cls}`}>
         <span>{main}</span>
       </span>
-      <span className={`flex-1 flex items-center justify-end px-2 sm:px-3 border-t border-gray-200 ${cls}`}>
+      <span className={`flex-1 flex items-center justify-end px-2 sm:px-3 border-t border-line ${cls}`}>
         <span>{main}</span>
       </span>
       {hasFooter ? (

@@ -1,8 +1,17 @@
 'use client';
 
 import React from 'react';
+import { useKomorkaKlawiatura } from '@/lib/hooks/useKomorkaKlawiatura';
 
 export type SplitCellMode = 'none' | 'assign' | 'director' | 'extension' | 'delete' | 'split';
+
+/** Wspólna klasa fokusu klawiaturowego klikalnych połówek (spójna z TabelaPlanu). */
+const FOCUS_KOMORKA = 'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent';
+
+/** Znacznik typu godziny — nie-kolorowy (status nie samym kolorem). */
+function ZnacznikTyp({ children }: { children: React.ReactNode }) {
+  return <span className="ml-0.5 align-baseline text-[0.6rem] font-semibold text-ink-faint">{children}</span>;
+}
 
 interface GroupSplitCellProps {
   grade: string;
@@ -52,41 +61,40 @@ function halfBg(
   hasDirectorHours?: boolean,
   hasExtensionHours?: boolean,
 ): string {
-  if (mode === 'delete' && canRemove) return 'cursor-pointer bg-red-200 hover:bg-red-300 ring-1 ring-red-400 rounded-xs';
+  if (mode === 'delete' && canRemove) return `cursor-pointer bg-danger-bg hover:bg-danger-bg ring-1 ring-danger/40 rounded-sm ${FOCUS_KOMORKA}`;
 
-  /** Niebiesko tylko gdy aktywny tryb assign – pełny przydział lub nadwyżka */
+  /** Pełny przydział lub nadwyżka → accent; sygnał tylko w trybie assign */
   if (mode === 'assign') {
-    if (hasExtensionHours && total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-xs';
-    if (canAssign) return 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded-sm';
-    /** Pełny przydział lub nadwyżka – niebiesko tylko w trybie assign */
-    if ((total > 0 || hasDirectorHours) && remaining <= 0) return 'bg-blue-200 ring-2 ring-blue-400 rounded-sm';
+    if (hasExtensionHours && total > 0) return 'bg-accent-weak ring-1 ring-accent/30 rounded-sm';
+    if (canAssign) return `cursor-pointer bg-ok-bg hover:bg-ok-bg ring-2 ring-ok/40 rounded-sm ${FOCUS_KOMORKA}`;
+    if ((total > 0 || hasDirectorHours) && remaining <= 0) return 'bg-accent-weak ring-2 ring-accent/40 rounded-sm';
   }
   if (mode === 'director') {
-    if (canAssign) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-xs';
-    if (total > 0 || hasDirectorHours) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-xs';
+    if (canAssign) return `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-1 ring-accent/40 rounded-sm ${FOCUS_KOMORKA}`;
+    if (total > 0 || hasDirectorHours) return `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-1 ring-accent/40 rounded-sm ${FOCUS_KOMORKA}`;
   }
   if (mode === 'extension') {
-    if (canAssign) return 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-1 ring-violet-400 rounded-xs';
-    if (total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-xs';
+    if (canAssign) return `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-1 ring-accent/40 rounded-sm ${FOCUS_KOMORKA}`;
+    if (total > 0) return 'bg-accent-weak ring-1 ring-accent/30 rounded-sm';
   }
 
-  /** Bez aktywnego trybu (assign/director/extension) – nie podświetlamy na niebiesko, tylko neutralne tło */
+  /** Bez aktywnego trybu (assign/director/extension) – neutralne tło, typ rozróżnia znacznik */
   if (total > 0) {
-    if (hasExtensionHours) return 'bg-violet-100 ring-1 ring-violet-300 rounded-xs';
-    return 'ring-1 ring-gray-300 rounded-xs';
+    if (hasExtensionHours) return 'bg-accent-weak ring-1 ring-accent/30 rounded-sm';
+    return 'ring-1 ring-line-strong rounded-sm';
   }
   return '';
 }
 
 function halfText(total: number, remaining: number, mode: SplitCellMode, hasDirectorHours?: boolean, hasExtensionHours?: boolean): string {
   if (mode === 'assign' || mode === 'delete' || mode === 'director' || mode === 'extension') {
-    if (mode === 'director' && total > 0) return 'font-bold text-sky-700';
-    if ((mode === 'extension' || hasExtensionHours) && total > 0) return 'font-bold text-violet-700';
+    if (mode === 'director' && total > 0) return 'font-bold text-accent-strong';
+    if ((mode === 'extension' || hasExtensionHours) && total > 0) return 'font-bold text-accent-strong';
     return '';
   }
   if (total <= 0) return '';
-  if (hasExtensionHours) return 'font-bold text-violet-700';
-  return 'text-gray-700 font-medium';
+  if (hasExtensionHours) return 'font-bold text-accent-strong';
+  return 'text-ink-soft font-medium';
 }
 
 /** Jak w komórce bez podziału: baza+opcjonalne+rozszerzenie, a godziny dyrektorskie jako +Nd */
@@ -113,19 +121,26 @@ function HalfHoursDisplay({
   }
   const coreClass =
     extension > 0
-      ? 'font-bold text-violet-700'
+      ? 'font-bold text-accent-strong'
       : optional > 0
-        ? 'font-medium text-gray-800'
-        : 'text-gray-700 font-medium';
+        ? 'font-medium text-ink'
+        : 'text-ink-soft font-medium';
+  const znacznikRoz = extension > 0 ? <ZnacznikTyp>roz.</ZnacznikTyp> : null;
   if (director > 0) {
     return (
       <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 leading-tight">
         <span className={`tabular-nums ${coreClass}`}>{core}</span>
-        <span className="text-sky-600 font-semibold tabular-nums text-[0.65rem] sm:text-xs">+{director}d</span>
+        {znacznikRoz}
+        <span className="text-accent-strong font-semibold tabular-nums text-[0.65rem] sm:text-xs">+{director}d</span>
       </span>
     );
   }
-  return <span className={`tabular-nums ${coreClass}`}>{core}</span>;
+  return (
+    <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 leading-tight">
+      <span className={`tabular-nums ${coreClass}`}>{core}</span>
+      {znacznikRoz}
+    </span>
+  );
 }
 
 export default function GroupSplitCell({
@@ -158,12 +173,18 @@ export default function GroupSplitCell({
   hasDirectorHours = false,
   hasExtensionHours = false,
 }: GroupSplitCellProps) {
-  const handleClick = (canAssign: boolean, canRemove: boolean, assign: () => void, remove: () => void) => {
+  const NOOP = () => {};
+  const activateFor = (canAssign: boolean, canRemove: boolean, assign: () => void, remove: () => void) => {
     if (canAssign) return assign;
     if (canRemove) return remove;
     if (canToggleSplit) return onToggleSplit;
     return undefined;
   };
+  const activate1 = activateFor(canAssignG1, canRemoveG1, onAssignG1, onRemoveG1);
+  const activate2 = activateFor(canAssignG2, canRemoveG2, onAssignG2, onRemoveG2);
+  /** Klawiatura: Enter/Space → ta sama akcja co klik (hooki wołane bezwarunkowo, stała kolejność). */
+  const kb1 = useKomorkaKlawiatura(activate1 ?? NOOP);
+  const kb2 = useKomorkaKlawiatura(activate2 ?? NOOP);
 
   /** Prawy przycisk usuwa tylko godziny (nigdy grupy), i tylko gdy aktywny jest tryb danego typu godzin (assign/director/extension). W trybie split prawy przycisk nic nie robi. */
   const allowRightClickRemove = !splitModeActive && activeMode !== 'split' && activeMode !== 'delete';
@@ -192,8 +213,11 @@ export default function GroupSplitCell({
     return undefined;
   };
 
+  /** Dostępny opis połówki dla czytników ekranu. */
+  const ariaLabelFor = (group: 1 | 2, assigned: number) => `Rocznik ${grade}, grupa ${group}, ${assigned} godz.`;
+
   const tdClass = splitModeActive
-    ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded-sm'
+    ? `cursor-pointer bg-warn-bg hover:bg-warn-bg ring-1 ring-warn/40 rounded-sm ${FOCUS_KOMORKA}`
     : '';
 
   const effectiveMode = splitModeActive ? ('split' as SplitCellMode) : activeMode;
@@ -206,16 +230,15 @@ export default function GroupSplitCell({
   const interactive2 = canAssignG2 || canRemoveG2 || canToggleSplit;
 
   const half = 'flex items-center justify-center text-xs tabular-nums transition-colors min-h-0 px-0.5';
-  const containerBorder = hasDirectorHours ? 'ring-1 ring-gray-400 rounded-sm' : '';
+  const containerBorder = hasDirectorHours ? 'ring-1 ring-line-strong rounded-sm' : '';
 
   return (
-    <td className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-13 ${tdClass} ${containerBorder}`} aria-label={`Rocznik ${grade}`}>
+    <td className={`border-r border-line w-12 sm:w-14 p-0 h-13 ${tdClass} ${containerBorder}`} aria-label={`Rocznik ${grade}`}>
       <div className="flex flex-col h-full">
         <div
-          className={`${half} flex-1 border-b border-gray-200 ${bg1} ${txt1}`}
-          onClick={handleClick(canAssignG1, canRemoveG1, onAssignG1, onRemoveG1)}
+          className={`${half} flex-1 border-b border-line ${bg1} ${txt1}`}
+          {...(interactive1 ? { ...kb1, 'aria-label': ariaLabelFor(1, totalG1) } : undefined)}
           onContextMenu={handleContextMenu(totalG1, onRemoveG1)}
-          role={interactive1 ? 'button' : undefined}
           title={titleFor(1, canAssignG1, canRemoveG1, totalG1)}
         >
           <HalfHoursDisplay
@@ -228,9 +251,8 @@ export default function GroupSplitCell({
         </div>
         <div
           className={`${half} flex-1 ${bg2} ${txt2}`}
-          onClick={handleClick(canAssignG2, canRemoveG2, onAssignG2, onRemoveG2)}
+          {...(interactive2 ? { ...kb2, 'aria-label': ariaLabelFor(2, totalG2) } : undefined)}
           onContextMenu={handleContextMenu(totalG2, onRemoveG2)}
-          role={interactive2 ? 'button' : undefined}
           title={titleFor(2, canAssignG2, canRemoveG2, totalG2)}
         >
           <HalfHoursDisplay
