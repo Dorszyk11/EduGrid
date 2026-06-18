@@ -6,6 +6,31 @@ import { pobierzMapeGodzinZPlanuIPrzydzialu } from "@/utils/godzinyPlanIPrzydzia
 import { requireUserId, ownerScope } from "@/lib/api/guard";
 import { errorResponse } from "@/lib/api/respond";
 import { ValidationError } from "@/lib/errors";
+import { z } from "zod";
+
+/** Relacja Payload: przy depth>=1 to obiekt, w innym wypadku samo id. (typeof null === "object") */
+type Relacja = string | number | { id: string | number; imie?: string; nazwisko?: string } | null | undefined;
+interface KlasaRow {
+  id: string | number;
+  nazwa: string;
+  rok_szkolny?: string | null;
+  profil?: string | null;
+  numer_klasy?: number;
+}
+interface RozkladRow {
+  rok_szkolny?: string | null;
+  godziny_tyg?: number;
+  godziny_roczne?: number;
+  klasa?: Relacja;
+  przedmiot?: Relacja;
+  nauczyciel?: Relacja;
+}
+
+const QuerySchema = z.object({
+  typSzkolyId: z.string().min(1),
+  rokSzkolny: z.string().nullable().optional(),
+  klasaId: z.string().nullable().optional(),
+});
 
 function najnowszyRokSzkolny(lata: string[]): string {
   return [...lata].sort((a, b) => b.localeCompare(a, "pl"))[0] ?? "";
@@ -16,15 +41,15 @@ function najnowszyRokSzkolny(lata: string[]): string {
  * z najnowszego roku szkolnego (żeby nie sumować wielokrotnie tych samych zajęć).
  */
 function przydzialyDlaNajnowszegoRoku(
-  przypisania: any[]
-): any[] {
+  przypisania: RozkladRow[]
+): RozkladRow[] {
   if (przypisania.length === 0) return [];
   const lata = przypisania
-    .map((r: any) => r.rok_szkolny)
-    .filter((x: unknown): x is string => typeof x === "string");
+    .map((r) => r.rok_szkolny)
+    .filter((x): x is string => typeof x === "string");
   const najnowszy = najnowszyRokSzkolny(lata);
   if (!najnowszy) return przypisania;
-  return przypisania.filter((r: any) => r.rok_szkolny === najnowszy);
+  return przypisania.filter((r) => r.rok_szkolny === najnowszy);
 }
 
 /**
@@ -39,18 +64,22 @@ export async function GET(request: NextRequest) {
   try {
     const userId = await requireUserId(request);
     const { searchParams } = new URL(request.url);
-    const typSzkolyId = searchParams.get("typSzkolyId");
-    const rokSzkolnyRaw = searchParams.get("rokSzkolny");
+    const parsed = QuerySchema.safeParse({
+      typSzkolyId: searchParams.get("typSzkolyId") ?? undefined,
+      rokSzkolny: searchParams.get("rokSzkolny"),
+      klasaId: searchParams.get("klasaId"),
+    });
+    if (!parsed.success) {
+      throw new ValidationError("typSzkolyId jest wymagany", "typSzkolyId");
+    }
+    const typSzkolyId = parsed.data.typSzkolyId;
+    const rokSzkolnyRaw = parsed.data.rokSzkolny ?? null;
     const rokSzkolny =
       rokSzkolnyRaw === null || rokSzkolnyRaw === ""
         ? "2024/2025"
         : rokSzkolnyRaw;
-    const klasaId = searchParams.get("klasaId") || null;
+    const klasaId = parsed.data.klasaId || null;
     const trybWszystkieLata = rokSzkolny === ROK_SZKOLNY_WSZYSTKIE;
-
-    if (!typSzkolyId) {
-      throw new ValidationError("typSzkolyId jest wymagany", "typSzkolyId");
-    }
 
     const payload = await getPayload({ config });
 
@@ -93,9 +122,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Filtruj klasy: w trybie „wszystkie” — każdy aktywny oddział typu; inaczej po zakresie cyklu / roku
+    const klasyDocs = klasyWszystkie.docs as unknown as KlasaRow[];
     let klasyFiltered = trybWszystkieLata
-      ? klasyWszystkie.docs.filter((k: any) => Boolean(k.rok_szkolny))
-      : klasyWszystkie.docs.filter((k: any) => {
+      ? klasyDocs.filter((k) => Boolean(k.rok_szkolny))
+      : klasyDocs.filter((k) => {
           const rs = k.rok_szkolny;
           if (!rs) return false;
           const rangeMatch = String(rs).match(/^(\d{4})-(\d{4})$/);
@@ -109,7 +139,7 @@ export async function GET(request: NextRequest) {
     // Opcjonalnie: tylko jedna klasa (dla widoku „siatka dla jednej klasy”)
     if (klasaId) {
       klasyFiltered = klasyFiltered.filter(
-        (k: any) => String(k.id) === String(klasaId)
+        (k) => String(k.id) === String(klasaId)
       );
     }
     const klasy = { ...klasyWszystkie, docs: klasyFiltered };
@@ -132,7 +162,8 @@ export async function GET(request: NextRequest) {
 
     // Filtruj tylko rozkłady dla klas z wybranego typu szkoły
     const klasaIds = klasy.docs.map((k) => k.id);
-    const rozkladFiltrowany = rozkladGodzin.docs.filter((r: any) => {
+    const rozkladDocs = rozkladGodzin.docs as unknown as RozkladRow[];
+    const rozkladFiltrowany = rozkladDocs.filter((r) => {
       const rKlasa = typeof r.klasa === "object" ? r.klasa : null;
       return rKlasa && klasaIds.includes(rKlasa.id);
     });
@@ -171,7 +202,7 @@ export async function GET(request: NextRequest) {
         godzinyWRozkladzie: number;
         godzinyZPlanuPrzydzialu: number;
         brakWRozkladzie: boolean;
-        nauczycielId?: string;
+        nauczycielId?: string | number;
         nauczycielNazwa?: string;
         liczbaNauczycieli: number;
       }>;
@@ -188,7 +219,7 @@ export async function GET(request: NextRequest) {
         godzinyWRozkladzie: number;
         godzinyZPlanuPrzydzialu: number;
         brakWRozkladzie: boolean;
-        nauczycielId?: string;
+        nauczycielId?: string | number;
         nauczycielNazwa?: string;
         liczbaNauczycieli: number;
       }> = [];
@@ -199,7 +230,7 @@ export async function GET(request: NextRequest) {
           mapaGodzinPlanPrzydzial.get(kluczPlan) ?? 0;
 
         // Znajdź wszystkie przypisania tego przedmiotu w tej klasie
-        let przypisania = rozkladFiltrowany.filter((r: any) => {
+        let przypisania = rozkladFiltrowany.filter((r) => {
           const rPrzedmiot =
             typeof r.przedmiot === "object" ? r.przedmiot : null;
           const rKlasa = typeof r.klasa === "object" ? r.klasa : null;
@@ -227,7 +258,7 @@ export async function GET(request: NextRequest) {
         }
 
         const godzinyWRozkladzie = przypisania.reduce(
-          (sum: number, r: any) => sum + (r.godziny_tyg || 0),
+          (sum: number, r) => sum + (r.godziny_tyg || 0),
           0
         );
         const godzinyTygodniowo = Math.max(
@@ -244,7 +275,7 @@ export async function GET(request: NextRequest) {
         );
 
         let sumaGodzinRocznie = przypisania.reduce(
-          (sum: number, r: any) => sum + (r.godziny_roczne || 0),
+          (sum: number, r) => sum + (r.godziny_roczne || 0),
           0
         );
         if (godzinyTygodniowo > godzinyWRozkladzie) {
