@@ -24,17 +24,26 @@ export const Klasy: CollectionConfig = {
       };
     },
     create: ({ req }) => Boolean(req.user?.id),
-    update: ({ req, data }) => {
+    // Where-based (jak read): operacja dotyczy wyłącznie rekordów właściciela
+    // (+ legacy bez właściciela) na poziomie DB — bez tego delete bez body
+    // dawał pełny dostęp do cudzych rekordów po ID (audyt [8]).
+    update: ({ req }) => {
       if (!req.user?.id) return false;
-      const doc = data as { wlasciciel?: string | number | null };
-      if (doc.wlasciciel == null) return true;
-      return String(doc.wlasciciel) === String(req.user.id);
+      return {
+        or: [
+          { wlasciciel: { equals: req.user.id } },
+          { wlasciciel: { exists: false } },
+        ],
+      };
     },
-    delete: ({ req, data }) => {
+    delete: ({ req }) => {
       if (!req.user?.id) return false;
-      const doc = data as { wlasciciel?: string | number | null };
-      if (doc.wlasciciel == null) return true;
-      return String(doc.wlasciciel) === String(req.user.id);
+      return {
+        or: [
+          { wlasciciel: { equals: req.user.id } },
+          { wlasciciel: { exists: false } },
+        ],
+      };
     },
   },
   fields: [

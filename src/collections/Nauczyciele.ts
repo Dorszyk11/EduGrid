@@ -26,13 +26,27 @@ export const Nauczyciele: CollectionConfig = {
       };
     },
     create: ({ req }) => Boolean(req.user?.id),
-    update: ({ req, data }) => {
+    // Where-based (jak read): zapis/usuwanie tylko własnych rekordów (+ legacy
+    // bez właściciela). Dawniej delete = każdy zalogowany (pełny dostęp do
+    // cudzych nauczycieli), a update zależał od przychodzącego body (audyt [8]).
+    update: ({ req }) => {
       if (!req.user?.id) return false;
-      const doc = data as { wlasciciel?: string | number | null };
-      if (doc.wlasciciel == null) return true;
-      return String(doc.wlasciciel) === String(req.user.id);
+      return {
+        or: [
+          { wlasciciel: { equals: req.user.id } },
+          { wlasciciel: { exists: false } },
+        ],
+      };
     },
-    delete: ({ req }) => Boolean(req.user?.id),
+    delete: ({ req }) => {
+      if (!req.user?.id) return false;
+      return {
+        or: [
+          { wlasciciel: { equals: req.user.id } },
+          { wlasciciel: { exists: false } },
+        ],
+      };
+    },
   },
   fields: [
     {
