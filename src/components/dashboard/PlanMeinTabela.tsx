@@ -6,6 +6,7 @@ import { useGroupSplit, type GroupAssignments, type GroupSplitFlags, type GroupS
 import GroupSplitCell from './GroupSplitCell';
 import { GroupSplitRazem, GroupSplitZrealizowane } from './GroupSplitSummary';
 import TabelaDoradztwa from './plan-mein/TabelaDoradztwa';
+import ModalPonadprogramowy, { type ModalPonadprogramowyState } from './plan-mein/ModalPonadprogramowy';
 import type { PrzydzialGrupyByGrade, SubjectRow, DirectorRow, PlanMein } from '@/lib/przydzial/typy';
 import {
   isDirectorRow,
@@ -79,19 +80,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   const [dyrektor, setDyrektor] = useState<Record<string, Record<string, number>>>({});
   const [ladowanieZapis, setLadowanieZapis] = useState(false);
   /** Modal: godziny do wyboru ponad program lub godziny dyrektorskie ponad limit puli */
-  const [modalPonadprogramowa, setModalPonadprogramowa] = useState<
-    | { kind: 'optional'; subKey: string; grade: string; subjectName: string }
-    | {
-        kind: 'dyrektor';
-        subKey: string;
-        grade: string;
-        subjectName: string;
-        splitBothGroups: boolean;
-        totalDirectorHours: number;
-        planId?: string;
-      }
-    | null
-  >(null);
+  const [modalPonadprogramowa, setModalPonadprogramowa] = useState<ModalPonadprogramowyState | null>(null);
   /** Klucze przedmiotów oznaczonych jako „rozszerzenie” (pogrubiona nazwa) – tryb „Dodaj rozszerzenia” */
   const [rozszerzeniaSubKeys, setRozszerzeniaSubKeys] = useState<Set<string>>(() => new Set());
   /** Godziny rozszerzeń per przedmiot (subKey -> rocznik -> liczba). Przy odznaczeniu przedmiotu jego godziny znikają z puli. */
@@ -1381,52 +1370,19 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
       {/* Modal: godziny ponadprogramowe (do wyboru lub dyrektorskie ponad pulę) */}
       {modalPonadprogramowa && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
-          <div className="bg-surface rounded-card shadow-pop max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-ink">
-              {modalPonadprogramowa.kind === 'optional' ? 'Godziny ponadprogramowe' : 'Godzina dyrektorska ponadprogramowa'}
-            </h3>
-            <p className="text-ink-soft text-sm leading-relaxed">
-              {modalPonadprogramowa.kind === 'optional' ? (
-                <>
-                  Wszystkie godziny programowe są przydzielone. Czy chcesz dodać godzinę ponadprogramową do przedmiotu „{modalPonadprogramowa.subjectName}”?
-                </>
-              ) : (
-                <>
-                  Limit godzin dyrektorskich z planu to <strong className="text-ink">{modalPonadprogramowa.totalDirectorHours}</strong>. Czy na pewno
-                  chcesz dodać <strong className="text-ink">jedną godzinę dyrektorską ponadprogramową</strong> dla przedmiotu „
-                  {modalPonadprogramowa.subjectName}” (rocznik / klasa: <strong className="text-ink">{modalPonadprogramowa.grade}</strong>)?
-                </>
-              )}
-            </p>
-            <div className="flex flex-row gap-3 justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setModalPonadprogramowa(null)}
-                className="px-4 py-2.5 bg-line text-ink rounded-lg hover:bg-line font-medium"
-              >
-                Nie
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const m = modalPonadprogramowa;
-                  if (m.kind === 'optional') {
-                    przydzielGodzine(m.subKey, m.grade);
-                  } else if (m.splitBothGroups) {
-                    groupSplit.addDirectorHourToBothGroups(m.subKey, m.grade);
-                  } else {
-                    dodajGodzineDyrektorska(m.subKey, m.grade, m.totalDirectorHours, m.planId);
-                  }
-                  setModalPonadprogramowa(null);
-                }}
-                className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-              >
-                Tak, dodaj
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalPonadprogramowy
+          modal={modalPonadprogramowa}
+          onClose={() => setModalPonadprogramowa(null)}
+          onPotwierdz={(m) => {
+            if (m.kind === 'optional') {
+              przydzielGodzine(m.subKey, m.grade);
+            } else if (m.splitBothGroups) {
+              groupSplit.addDirectorHourToBothGroups(m.subKey, m.grade);
+            } else {
+              dodajGodzineDyrektorska(m.subKey, m.grade, m.totalDirectorHours, m.planId);
+            }
+          }}
+        />
       )}
 
     </div>
