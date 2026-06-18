@@ -12,6 +12,19 @@ import {
   X,
   FileText,
   BarChart3,
+  LayoutGrid,
+  CalendarClock,
+  ClipboardList,
+  ClipboardCheck,
+  Briefcase,
+  School,
+  Grid3x3,
+  ArrowLeftRight,
+  Upload,
+  FileBarChart,
+  Users,
+  GraduationCap,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -30,6 +43,21 @@ const ICONS = {
   close: X,
   file: FileText,
   chart: BarChart3,
+  // Nawigacja (A5) — semantyczne nazwy ekranów EduGrid.
+  dashboard: LayoutGrid,
+  przydzial: ClipboardList,
+  realizacja: CalendarClock,
+  dyspozycja: ClipboardCheck,
+  kadry: Briefcase,
+  szkoly: School,
+  klasy: GraduationCap,
+  nauczyciele: Users,
+  'plany-mein': FileText,
+  'siatka-szkoly': Grid3x3,
+  mapowania: ArrowLeftRight,
+  import: Upload,
+  raporty: FileBarChart,
+  admin: Settings,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
