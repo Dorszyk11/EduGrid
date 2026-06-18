@@ -25,21 +25,19 @@ export default function WykresKolowyRealizacji({
   const strokeWidth = 14;
   const circumference = 2 * Math.PI * (r - strokeWidth / 2);
   const offset = circumference - (clamped / 100) * circumference;
+  const procentTekst = Math.round(val * 10) / 10;
 
-  const color =
-    clamped >= 100
-      ? 'stroke-emerald-500'
-      : clamped >= 80
-        ? 'stroke-green-400'
-        : clamped >= 60
-          ? 'stroke-amber-400'
-          : clamped >= 40
-            ? 'stroke-orange-400'
-            : 'stroke-red-400';
+  // Ton wg progu realizacji — spójny z paletą statusu (ok / warn / danger).
+  const tonColor =
+    clamped >= 80 ? 'text-ok' : clamped >= 50 ? 'text-warn' : 'text-danger';
 
   return (
-    <div className={`flex flex-col items-center ${className}`}>
-      <svg width={size} height={size} className="transform -rotate-90">
+    <div
+      className={`flex flex-col items-center ${className}`}
+      role="img"
+      aria-label={`${label}: ${procentTekst}%`}
+    >
+      <svg width={size} height={size} className="transform -rotate-90" aria-hidden>
         <circle
           cx={cx}
           cy={cy}
@@ -47,23 +45,29 @@ export default function WykresKolowyRealizacji({
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-gray-200"
+          className="text-line"
         />
         <circle
           cx={cx}
           cy={cy}
           r={r - strokeWidth / 2}
           fill="none"
+          stroke="currentColor"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className={color}
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          className={`${tonColor} transition-[stroke-dashoffset] duration-300 ease-out motion-reduce:transition-none`}
         />
       </svg>
-      <span className="text-2xl font-bold mt-1 text-gray-800">{Math.round(val * 10) / 10}%</span>
-      {label && <span className="text-sm text-gray-500">{label}</span>}
+      <span aria-hidden className="text-2xl font-bold mt-1 text-ink tabular-nums">
+        {procentTekst}%
+      </span>
+      {label && (
+        <span aria-hidden className="text-sm text-ink-faint">
+          {label}
+        </span>
+      )}
     </div>
   );
 }
