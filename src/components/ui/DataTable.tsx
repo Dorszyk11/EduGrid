@@ -7,6 +7,10 @@ export interface Column<T> {
   /** Render komórki dla wiersza (index = pozycja w widocznej liście). */
   render: (row: T, index: number) => ReactNode;
   className?: string;
+  /** Kolumna „przyklejona" do lewej krawędzi przy poziomym scrollu. */
+  sticky?: boolean;
+  /** Pionowa linia oddzielająca (np. grupa / kolumna sum). */
+  separator?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -19,6 +23,10 @@ interface DataTableProps<T> {
   empty?: ReactNode;
   /** Klasa wiersza (np. podświetlenie). */
   rowClassName?: (row: T) => string;
+  /** Nagłówek „przyklejony" do góry przy pionowym scrollu. */
+  stickyHeader?: boolean;
+  /** Stopka (np. sumy) renderowana w `<tfoot>`. */
+  footer?: ReactNode;
 }
 
 const alignClass = { left: 'text-left', right: 'text-right', center: 'text-center' } as const;
@@ -35,8 +43,12 @@ export default function DataTable<T>({
   error = null,
   empty = 'Brak danych.',
   rowClassName,
+  stickyHeader = false,
+  footer,
 }: DataTableProps<T>) {
   const colCount = columns.length;
+
+  const separatorClass = (c: Column<T>) => (c.separator ? 'border-l-2 border-line-strong' : '');
 
   return (
     <div className="overflow-x-auto rounded-card border border-line">
@@ -47,7 +59,9 @@ export default function DataTable<T>({
               <th
                 key={c.key}
                 scope="col"
-                className={`px-3 py-2.5 font-medium text-ink-soft ${alignClass[c.align ?? 'left']} ${c.className ?? ''}`}
+                className={`px-3 py-2.5 font-medium text-ink-soft ${alignClass[c.align ?? 'left']} ${
+                  stickyHeader ? 'sticky top-0 z-10 bg-surface-2' : ''
+                } ${c.sticky ? 'sticky left-0 z-20 bg-surface-2' : ''} ${separatorClass(c)} ${c.className ?? ''}`}
               >
                 {c.header}
               </th>
@@ -58,22 +72,39 @@ export default function DataTable<T>({
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <tr key={`skeleton-${i}`} className="border-b border-line last:border-0">
-                {columns.map((c) => (
-                  <td key={c.key} className="px-3 py-3">
-                    <span className="block h-3.5 w-3/4 animate-pulse rounded-sm bg-line" />
-                  </td>
-                ))}
+                {columns.map((c, ci) =>
+                  ci === 0 ? (
+                    <td key={c.key} className="px-3 py-3" role="status" aria-live="polite" aria-busy="true">
+                      <span className="block h-3.5 w-3/4 animate-pulse motion-reduce:animate-none rounded-sm bg-line" />
+                      <span className="sr-only">Wczytywanie danych…</span>
+                    </td>
+                  ) : (
+                    <td key={c.key} className="px-3 py-3">
+                      <span className="block h-3.5 w-3/4 animate-pulse motion-reduce:animate-none rounded-sm bg-line" />
+                    </td>
+                  ),
+                )}
               </tr>
             ))
           ) : error ? (
             <tr>
-              <td colSpan={colCount} className="px-3 py-10 text-center text-sm text-danger">
+              <td
+                colSpan={colCount}
+                role="status"
+                aria-live="polite"
+                className="px-3 py-10 text-center text-sm text-danger"
+              >
                 {error}
               </td>
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={colCount} className="px-3 py-10 text-center text-sm text-ink-faint">
+              <td
+                colSpan={colCount}
+                role="status"
+                aria-live="polite"
+                className="px-3 py-10 text-center text-sm text-ink-faint"
+              >
                 {empty}
               </td>
             </tr>
@@ -84,7 +115,12 @@ export default function DataTable<T>({
                 className={`border-b border-line last:border-0 hover:bg-surface-2 ${rowClassName?.(row) ?? ''}`}
               >
                 {columns.map((c) => (
-                  <td key={c.key} className={`px-3 py-2.5 text-ink ${alignClass[c.align ?? 'left']} ${c.className ?? ''}`}>
+                  <td
+                    key={c.key}
+                    className={`px-3 py-2.5 text-ink ${alignClass[c.align ?? 'left']} ${
+                      c.sticky ? 'sticky left-0 z-10 bg-surface' : ''
+                    } ${separatorClass(c)} ${c.className ?? ''}`}
+                  >
                     {c.render(row, i)}
                   </td>
                 ))}
@@ -92,6 +128,11 @@ export default function DataTable<T>({
             ))
           )}
         </tbody>
+        {footer && !loading && !error ? (
+          <tfoot>
+            <tr className="bg-surface-2 font-semibold border-t border-line-strong">{footer}</tr>
+          </tfoot>
+        ) : null}
       </table>
     </div>
   );
