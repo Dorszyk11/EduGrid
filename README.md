@@ -158,6 +158,12 @@ Dane planów: `src/utils/import/ramowe-plany.json`.
   - domyślnie (`DB_SSL_MODE=auto`) SSL dla zdalnych hostów.
 - Test połączenia: `npm run test:db`.
 
+## Wdrożenie i monitoring
+
+- **Hosting**: Vercel (build `next build`, sekrety `DATABASE_URI`/`PAYLOAD_SECRET` w Project Settings).
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) — lint + tsc + test + build na każdym PR.
+- **Monitoring**: Vercel Analytics + Speed Insights (komponenty w root layout, aktywne tylko na produkcji Vercel). Sentry (błędy runtime) — opcjonalny, do dodania z własnym DSN, jeśli zajdzie potrzeba.
+
 ## Struktura projektu
 
 ```

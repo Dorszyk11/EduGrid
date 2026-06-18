@@ -4,6 +4,8 @@ import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthContext'
 import AuthAwareLayout from '@/components/layout/AuthAwareLayout'
 import { ToastProvider } from '@/components/ui/Toast'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 // Body: Inter (czytelność danych). Display: Space Grotesk (techniczny, „siatkowy").
 const inter = Inter({
@@ -36,6 +38,9 @@ export default function RootLayout({
             <AuthAwareLayout>{children}</AuthAwareLayout>
           </ToastProvider>
         </AuthProvider>
+        {/* Monitoring Vercel (no-op poza produkcją Vercel) */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
