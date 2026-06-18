@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { Dispatch, SetStateAction, MouseEvent as ReactMouseEvent } from 'react';
+import type { Dispatch, SetStateAction, MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { useGroupSplit } from '@/hooks/useGroupSplit';
 import GroupSplitCell from '../GroupSplitCell';
 import { GroupSplitRazem, GroupSplitZrealizowane } from '../GroupSplitSummary';
@@ -7,9 +7,47 @@ import type { PrzydzialGrupyByGrade, SubjectRow, DirectorRow, PlanMein } from '@
 import { isDirectorRow, isPrzedmiotLaczny, isPrzedmiotRozszerzony, subjectKey } from '@/lib/przydzial/plany-mein';
 import { canPrzydzielacWKomorce, kolorOdProcentuGodzinDodatkowych } from '@/lib/przydzial/reguly';
 import { totalDisplay } from '@/lib/przydzial/tabelaHelpers';
+import { statusRealizacji, PUSTA, type TonStatusu } from '@/lib/status-realizacji';
 import type { ModalPonadprogramowyState } from './ModalPonadprogramowy';
 
 type GroupSplit = ReturnType<typeof useGroupSplit>;
+
+/** Mapa tonu statusu → klasy tła/tekstu komórki „Zrealizowane” (tokeny, status nie samym kolorem). */
+const TON_KOMORKA: Record<TonStatusu, string> = {
+  ok: 'bg-ok-bg font-semibold text-ok ring-1 ring-ok/40 rounded-sm',
+  warn: 'bg-warn-bg font-semibold text-warn ring-1 ring-warn/40 rounded-sm',
+  danger: 'bg-danger-bg font-semibold text-danger ring-1 ring-danger/40 rounded-sm',
+  accent: 'bg-accent-weak font-semibold text-accent-strong ring-1 ring-accent/40 rounded-sm',
+};
+
+/** Znacznik typu godziny — nie-kolorowy badge (status nie samym kolorem). */
+function ZnacznikTyp({ children }: { children: ReactNode }) {
+  return (
+    <span className="ml-0.5 align-baseline text-[0.7em] font-semibold text-ink-faint">{children}</span>
+  );
+}
+
+/**
+ * Props klikalnej komórki dostępnej z klawiatury — odpowiednik `useKomorkaKlawiatura`,
+ * ale jako zwykła funkcja (komórki powstają w `.map()`, więc nie wolno tu wołać hooka).
+ * Enter/Space → `onActivate` (Space z `preventDefault`).
+ */
+function komorkaKlawiatura(onActivate: () => void) {
+  return {
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: onActivate,
+    onKeyDown: (e: ReactKeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        onActivate();
+      }
+    },
+  };
+}
+
+/** Wspólna klasa fokusu klawiaturowego dla klikalnych komórek. */
+const FOCUS_KOMORKA = 'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent';
 
 /**
  * Główna tabela planu ramowego MEiN dla jednego planu (jeden <section>).
@@ -82,7 +120,7 @@ export default function TabelaPlanu({
 }: TabelaPlanuProps) {
   return (
           <section
-            className="bg-surface rounded-lg border border-line overflow-hidden shadow-xs w-full min-w-0"
+            className="bg-surface rounded-card border border-line overflow-hidden shadow-card w-full min-w-0"
           >
             <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-line">
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-sm">
@@ -127,25 +165,25 @@ export default function TabelaPlanu({
               <table className="w-full min-w-[480px] text-left border-collapse text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b-2 border-line-strong">
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft w-10 sm:w-12 border-r border-line text-left">
+                    <th className="sticky top-0 z-20 bg-surface-2 px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft w-10 sm:w-12 border-r border-line text-left">
                       Lp.
                     </th>
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft min-w-[100px] sm:min-w-[120px] border-r border-line">
+                    <th className="sticky top-0 left-0 z-30 bg-surface-2 px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft min-w-[100px] sm:min-w-[120px] border-r border-line">
                       Przedmiot
                     </th>
                     {hasGrades &&
                       grades.map((g) => (
                         <th
                           key={g}
-                          className="px-1.5 sm:px-2 py-2.5 sm:py-3 font-semibold text-ink-soft text-center w-12 sm:w-14 border-r border-line"
+                          className="sticky top-0 z-20 bg-surface-2 px-1.5 sm:px-2 py-2.5 sm:py-3 font-semibold text-ink-soft text-center w-12 sm:w-14 border-r border-line"
                         >
                           {g}
                         </th>
                       ))}
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right min-w-20 sm:min-w-24 w-24 sm:w-28">
+                    <th className="sticky top-0 z-20 bg-surface-2 px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right min-w-20 sm:min-w-24 w-24 sm:w-28 border-l-2 border-line-strong">
                       Razem
                     </th>
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right w-20 sm:w-24 border-l border-line whitespace-nowrap">
+                    <th className="sticky top-0 z-20 bg-surface-2 px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right w-20 sm:w-24 border-l border-line whitespace-nowrap">
                       Zrealizowane godziny
                     </th>
                   </tr>
@@ -154,10 +192,11 @@ export default function TabelaPlanu({
                   {orderedSubjectsForTable.map((entry, i) => {
                     if (isDirectorRow(entry)) {
                       const tot = entry.director_discretion_hours.total_hours;
+                      const dyrTon = klasaId && tot > 0 ? statusRealizacji(assignedDirectorHoursPlan, tot).ton : null;
                       return (
-                        <tr key={i} className="border-t-2 border-line-strong font-medium bg-sky-50/50">
+                        <tr key={i} className="border-t-2 border-line-strong font-medium bg-surface-2">
                           <td
-                            className="px-2 sm:px-3 py-1.5 sm:py-2 text-ink-soft border-r border-line text-sm"
+                            className="sticky left-0 z-10 bg-surface-2 px-2 sm:px-3 py-1.5 sm:py-2 text-ink-soft border-r border-line text-sm"
                             colSpan={hasGrades ? 2 + grades.length : 2}
                           >
                             Godziny do dyspozycji dyrektora
@@ -167,20 +206,12 @@ export default function TabelaPlanu({
                               </span>
                             )}
                           </td>
-                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-ink border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28">
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-ink border-l-2 border-line-strong border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28">
                             {tot}
                           </td>
                           <td
                             className={`px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-line text-xs sm:text-sm ${
-                              klasaId && tot > 0
-                                ? assignedDirectorHoursPlan > tot
-                                  ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded-sm'
-                                  : assignedDirectorHoursPlan === tot
-                                    ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded-sm'
-                                    : remainingDirectorHours === 1
-                                      ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded-sm'
-                                      : 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded-sm'
-                                : ''
+                              dyrTon ? TON_KOMORKA[dyrTon] : ''
                             }`}
                           >
                             {klasaId && tot > 0 ? (
@@ -191,7 +222,7 @@ export default function TabelaPlanu({
                                 )}
                               </span>
                             ) : (
-                              '–'
+                              PUSTA
                             )}
                           </td>
                         </tr>
@@ -293,8 +324,6 @@ export default function TabelaPlanu({
                     /** Kolumna „Zrealizowane”: realizacja = suma godzin w wierszu (baza + do wyboru + dyrektor + rozszerzenia), plan = planoweGodziny z MEiN. */
                     const displayedAssigned = razemRzeczywiste;
                     const displayedTotal = planoweGodziny;
-                    /** Różnica plan − realizacja (dla kolorów); może być ujemna przy nadwyżce. */
-                    const displayedRemaining = planoweGodziny - razemRzeczywiste;
                     /** Podpis „do przydziału” tylko dla puli „godzin do wyboru”. */
                     const remainingOptionalForLabel = hoursToChoose > 0 ? Math.max(0, hoursToChoose - assignedSum) : 0;
                     /** Wolna pula rozszerzeń dla przedmiotu z etykietą rozszerzenie. */
@@ -302,52 +331,47 @@ export default function TabelaPlanu({
                       nazwaPogrubiona ? Math.max(0, extendedPoolSize - extendedPoolAssignedTotal) : 0;
                     const rowHasPodzial = groupSplit.rowHasAnySplit(subKey, grades);
 
-                    const cellPodzialClass = trybPodzielNaGrupy && !tylkoOdczyt ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded-sm' : '';
                     const cellTallClass = 'py-2.5 sm:py-3 min-h-13';
+                    const onToggleNazwa = () => {
+                      const next = new Set(rozszerzeniaSubKeys);
+                      if (next.has(subKey)) {
+                        next.delete(subKey);
+                        const nextPrzydzial = { ...rozszerzeniaPrzydzial };
+                        delete nextPrzydzial[subKey];
+                        setRozszerzeniaPrzydzial(nextPrzydzial);
+                        setRozszerzeniaSubKeys(next);
+                        setExtendedCellsAdded((prev) => {
+                          const nextSet = new Set(prev);
+                          grades.forEach((g) => nextSet.delete(`${subKey}_${g}`));
+                          return nextSet;
+                        });
+                        const nextSet = new Set(next);
+                        const nextGrupyRozsz = Object.fromEntries(
+                          Object.entries(przydzialGrupyRozszerzenia).filter(([k]) => nextSet.has(k))
+                        ) as Record<string, PrzydzialGrupyByGrade>;
+                        if (Object.keys(nextGrupyRozsz).length !== Object.keys(przydzialGrupyRozszerzenia).length) {
+                          setPrzydzialGrupyRozszerzenia(nextGrupyRozsz);
+                        }
+                        zapiszRozszerzeniaDoBazy(Array.from(next), nextPrzydzial, nextGrupyRozsz);
+                      } else {
+                        next.add(subKey);
+                        setRozszerzeniaSubKeys(next);
+                        zapiszRozszerzeniaDoBazy(Array.from(next));
+                      }
+                    };
                     return (
                       <Fragment key={i}>
                         <tr className={czyRozszerzony ? 'bg-surface-2' : ''}>
-                            <td className={`px-2 sm:px-3 ${cellTallClass} text-ink-faint tabular-nums border-r border-line w-10 sm:w-12 align-top ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-l-2 border-l-gray-400' : ''}`}>
-                              {czyRozszerzony ? 'roz.' : row.lp != null ? row.lp : '–'}
+                            <td className={`px-2 sm:px-3 ${cellTallClass} text-ink-faint tabular-nums text-right border-r border-line w-10 sm:w-12 align-top ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-l-2 border-l-line-strong' : ''}`}>
+                              {czyRozszerzony ? <ZnacznikTyp>roz.</ZnacznikTyp> : row.lp != null ? row.lp : PUSTA}
                             </td>
                             <td
-                              className={`px-2 sm:px-3 ${cellTallClass} border-r border-line min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-ink' : 'text-ink'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded-sm' : ''}`}
-                          onClick={
-                            kafelekNazwaKlikalny
-                              ? () => {
-                                  const next = new Set(rozszerzeniaSubKeys);
-                                  if (next.has(subKey)) {
-                                    next.delete(subKey);
-                                    const nextPrzydzial = { ...rozszerzeniaPrzydzial };
-                                    delete nextPrzydzial[subKey];
-                                    setRozszerzeniaPrzydzial(nextPrzydzial);
-                                    setRozszerzeniaSubKeys(next);
-                                    setExtendedCellsAdded((prev) => {
-                                      const nextSet = new Set(prev);
-                                      grades.forEach((g) => nextSet.delete(`${subKey}_${g}`));
-                                      return nextSet;
-                                    });
-                                    const nextSet = new Set(next);
-                                    const nextGrupyRozsz = Object.fromEntries(
-                                      Object.entries(przydzialGrupyRozszerzenia).filter(([k]) => nextSet.has(k))
-                                    ) as Record<string, PrzydzialGrupyByGrade>;
-                                    if (Object.keys(nextGrupyRozsz).length !== Object.keys(przydzialGrupyRozszerzenia).length) {
-                                      setPrzydzialGrupyRozszerzenia(nextGrupyRozsz);
-                                    }
-                                    zapiszRozszerzeniaDoBazy(Array.from(next), nextPrzydzial, nextGrupyRozsz);
-                                  } else {
-                                    next.add(subKey);
-                                    setRozszerzeniaSubKeys(next);
-                                    zapiszRozszerzeniaDoBazy(Array.from(next));
-                                  }
-                                }
-                              : undefined
-                          }
-                          role={kafelekNazwaKlikalny ? 'button' : undefined}
+                              {...(kafelekNazwaKlikalny ? { ...komorkaKlawiatura(onToggleNazwa), 'aria-label': `Oznacz jako rozszerzenie: ${subject}` } : {})}
+                              className={`sticky left-0 z-10 px-2 sm:px-3 ${cellTallClass} border-r border-line min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-ink' : 'text-ink'} ${kafelekNazwaKlikalny ? `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-1 ring-accent/30 rounded-sm ${FOCUS_KOMORKA}` : czyRozszerzony ? 'bg-surface-2' : 'bg-surface'}`}
                         >
                           <span>{subject}</span>
                           {nazwaPogrubiona && (
-                            <span className="ml-1.5 inline-block px-1.5 py-0.5 text-xs font-normal text-white bg-violet-700 rounded-sm">rozszerzenie</span>
+                            <span className="ml-1.5 inline-block px-1.5 py-0.5 text-xs font-normal text-accent-strong bg-accent-weak border border-accent/30 rounded-sm">rozszerzenie</span>
                           )}
                         </td>
                         {hasGrades &&
@@ -520,53 +544,51 @@ export default function TabelaPlanu({
                             }
                             const maNadgodzinyDyrektorWKomorce = dirH > 0 && maNadgodzinyDyrektorskie;
                             const maGodzinyDyrektorskie = dirH > 0;
-                            /** Tło tylko w komórce z przypisaną godziną: fioletowe – godziny rozszerzeń, sky – ponadgodziny zwykłe i nadgodziny dyrektorskie, czerwone – tryb usuwania. W trybie „Przydziel godzinę” nie kładziemy fioletu – ma być zielone. */
+                            /** Tło komórki z przypisaną godziną: usuwanie → danger; rozszerzenia/ponad/nadgodziny → warn (uwaga: ponad limit). Typ rozróżnia znacznik tekstowy, nie sam kolor. */
                             const bgPonadprogramowa =
                               trybUsunGodzine
-                                ? (assigned > 0 || dirH > 0 ? 'bg-red-200' : '')
+                                ? (assigned > 0 || dirH > 0 ? 'bg-danger-bg' : '')
                                 : nazwaPogrubiona && (rozszerzeniaPrzydzial[subKey]?.[g] ?? 0) > 0 && !przydzielGodzineKlikalnyThis
-                                  ? 'bg-violet-200'
+                                  ? 'bg-accent-weak'
                                   : maPonadprogramowe && (assigned > 0 || dirH > 0)
-                                    ? 'bg-sky-200'
+                                    ? 'bg-warn-bg'
                                     : maNadgodzinyDyrektorWKomorce && dirH > 0
-                                      ? 'bg-sky-200'
+                                      ? 'bg-warn-bg'
                                       : '';
-                            /** Tło dla komórek z godzinami dyrektorskimi. Nie stosuj gdy tryb przydziału/dyrektorski – wtedy bgKlikalny daje zielony/niebieski/sky. */
+                            /** Tło dla komórek z godzinami dyrektorskimi. Nie stosuj gdy tryb przydziału/dyrektorski – wtedy bgKlikalny daje sygnał. */
                             const bgGodzinyDyrektorskie =
                               maGodzinyDyrektorskie && !maPonadprogramowe && !maNadgodzinyDyrektorWKomorce && !kafelekKlikalnyDyrektor && !kafelekKlikalnyGodziny
-                                ? 'bg-sky-50 ring-2 ring-line-strong rounded-sm'
+                                ? 'bg-surface-2 ring-1 ring-line-strong rounded-sm'
                                 : '';
                             const bgKlikalny =
                               kafelekKlikalny
                                 ? kafelekKlikalnyUsun
                                   ? maPonadprogramowe || maNadgodzinyDyrektorWKomorce
-                                    ? 'cursor-pointer hover:bg-red-300 ring-2 ring-red-400 rounded-sm'
-                                    : 'cursor-pointer bg-red-200 hover:bg-red-300 ring-2 ring-red-400 rounded-sm'
+                                    ? `cursor-pointer hover:bg-danger-bg ring-2 ring-danger/50 rounded-sm ${FOCUS_KOMORKA}`
+                                    : `cursor-pointer bg-danger-bg hover:bg-danger-bg ring-2 ring-danger/50 rounded-sm ${FOCUS_KOMORKA}`
                                   : kafelekKlikalnyDyrektor
-                                    ? remainingDirectorHours > 0
-                                      ? 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded-sm'
-                                      : 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded-sm'
+                                    ? `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-2 ring-accent/50 rounded-sm ${FOCUS_KOMORKA}`
                                     : kafelekKlikalnyGodziny
                                       ? klikalneRozszerzeniaThis
-                                        ? 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-2 ring-violet-400 rounded-sm'
+                                        ? `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-2 ring-accent/50 rounded-sm ${FOCUS_KOMORKA}`
                                         : remaining > 0
-                                          ? 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded-sm'
-                                          : 'cursor-pointer bg-blue-200 hover:bg-blue-300 ring-2 ring-blue-400 rounded-sm'
+                                          ? `cursor-pointer bg-ok-bg hover:bg-ok-bg ring-2 ring-ok/50 rounded-sm ${FOCUS_KOMORKA}`
+                                          : `cursor-pointer bg-accent-weak hover:bg-accent-weak/70 ring-2 ring-accent/50 rounded-sm ${FOCUS_KOMORKA}`
                                       : ''
                                 : '';
-                            /** W trybie „Przydziel godzinę” dostępne pola świecą obwódką i cieniem, żeby były widoczne mimo innego tła */
+                            /** W trybie „Przydziel godzinę” dostępne pola świecą obwódką, żeby były widoczne mimo innego tła */
                             const swieciPrzydzielGodzine =
                               przydzielGodzineKlikalnyThis
-                                ? 'ring-2 ring-green-400 ring-offset-1 ring-offset-white shadow-[0_0_0_2px_rgba(34,197,94,0.7)]'
+                                ? 'ring-2 ring-ok ring-offset-1 ring-offset-surface'
                                 : '';
                             /** Wiersz zbiorczy rozszerzeń: bez porównania do planu MEiN — tylko wskaźnik faktycznych godzin w roczniku */
                             const bgZrealizowaneRozszerzony =
                               czyRozszerzony && klasaId && !kafelekKlikalny && assigned > 0
-                                ? 'bg-violet-50 ring-1 ring-violet-200 rounded-sm'
+                                ? 'bg-accent-weak ring-1 ring-accent/30 rounded-sm'
                                 : '';
                             const textZrealizowaneRozszerzony =
                               czyRozszerzony && klasaId && !kafelekKlikalny && assigned > 0
-                                ? 'text-violet-900 font-semibold'
+                                ? 'text-accent-strong font-semibold'
                                 : '';
                             /** Prawy przycisk usuwa tylko godziny (nie grupy) i tylko typu aktywnego przycisku. */
                             const maCoUsunacDyrektor = dirH > 0 && trybPrzydzielDyrektor;
@@ -585,50 +607,60 @@ export default function TabelaPlanu({
                                   }
                                 }
                               : undefined;
+                            const onClickKomorka = kafelekKlikalnyPodzial
+                              ? () => togglePodzialNaGrupy(subKey, g)
+                              : kafelekKlikalnyGodziny
+                              ? () => {
+                                  if (trybPrzydzielGodzinyRozszerzen && klikalneRozszerzeniaThis) {
+                                    setExtendedCellsAdded((prev) => new Set(prev).add(`${subKey}_${g}`));
+                                    dodajGodzineRozszerzen(subKey, g);
+                                  } else if (remaining > 0) {
+                                    przydzielGodzine(subKey, g);
+                                  } else {
+                                    setModalPonadprogramowa({ kind: 'optional', subKey, grade: g, subjectName: subject });
+                                  }
+                                }
+                              : kafelekKlikalnyDyrektor
+                                ? () => {
+                                    if (assignedDirectorHoursPlan >= totalDirectorHours) {
+                                      setModalPonadprogramowa({
+                                        kind: 'dyrektor',
+                                        subKey,
+                                        grade: g,
+                                        subjectName: subject,
+                                        splitBothGroups: false,
+                                        totalDirectorHours,
+                                        planId: plan.plan_id,
+                                      });
+                                    } else {
+                                      dodajGodzineDyrektorska(subKey, g, totalDirectorHours, plan.plan_id);
+                                    }
+                                  }
+                                : kafelekKlikalnyUsun
+                                  ? () => {
+                                      if ((czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0) {
+                                        cofnijGodzineRozszerzen(g, planIdPrefix, nazwaPogrubiona ? subKey : undefined);
+                                      } else if (dirH > 0) usunGodzineDyrektorska(subKey, g);
+                                      else cofnijGodzine(subKey, g);
+                                    }
+                                  : undefined;
                             return (
                               <td
                                 key={g}
-                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-line w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded-sm' : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
+                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-line w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? `cursor-pointer bg-warn-bg hover:bg-warn-bg ring-1 ring-warn/40 rounded-sm ${FOCUS_KOMORKA}` : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
                                 onContextMenu={onContextMenuUsun}
-                                onClick={
-                                  kafelekKlikalnyPodzial
-                                    ? () => togglePodzialNaGrupy(subKey, g)
-                                    : kafelekKlikalnyGodziny
-                                    ? () => {
-                                        if (trybPrzydzielGodzinyRozszerzen && klikalneRozszerzeniaThis) {
-                                          setExtendedCellsAdded((prev) => new Set(prev).add(`${subKey}_${g}`));
-                                          dodajGodzineRozszerzen(subKey, g);
-                                        } else if (remaining > 0) {
-                                          przydzielGodzine(subKey, g);
-                                        } else {
-                                          setModalPonadprogramowa({ kind: 'optional', subKey, grade: g, subjectName: subject });
+                                onClick={onClickKomorka}
+                                onKeyDown={
+                                  kafelekKlikalny && onClickKomorka
+                                    ? (e: ReactKeyboardEvent) => {
+                                        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                                          e.preventDefault();
+                                          onClickKomorka();
                                         }
                                       }
-                                    : kafelekKlikalnyDyrektor
-                                      ? () => {
-                                          if (assignedDirectorHoursPlan >= totalDirectorHours) {
-                                            setModalPonadprogramowa({
-                                              kind: 'dyrektor',
-                                              subKey,
-                                              grade: g,
-                                              subjectName: subject,
-                                              splitBothGroups: false,
-                                              totalDirectorHours,
-                                              planId: plan.plan_id,
-                                            });
-                                          } else {
-                                            dodajGodzineDyrektorska(subKey, g, totalDirectorHours, plan.plan_id);
-                                          }
-                                        }
-                                      : kafelekKlikalnyUsun
-                                        ? () => {
-                                            if ((czyRozszerzony || nazwaPogrubiona) && (extendedAssignedByGrade[g] ?? 0) > 0) {
-                                              cofnijGodzineRozszerzen(g, planIdPrefix, nazwaPogrubiona ? subKey : undefined);
-                                            } else if (dirH > 0) usunGodzineDyrektorska(subKey, g);
-                                            else cofnijGodzine(subKey, g);
-                                          }
-                                        : undefined
+                                    : undefined
                                 }
+                                tabIndex={kafelekKlikalny ? 0 : undefined}
                                 role={kafelekKlikalny ? 'button' : undefined}
                                 title={
                                   kafelekKlikalnyPodzial
@@ -661,21 +693,21 @@ export default function TabelaPlanu({
                                     textZrealizowaneRozszerzony
                                       ? textZrealizowaneRozszerzony
                                       : kafelekKlikalnyUsun
-                                        ? 'font-bold text-red-700'
+                                        ? 'font-bold text-danger'
                                         : kafelekKlikalnyDyrektor
-                                          ? 'font-bold text-sky-700'
+                                          ? 'font-bold text-accent-strong'
                                           : kafelekKlikalnyGodziny
                                             ? klikalneRozszerzeniaThis
-                                              ? 'font-bold text-violet-700'
+                                              ? 'font-bold text-accent-strong'
                                               : remaining > 0
-                                                ? 'font-bold text-green-700'
-                                                : 'font-bold text-blue-700'
+                                                ? 'font-bold text-ok'
+                                                : 'font-bold text-accent-strong'
                                             : maPonadprogramowe
-                                              ? 'font-semibold text-blue-800'
+                                              ? 'font-semibold text-warn'
                                               : maNadgodzinyDyrektorWKomorce
-                                                ? 'font-semibold text-sky-800'
+                                                ? 'font-semibold text-warn'
                                                 : maGodzinyDyrektorskie
-                                                  ? 'font-bold text-sky-800'
+                                                  ? 'font-bold text-accent-strong'
                                                   : 'text-ink-soft'
                                   }`}
                                 >
@@ -686,17 +718,17 @@ export default function TabelaPlanu({
                                             {assigned} z {assigned}
                                           </>
                                         )
-                                      : '–'
+                                      : PUSTA
                                     : cellDisplayTotal > 0
                                       ? dirH > 0
-                                        ? <>{cellDisplayTotal - dirH}<span className="text-sky-600 font-semibold">+{dirH}d</span></>
+                                        ? <>{cellDisplayTotal - dirH}<ZnacznikTyp>+{dirH} dyr.</ZnacznikTyp></>
                                         : cellDisplayTotal
-                                      : '–'}
+                                      : PUSTA}
                                 </span>
                               </td>
                             );
                           })}
-                        <td className={`${rowHasPodzial ? 'p-0 min-h-13' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right tabular-nums font-medium text-ink border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28 ${obramowanieRozszerzony}`}>
+                        <td className={`${rowHasPodzial ? 'p-0 min-h-13' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right tabular-nums font-medium text-ink border-l-2 border-line-strong border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28 ${obramowanieRozszerzony}`}>
                           {rowHasPodzial ? (
                             <GroupSplitRazem
                               razemRzeczywiste={razemRzeczywiste}
@@ -707,7 +739,7 @@ export default function TabelaPlanu({
                             <>
                               <span className="tabular-nums">
                                 {razemDyrektorskie > 0 ? (
-                                  <>{razemRzeczywiste - razemDyrektorskie}<span className="text-sky-600 font-semibold">+{razemDyrektorskie}d</span></>
+                                  <>{razemRzeczywiste - razemDyrektorskie}<ZnacznikTyp>+{razemDyrektorskie} dyr.</ZnacznikTyp></>
                                 ) : razemRzeczywiste}
                               </span>
                               {razemRzeczywiste !== planoweGodziny && (
@@ -721,22 +753,13 @@ export default function TabelaPlanu({
                           )}
                         </td>
                         <td
-                          className={`${rowHasPodzial ? 'p-0 min-h-13' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right border-l border-line w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
-                            rowHasPodzial
-                              ? ''
-                              : klasaId && (planoweGodziny > 0 || godzinyRozszerzenia > 0 || (row.hours_to_choose != null && row.hours_to_choose > 0) || czyRozszerzony)
-                                ? planoweGodziny > 0
-                                  ? displayedAssigned > displayedTotal
-                                    ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded-sm'
-                                    : displayedAssigned === displayedTotal
-                                      ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded-sm'
-                                      : displayedRemaining === 1
-                                        ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded-sm'
-                                        : displayedRemaining > 1
-                                          ? 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded-sm'
-                                          : ''
-                                  : ''
-                                : ''
+                          className={`${rowHasPodzial ? 'p-0 min-h-13' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right border-l border-line w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-line-strong' : ''} ${
+                            !rowHasPodzial &&
+                            klasaId &&
+                            (planoweGodziny > 0 || godzinyRozszerzenia > 0 || (row.hours_to_choose != null && row.hours_to_choose > 0) || czyRozszerzony) &&
+                            planoweGodziny > 0
+                              ? TON_KOMORKA[statusRealizacji(displayedAssigned, displayedTotal).ton]
+                              : ''
                           }`}
                         >
                           {rowHasPodzial && (planoweGodziny > 0 || godzinyRozszerzenia > 0 || hoursToChoose > 0) ? (
@@ -749,7 +772,7 @@ export default function TabelaPlanu({
                               extensionPoolRemaining={extensionPoolRemaining > 0 ? extensionPoolRemaining : undefined}
                             />
                           ) : rowHasPodzial ? (
-                            <span className="text-ink-faint">–</span>
+                            <span className="text-ink-faint">{PUSTA}</span>
                           ) : planoweGodziny > 0 || godzinyRozszerzenia > 0 || row.hours_to_choose != null || czyRozszerzony ? (
                             klasaId ? (
                               <span className="tabular-nums">
@@ -757,7 +780,7 @@ export default function TabelaPlanu({
                                   ? `${displayedAssigned} z ${displayedTotal}`
                                   : displayedAssigned > 0
                                     ? String(displayedAssigned)
-                                    : '–'}
+                                    : PUSTA}
                                 {extendedSumForThisSubject > 0 && (
                                   <span className="block text-xs opacity-90 mt-0.5">
                                     z czego {extendedSumForThisSubject} rozszerzeń
@@ -780,10 +803,10 @@ export default function TabelaPlanu({
                                 )}
                               </span>
                             ) : (
-                              row.hours_to_choose ?? '–'
+                              row.hours_to_choose ?? PUSTA
                             )
                           ) : (
-                            '–'
+                            PUSTA
                           )}
                         </td>
                       </tr>
@@ -794,7 +817,7 @@ export default function TabelaPlanu({
                 <tfoot>
                   <tr className="border-t-2 border-line-strong bg-surface-2 font-semibold text-xs sm:text-sm">
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-line w-10 sm:w-12" />
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 border-r border-line">
+                    <td className="sticky left-0 z-10 bg-surface-2 px-2 sm:px-3 py-1.5 sm:py-2 border-r border-line">
                       Suma godzin w roku
                     </td>
                     {hasGrades &&
@@ -824,11 +847,11 @@ export default function TabelaPlanu({
                           </td>
                         );
                       })}
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28">
-                      –
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-l-2 border-line-strong border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28">
+                      {PUSTA}
                     </td>
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-l border-line">
-                      –
+                      {PUSTA}
                     </td>
                   </tr>
                 </tfoot>
