@@ -55,7 +55,7 @@ interface NauczycielDetail {
 }
 
 const SELECT_CLASS =
-  'w-full max-w-md border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
+  'w-full max-w-md border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 /** Unikalna para klasa + rok (do wyboru w select) */
 function uniqueKlasyRok(obciazenie: ObciazenieItem[]): { klasaId: string; klasaNazwa: string; rokSzkolny: string }[] {
@@ -231,7 +231,7 @@ export default function NauczycielePage() {
           <p className="text-sm text-ink-faint">Ładowanie obciążenia nauczyciela…</p>
         )}
         {error && (
-          <div className="rounded border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
+          <div className="rounded-sm border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -259,7 +259,7 @@ export default function NauczycielePage() {
         )}
 
         {daneNauczyciela && opcjeKlasyRok.length === 0 && daneNauczyciela.obciazenie.length === 0 && (
-          <p className="rounded bg-warn-bg p-3 text-sm text-warn">
+          <p className="rounded-sm bg-warn-bg p-3 text-sm text-warn">
             Ten nauczyciel nie ma przypisanych godzin w rozkładzie. Przydziel godziny w module Przydział.
           </p>
         )}
@@ -290,15 +290,15 @@ export default function NauczycielePage() {
             <Card>
               <h2 className="font-display text-base font-semibold text-ink mb-4">Podsumowanie obciążenia</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="rounded border border-line bg-surface-2 p-4">
+                <div className="rounded-sm border border-line bg-surface-2 p-4">
                   <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
                   <p className="text-2xl font-bold text-ink tabular">{daneNauczyciela.podsumowanie.suma_godzin_tyg}</p>
                 </div>
-                <div className="rounded border border-line bg-surface-2 p-4">
+                <div className="rounded-sm border border-line bg-surface-2 p-4">
                   <p className="text-sm text-ink-soft">Procent obciążenia</p>
                   <p className="text-2xl font-bold text-ink tabular">{daneNauczyciela.podsumowanie.procent_obciazenia}%</p>
                 </div>
-                <div className="rounded border border-line bg-surface-2 p-4">
+                <div className="rounded-sm border border-line bg-surface-2 p-4">
                   <p className="text-sm text-ink-soft mb-1">Status</p>
                   <StatusPill status={daneNauczyciela.podsumowanie.status} />
                 </div>
@@ -325,7 +325,7 @@ export default function NauczycielePage() {
               <h2 className="font-display text-base font-semibold text-ink mb-4">Kwalifikacje</h2>
               <div className="space-y-2">
                 {daneNauczyciela.kwalifikacje.map((kwal, index) => (
-                  <div key={index} className="flex items-center justify-between rounded border border-line bg-surface-2 p-3">
+                  <div key={index} className="flex items-center justify-between rounded-sm border border-line bg-surface-2 p-3">
                     <div>
                       <p className="font-semibold text-ink">{kwal.przedmiot?.nazwa}</p>
                       {(kwal.specjalizacja || kwal.stopien) && (
@@ -362,15 +362,15 @@ export default function NauczycielePage() {
           <Card>
             <h2 className="font-display text-base font-semibold text-ink mb-4">Sumarycznie</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded border border-line bg-surface-2 p-4">
+              <div className="rounded-sm border border-line bg-surface-2 p-4">
                 <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
                 <p className="text-2xl font-bold text-ink tabular">{sumaGodzinTyg}</p>
               </div>
-              <div className="rounded border border-line bg-surface-2 p-4">
+              <div className="rounded-sm border border-line bg-surface-2 p-4">
                 <p className="text-sm text-ink-soft">Liczba klas</p>
                 <p className="text-2xl font-bold text-ink tabular">{liczbaKlas}</p>
               </div>
-              <div className="rounded border border-line bg-surface-2 p-4">
+              <div className="rounded-sm border border-line bg-surface-2 p-4">
                 <p className="text-sm text-ink-soft">Liczba przedmiotów</p>
                 <p className="text-2xl font-bold text-ink tabular">{liczbaPrzedmiotow}</p>
               </div>

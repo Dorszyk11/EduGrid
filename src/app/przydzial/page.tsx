@@ -221,7 +221,7 @@ export default function PrzydzialPage() {
             <button
               onClick={generujPrzydzial}
               disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
-              className="px-5 py-2.5 bg-accent text-white rounded hover:bg-accent-strong disabled:bg-line-strong disabled:cursor-not-allowed font-medium"
+              className="px-5 py-2.5 bg-accent text-white rounded-sm hover:bg-accent-strong disabled:bg-line-strong disabled:cursor-not-allowed font-medium"
             >
               {ladowanie ? 'Generowanie...' : 'Generuj przydział'}
             </button>
@@ -229,7 +229,7 @@ export default function PrzydzialPage() {
           <button
             onClick={otworzPotwierdzenieReset}
             disabled={ladowanie || resetowanie || !selectedClass?.id}
-            className="px-4 py-2.5 bg-danger-bg text-danger rounded hover:bg-danger-bg disabled:bg-surface-2 disabled:text-ink-faint disabled:cursor-not-allowed font-medium border border-line"
+            className="px-4 py-2.5 bg-danger-bg text-danger rounded-sm hover:bg-danger-bg disabled:bg-surface-2 disabled:text-ink-faint disabled:cursor-not-allowed font-medium border border-line"
           >
             {resetowanie ? 'Resetowanie...' : 'Reset'}
           </button>
@@ -351,14 +351,14 @@ export default function PrzydzialPage() {
               <button
                 type="button"
                 onClick={() => setPokazPotwierdzenieReset(false)}
-                className="px-4 py-2.5 bg-surface-2 text-ink rounded hover:bg-line font-medium"
+                className="px-4 py-2.5 bg-surface-2 text-ink rounded-sm hover:bg-line font-medium"
               >
                 Nie
               </button>
               <button
                 type="button"
                 onClick={wykonajReset}
-                className="px-4 py-2.5 bg-danger text-white rounded hover:bg-danger font-medium"
+                className="px-4 py-2.5 bg-danger text-white rounded-sm hover:bg-danger font-medium"
               >
                 Tak
               </button>
@@ -376,7 +376,7 @@ export default function PrzydzialPage() {
             setTypSzkolyId(v);
           }}
           disabled={ladowanieTypow}
-          className="w-full sm:w-[200px] sm:min-w-0 border border-line-strong rounded px-3 py-2.5 text-base bg-white disabled:opacity-60"
+          className="w-full sm:w-[200px] sm:min-w-0 border border-line-strong rounded-sm px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
           <option value="">{ladowanieTypow ? 'Ładowanie...' : 'Wybierz typ szkoły'}</option>
           {typySzkol.map((typ) => (
@@ -392,7 +392,7 @@ export default function PrzydzialPage() {
             setSelectedLitera('');
           }}
           disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-          className="w-full sm:w-[140px] sm:min-w-0 border border-line-strong rounded px-3 py-2.5 text-base bg-white disabled:opacity-60"
+          className="w-full sm:w-[140px] sm:min-w-0 border border-line-strong rounded-sm px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
           <option value="">{ladowanieKlas ? 'Ładowanie...' : 'Rocznik'}</option>
           {roczniki.map((r) => (
@@ -407,7 +407,7 @@ export default function PrzydzialPage() {
             setSelectedLitera(v);
           }}
           disabled={!selectedRocznik || literki.length === 0}
-          className="w-full sm:w-[100px] sm:min-w-0 border border-line-strong rounded px-3 py-2.5 text-base bg-white disabled:opacity-60"
+          className="w-full sm:w-[100px] sm:min-w-0 border border-line-strong rounded-sm px-3 py-2.5 text-base bg-white disabled:opacity-60"
         >
           <option value="">Klasa</option>
           {literki.map((l) => (

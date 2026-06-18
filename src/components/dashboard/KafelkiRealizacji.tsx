@@ -49,19 +49,19 @@ export default function KafelkiRealizacji({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
       {/* Wykres kołowy – procent realizacji */}
-      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm flex flex-col items-center justify-center min-h-[140px] sm:min-h-[200px]">
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-xs flex flex-col items-center justify-center min-h-[140px] sm:min-h-[200px]">
         <WykresKolowyRealizacji procent={procentRealizacji} label="Procent realizacji" size={120} />
       </div>
 
       {/* Kafelek: Braki godzin */}
-      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm flex flex-col justify-center min-h-[140px] sm:min-h-[200px]">
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-xs flex flex-col justify-center min-h-[140px] sm:min-h-[200px]">
         <h3 className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">Braki godzin</h3>
         <p className="text-2xl sm:text-3xl font-bold text-red-600 tabular-nums">{brakiGodzin}</p>
         <p className="text-xs sm:text-sm text-gray-500 mt-1 leading-snug">godz. łącznie do uzupełnienia</p>
       </div>
 
       {/* Kafelek: Nadwyżki */}
-      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm flex flex-col justify-center min-h-[140px] sm:min-h-[200px]">
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-xs flex flex-col justify-center min-h-[140px] sm:min-h-[200px]">
         <h3 className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">Nadwyżki</h3>
         <p className="text-2xl sm:text-3xl font-bold text-emerald-600 tabular-nums">{nadwyzkiGodzin}</p>
         <p className="text-xs sm:text-sm text-gray-500 mt-1 leading-snug">godz. łącznie ponad wymóg</p>

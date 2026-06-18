@@ -340,9 +340,9 @@ export default function RaportPage() {
       <div className="space-y-6 p-6">
         <Card>
           <div className="animate-pulse space-y-4">
-            <div className="h-8 w-1/3 rounded bg-line" />
-            <div className="h-4 w-1/2 rounded bg-line" />
-            <div className="h-4 w-2/3 rounded bg-line" />
+            <div className="h-8 w-1/3 rounded-sm bg-line" />
+            <div className="h-4 w-1/2 rounded-sm bg-line" />
+            <div className="h-4 w-2/3 rounded-sm bg-line" />
           </div>
         </Card>
       </div>

@@ -7,7 +7,7 @@ import { useConfirm } from '@/lib/hooks/useConfirm';
 import { useToast } from '@/components/ui/Toast';
 import type { Przedmiot, NauczycielAdmin } from './types';
 
-const INPUT = 'rounded border border-line-strong bg-surface px-3 py-2 text-ink';
+const INPUT = 'rounded-sm border border-line-strong bg-surface px-3 py-2 text-ink';
 
 interface NauczycieleSectionProps {
   przedmioty: Przedmiot[];
@@ -137,17 +137,17 @@ export default function NauczycieleSection({ przedmioty, nauczyciele, reload }: 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-ink-soft">Specjalizacja (przedmioty)</span>
             {przedmioty.length === 0 ? (
-              <p className="w-48 max-w-full rounded border border-line bg-warn-bg px-2 py-1.5 text-xs text-warn">
+              <p className="w-48 max-w-full rounded-sm border border-line bg-warn-bg px-2 py-1.5 text-xs text-warn">
                 Brak przedmiotów w bazie – nie można wybrać specjalizacji, dopóki nie pojawią się rekordy
                 przedmiotów (np. z migracji lub seed).
               </p>
             ) : (
-              <div className="w-48 rounded border border-line-strong bg-surface-2">
+              <div className="w-48 rounded-sm border border-line-strong bg-surface-2">
                 <div className="flex max-h-20 flex-wrap gap-x-1 gap-y-0 overflow-y-auto border-b border-line p-1">
                   {widocznePrzedmioty.map((p) => (
                     <label
                       key={String(p.id)}
-                      className="flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-[11px] text-ink hover:bg-surface-2"
+                      className="flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-[11px] text-ink hover:bg-surface-2"
                     >
                       <input
                         type="checkbox"
@@ -161,7 +161,7 @@ export default function NauczycieleSection({ przedmioty, nauczyciele, reload }: 
                               : s.przedmiotyIds.filter((x) => x !== id),
                           }));
                         }}
-                        className="h-3 w-3 rounded border-line-strong text-accent focus:ring-accent"
+                        className="h-3 w-3 rounded-sm border-line-strong text-accent focus:ring-accent"
                       />
                       <span>{p.nazwa}</span>
                     </label>

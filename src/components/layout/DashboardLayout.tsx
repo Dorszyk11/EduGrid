@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 rounded text-ink-soft hover:bg-bg hover:text-ink"
+              className="p-2 -ml-2 rounded-sm text-ink-soft hover:bg-bg hover:text-ink"
               aria-label="Otwórz menu"
             >
               <span className="text-xl" aria-hidden>☰</span>

@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/Toast';
 import type { TypSzkoly, KlasaAdmin } from './types';
 
 const LITERY_KLAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-const INPUT = 'rounded border border-line-strong bg-surface px-3 py-2 text-ink';
+const INPUT = 'rounded-sm border border-line-strong bg-surface px-3 py-2 text-ink';
 
 /** Opcje roku początku cyklu (np. 2022 dla technikum 2022–2027). */
 function opcjeRokuPoczatku(): number[] {

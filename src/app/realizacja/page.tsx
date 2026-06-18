@@ -33,7 +33,7 @@ interface KlasaItem {
 
 const allPlans: PlanItem[] = (plansData as { plans?: PlanItem[] }).plans ?? [];
 
-const SELECT_CLASS = 'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
+const SELECT_CLASS = 'border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 export default function RealizacjaPage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
@@ -345,7 +345,7 @@ export default function RealizacjaPage() {
                 type="button"
                 onClick={() => setTrybDodajRealizacje((v) => !v)}
                 className={trybDodajRealizacje
-                  ? 'inline-flex items-center justify-center rounded px-3.5 py-2 text-sm font-medium bg-ok text-white hover:opacity-90 transition-colors'
+                  ? 'inline-flex items-center justify-center rounded-sm px-3.5 py-2 text-sm font-medium bg-ok text-white hover:opacity-90 transition-colors'
                   : buttonClass('primary')}
               >
                 {trybDodajRealizacje ? 'Zrealizowane (klikaj komórki)' : 'Dodaj realizację'}
@@ -361,7 +361,7 @@ export default function RealizacjaPage() {
             </div>
           </div>
           {komunikatZapis && (
-            <div className={`mb-4 p-3 rounded text-sm ${komunikatZapis.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'}`}>
+            <div className={`mb-4 p-3 rounded-sm text-sm ${komunikatZapis.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'}`}>
               {komunikatZapis.tekst}
             </div>
           )}
@@ -409,7 +409,7 @@ export default function RealizacjaPage() {
                         return (
                           <td
                             key={rok}
-                            className={`px-4 py-3 text-center border-l border-line min-w-[4rem] tabular ${kolorKomorki} ${klikalna ? 'cursor-pointer hover:opacity-90' : ''}`}
+                            className={`px-4 py-3 text-center border-l border-line min-w-16 tabular ${kolorKomorki} ${klikalna ? 'cursor-pointer hover:opacity-90' : ''}`}
                             role={klikalna ? 'button' : undefined}
                             onClick={moznaDodac ? () => dodajGodzineRealizacji(index, rok) : undefined}
                             onContextMenu={(e) => {

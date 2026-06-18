@@ -13,7 +13,7 @@ interface TypSzkoly {
   nazwa: string;
 }
 
-const SELECT_CLASS = 'w-full rounded border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
+const SELECT_CLASS = 'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
 
 const RAPORTY: { typ: string; icon: IconName; tytul: string; opis: string }[] = [
   {

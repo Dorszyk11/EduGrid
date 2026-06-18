@@ -18,7 +18,7 @@ interface Mapowanie {
   uwagi?: string;
 }
 
-const SELECT_CLASS = 'w-full rounded border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
+const SELECT_CLASS = 'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
 
 function Badge({ children, tone }: { children: React.ReactNode; tone: 'accent' | 'ok' | 'neutral' }) {
   const cls =
@@ -136,7 +136,7 @@ export default function MapowaniaPage() {
               type="checkbox"
               checked={tylkoAktywne}
               onChange={(e) => setTylkoAktywne(e.target.checked)}
-              className="rounded border-line-strong text-accent focus:ring-accent"
+              className="rounded-sm border-line-strong text-accent focus:ring-accent"
             />
             Tylko aktywne
           </label>

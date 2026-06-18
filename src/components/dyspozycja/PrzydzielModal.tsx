@@ -2,7 +2,7 @@
 
 import Button from '@/components/ui/Button';
 
-const SELECT_CLASS = 'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
+const SELECT_CLASS = 'border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 interface Nauczyciel {
   id: string;

@@ -116,7 +116,7 @@ export default function KlasyPage() {
               zapiszTypSzkoly(v);
               setTypSzkolyId(v);
             }}
-            className="w-full max-w-md border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink"
+            className="w-full max-w-md border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink"
           >
             <option value="">Wszystkie typy</option>
             {typySzkol.map((t) => (

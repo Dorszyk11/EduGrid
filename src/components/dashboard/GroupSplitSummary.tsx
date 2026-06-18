@@ -28,7 +28,7 @@ function razemLine(totalHours: number, directorHours: number) {
 /** Obie połówki pokazują ten sam „Razem” co przy jednej komórce – szczegóły per grupa są w siatce. */
 export function GroupSplitRazem({ razemRzeczywiste, razemDyrektorskie, planoweGodziny }: GroupSplitRazemProps) {
   return (
-    <div className="flex flex-col h-full min-h-[3.25rem] text-xs tabular-nums">
+    <div className="flex flex-col h-full min-h-13 text-xs tabular-nums">
       <div className="flex flex-col flex-1 min-h-0">
         <span className="flex-1 flex items-center justify-end px-2 sm:px-3">
           {razemLine(razemRzeczywiste, razemDyrektorskie)}
@@ -63,10 +63,10 @@ interface GroupSplitZrealizowaneProps {
 function statusClasses(assigned: number, total: number): string {
   if (total <= 0) return '';
   const rem = total - assigned;
-  if (rem < 0) return 'bg-blue-200 text-blue-900 font-semibold ring-1 ring-blue-400 rounded-sm';
-  if (rem === 0) return 'bg-green-200 text-green-900 font-semibold ring-1 ring-green-500 rounded-sm';
-  if (rem === 1) return 'bg-amber-200 text-amber-900 font-semibold ring-1 ring-amber-500 rounded-sm';
-  return 'bg-red-200 text-red-900 font-semibold ring-1 ring-red-500 rounded-sm';
+  if (rem < 0) return 'bg-blue-200 text-blue-900 font-semibold ring-1 ring-blue-400 rounded-xs';
+  if (rem === 0) return 'bg-green-200 text-green-900 font-semibold ring-1 ring-green-500 rounded-xs';
+  if (rem === 1) return 'bg-amber-200 text-amber-900 font-semibold ring-1 ring-amber-500 rounded-xs';
+  return 'bg-red-200 text-red-900 font-semibold ring-1 ring-red-500 rounded-xs';
 }
 
 function formatProgress(assigned: number, total: number): string {
@@ -91,7 +91,7 @@ export function GroupSplitZrealizowane({
     remaining > 0 ||
     (extensionPoolRemaining != null && extensionPoolRemaining > 0);
   return (
-    <div className="flex flex-col h-full min-h-[3.25rem] text-xs tabular-nums">
+    <div className="flex flex-col h-full min-h-13 text-xs tabular-nums">
       <span className={`flex-1 flex items-center justify-end px-2 sm:px-3 ${cls}`}>
         <span>{main}</span>
       </span>

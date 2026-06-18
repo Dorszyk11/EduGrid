@@ -70,7 +70,7 @@ interface DaneApi {
   podsumowanieCalejSzkoly?: PodsumowanieCalejSzkoly;
 }
 
-const SELECT_CLASS = 'w-full border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink';
+const SELECT_CLASS = 'w-full border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink';
 
 export default function ZapotrzebowanieKadrowePage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
@@ -212,7 +212,7 @@ export default function ZapotrzebowanieKadrowePage() {
       </Card>
 
       {blad && (
-        <div className="rounded border border-danger/30 bg-danger-bg text-danger px-4 py-3 text-sm">
+        <div className="rounded-sm border border-danger/30 bg-danger-bg text-danger px-4 py-3 text-sm">
           {blad}
         </div>
       )}
@@ -307,7 +307,7 @@ export default function ZapotrzebowanieKadrowePage() {
                         <td className="px-3 py-2.5 text-center tabular font-semibold text-ink">{z.sugerowanaPotrzebaNauczycieli}</td>
                         <td className="px-4 py-2.5 text-center">
                           {z.brakujeNauczycieli > 0 ? (
-                            <span className="inline-flex items-center justify-center min-w-[2rem] rounded-full bg-danger-bg text-danger font-bold text-sm px-2 py-0.5">{z.brakujeNauczycieli}</span>
+                            <span className="inline-flex items-center justify-center min-w-8 rounded-full bg-danger-bg text-danger font-bold text-sm px-2 py-0.5">{z.brakujeNauczycieli}</span>
                           ) : (
                             <span className="text-ink-faint">0</span>
                           )}

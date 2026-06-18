@@ -107,7 +107,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
         {/* Logo */}
         <div className="h-16 px-5 border-b border-navy-line flex items-center justify-between shrink-0">
           <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5 group">
-            <span className="grid h-8 w-8 place-items-center rounded bg-accent text-white font-display font-bold text-sm shadow-sm">
+            <span className="grid h-8 w-8 place-items-center rounded-sm bg-accent text-white font-display font-bold text-sm shadow-xs">
               EG
             </span>
             <span className="font-display text-lg font-semibold tracking-tight text-white">
@@ -118,7 +118,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
             <button
               type="button"
               onClick={onClose}
-              className="lg:hidden p-2 -mr-2 rounded text-slate-400 hover:text-white hover:bg-navy-2"
+              className="lg:hidden p-2 -mr-2 rounded-sm text-slate-400 hover:text-white hover:bg-navy-2"
               aria-label="Zamknij menu"
             >
               ✕
@@ -140,7 +140,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
                   relative flex items-center gap-3 rounded px-3 py-2.5 text-sm transition-colors duration-150 ease-brand
                   ${isActive
                     ? 'bg-white/[0.07] text-white font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-accent'
-                    : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
+                    : 'text-slate-300 hover:bg-white/4 hover:text-white'
                   }
                 `}
               >
@@ -164,7 +164,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
               <button
                 type="button"
                 onClick={() => setProfileOpen((v) => !v)}
-                className="w-full flex items-center gap-3 px-2 py-2 rounded text-left hover:bg-white/[0.04] transition-colors"
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-sm text-left hover:bg-white/4 transition-colors"
                 aria-expanded={profileOpen}
                 aria-haspopup="true"
               >
@@ -179,7 +179,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
                 </span>
               </button>
               {profileOpen && (
-                <div className="absolute left-0 right-0 bottom-full mb-1 py-3 px-4 rounded-card bg-navy-2 border border-navy-line shadow-pop min-w-[12rem]">
+                <div className="absolute left-0 right-0 bottom-full mb-1 py-3 px-4 rounded-card bg-navy-2 border border-navy-line shadow-pop min-w-48">
                   <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Profil</p>
                   <p className="text-sm font-medium text-white truncate">
                     {[user.imie, user.nazwisko].filter(Boolean).join(' ') || '–'}
@@ -192,7 +192,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
                       onClose?.();
                       logout();
                     }}
-                    className="mt-3 w-full py-2 px-3 text-sm font-medium text-red-300 hover:text-red-200 hover:bg-white/[0.05] rounded transition-colors"
+                    className="mt-3 w-full py-2 px-3 text-sm font-medium text-red-300 hover:text-red-200 hover:bg-white/5 rounded-sm transition-colors"
                   >
                     Wyloguj
                   </button>
@@ -203,7 +203,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
             <Link
               href="/"
               onClick={onClose}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-accent text-white font-medium text-sm hover:bg-accent-strong transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm bg-accent text-white font-medium text-sm hover:bg-accent-strong transition-colors"
             >
               Zaloguj się
             </Link>

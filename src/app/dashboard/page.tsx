@@ -11,7 +11,7 @@ import { buttonClass } from '@/components/ui/Button';
 
 /** Wspólny styl selektora kaskadowego (tokeny). */
 const SELECT_CLASS =
-  'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
+  'border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 interface KlasaItem {
   id: string;
@@ -213,7 +213,7 @@ export default function DashboardPage() {
   }
 
   const SelectyKaskadowe = () => (
-    <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto sm:flex-shrink-0">
+    <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto sm:shrink-0">
       <select
         value={typSzkolyId}
         onChange={(e) => {

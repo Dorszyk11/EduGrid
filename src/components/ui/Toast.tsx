@@ -77,7 +77,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {mounted &&
         createPortal(
-          <div className="fixed right-4 top-4 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+          <div className="fixed right-4 top-4 z-60 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
             {toasts.map((t) => (
               <div
                 key={t.id}

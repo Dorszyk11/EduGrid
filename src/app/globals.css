@@ -1,62 +1,134 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: var(--bg);
+
+  --color-surface-2: var(--surface-2);
+  --color-surface: var(--surface);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-weak: var(--accent-weak);
+
+  --color-navy-2: var(--navy-2);
+  --color-navy: var(--navy);
+  --color-navy-line: var(--navy-line);
+
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --radius-card: var(--radius-lg);
+
+  --shadow-card: var(--shadow);
+  --shadow-pop: var(--shadow-md);
+
+  --ease-brand: var(--ease);
+}
 
 /*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@layer utilities {
+  /*
  * EduGrid — system tokenów (Faza 2 redesign).
  * Kierunek: enterprise SaaS, granat/błękit, gęste dane.
  * Sygnatura: precyzyjna „ledgerowa" siatka z tabularnymi liczbami i włosowymi liniami.
  * Wszystkie kolory tekstu na białym/jasnym tle spełniają WCAG AA.
  */
-:root {
-  /* Powierzchnie */
-  --bg: #f1f5f9;          /* tło aplikacji (slate-100) */
-  --surface: #ffffff;     /* karty, tabele */
-  --surface-2: #f8fafc;   /* nagłówki tabel, paski (slate-50) */
+  :root {
+    /* Powierzchnie */
+    --bg: #f1f5f9; /* tło aplikacji (slate-100) */
+    --surface: #ffffff; /* karty, tabele */
+    --surface-2: #f8fafc; /* nagłówki tabel, paski (slate-50) */
 
-  /* Tekst */
-  --ink: #1e293b;         /* główny (slate-800, ~12.6:1 na białym) */
-  --ink-soft: #475569;    /* drugorzędny (slate-600, ~7:1) */
-  --ink-faint: #64748b;   /* podpisy (slate-500, ~4.8:1) */
+    /* Tekst */
+    --ink: #1e293b; /* główny (slate-800, ~12.6:1 na białym) */
+    --ink-soft: #475569; /* drugorzędny (slate-600, ~7:1) */
+    --ink-faint: #64748b; /* podpisy (slate-500, ~4.8:1) */
 
-  /* Linie / obramowania (sygnatura siatki) */
-  --line: #e2e8f0;        /* slate-200 */
-  --line-strong: #cbd5e1; /* slate-300 */
+    /* Linie / obramowania (sygnatura siatki) */
+    --line: #e2e8f0; /* slate-200 */
+    --line-strong: #cbd5e1; /* slate-300 */
 
-  /* Akcent */
-  --accent: #2563eb;        /* blue-600 — akcja/link/fokus (~4.5:1) */
-  --accent-strong: #1d4ed8; /* blue-700 — hover */
-  --accent-weak: #eff6ff;   /* blue-50 — zaznaczenie/aktywne tło */
+    /* Akcent */
+    --accent: #2563eb; /* blue-600 — akcja/link/fokus (~4.5:1) */
+    --accent-strong: #1d4ed8; /* blue-700 — hover */
+    --accent-weak: #eff6ff; /* blue-50 — zaznaczenie/aktywne tło */
 
-  /* Granat (powłoka / sidebar) */
-  --navy: #0f172a;        /* slate-900 */
-  --navy-2: #1e293b;      /* slate-800 */
-  --navy-line: #334155;   /* slate-700 — linie na granacie */
+    /* Granat (powłoka / sidebar) */
+    --navy: #0f172a; /* slate-900 */
+    --navy-2: #1e293b; /* slate-800 */
+    --navy-line: #334155; /* slate-700 — linie na granacie */
 
-  /* Statusy domenowe (zgodność MEiN: OK / NADWYŻKA / BRAK).
+    /* Statusy domenowe (zgodność MEiN: OK / NADWYŻKA / BRAK).
      Wartości 700 — AA dla małego tekstu na tincie ORAZ białego tekstu na solidzie. */
-  --ok: #047857;     --ok-bg: #ecfdf5;
-  --warn: #b45309;   --warn-bg: #fffbeb;
-  --danger: #b91c1c; --danger-bg: #fef2f2;
+    --ok: #047857;
+    --ok-bg: #ecfdf5;
+    --warn: #b45309;
+    --warn-bg: #fffbeb;
+    --danger: #b91c1c;
+    --danger-bg: #fef2f2;
 
-  /* Typografia (webfonty przez next/font z fallbackiem systemowym) */
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+    /* Typografia (webfonty przez next/font z fallbackiem systemowym) */
+    --font-display:
+      var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+    --font-body:
+      var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+      sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
 
-  /* Promienie / cienie — enterprise: crisp, oszczędne */
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 10px;
-  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.05);
-  --shadow-md: 0 6px 16px -4px rgb(15 23 42 / 0.12);
+    /* Promienie / cienie — enterprise: crisp, oszczędne */
+    --radius-sm: 4px;
+    --radius: 6px;
+    --radius-lg: 10px;
+    --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+    --shadow:
+      0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.05);
+    --shadow-md: 0 6px 16px -4px rgb(15 23 42 / 0.12);
 
-  /* Ruch */
-  --dur-fast: 120ms;
-  --dur: 180ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* wejścia — szybki start, miękkie wyhamowanie */
+    /* Ruch */
+    --dur-fast: 120ms;
+    --dur: 180ms;
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out: cubic-bezier(
+      0.23,
+      1,
+      0.32,
+      1
+    ); /* wejścia — szybki start, miękkie wyhamowanie */
+  }
 }
 
 @layer base {

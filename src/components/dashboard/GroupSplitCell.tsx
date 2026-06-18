@@ -52,28 +52,28 @@ function halfBg(
   hasDirectorHours?: boolean,
   hasExtensionHours?: boolean,
 ): string {
-  if (mode === 'delete' && canRemove) return 'cursor-pointer bg-red-200 hover:bg-red-300 ring-1 ring-red-400 rounded-sm';
+  if (mode === 'delete' && canRemove) return 'cursor-pointer bg-red-200 hover:bg-red-300 ring-1 ring-red-400 rounded-xs';
 
   /** Niebiesko tylko gdy aktywny tryb assign – pełny przydział lub nadwyżka */
   if (mode === 'assign') {
-    if (hasExtensionHours && total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
-    if (canAssign) return 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded';
+    if (hasExtensionHours && total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-xs';
+    if (canAssign) return 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded-sm';
     /** Pełny przydział lub nadwyżka – niebiesko tylko w trybie assign */
-    if ((total > 0 || hasDirectorHours) && remaining <= 0) return 'bg-blue-200 ring-2 ring-blue-400 rounded';
+    if ((total > 0 || hasDirectorHours) && remaining <= 0) return 'bg-blue-200 ring-2 ring-blue-400 rounded-sm';
   }
   if (mode === 'director') {
-    if (canAssign) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
-    if (total > 0 || hasDirectorHours) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-sm';
+    if (canAssign) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-xs';
+    if (total > 0 || hasDirectorHours) return 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-1 ring-sky-400 rounded-xs';
   }
   if (mode === 'extension') {
-    if (canAssign) return 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-1 ring-violet-400 rounded-sm';
-    if (total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
+    if (canAssign) return 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-1 ring-violet-400 rounded-xs';
+    if (total > 0) return 'bg-violet-100 ring-1 ring-violet-300 rounded-xs';
   }
 
   /** Bez aktywnego trybu (assign/director/extension) – nie podświetlamy na niebiesko, tylko neutralne tło */
   if (total > 0) {
-    if (hasExtensionHours) return 'bg-violet-100 ring-1 ring-violet-300 rounded-sm';
-    return 'ring-1 ring-gray-300 rounded-sm';
+    if (hasExtensionHours) return 'bg-violet-100 ring-1 ring-violet-300 rounded-xs';
+    return 'ring-1 ring-gray-300 rounded-xs';
   }
   return '';
 }
@@ -193,7 +193,7 @@ export default function GroupSplitCell({
   };
 
   const tdClass = splitModeActive
-    ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded'
+    ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded-sm'
     : '';
 
   const effectiveMode = splitModeActive ? ('split' as SplitCellMode) : activeMode;
@@ -206,10 +206,10 @@ export default function GroupSplitCell({
   const interactive2 = canAssignG2 || canRemoveG2 || canToggleSplit;
 
   const half = 'flex items-center justify-center text-xs tabular-nums transition-colors min-h-0 px-0.5';
-  const containerBorder = hasDirectorHours ? 'ring-1 ring-gray-400 rounded' : '';
+  const containerBorder = hasDirectorHours ? 'ring-1 ring-gray-400 rounded-sm' : '';
 
   return (
-    <td className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-[3.25rem] ${tdClass} ${containerBorder}`} aria-label={`Rocznik ${grade}`}>
+    <td className={`border-r border-gray-100 w-12 sm:w-14 p-0 h-13 ${tdClass} ${containerBorder}`} aria-label={`Rocznik ${grade}`}>
       <div className="flex flex-col h-full">
         <div
           className={`${half} flex-1 border-b border-gray-200 ${bg1} ${txt1}`}

@@ -35,7 +35,7 @@ export default function TabelaDoradztwa({
 }: TabelaDoradztwaProps) {
   return (
     <section
-      className="bg-surface rounded-lg border border-line overflow-hidden shadow-sm w-full min-w-0 mt-6"
+      className="bg-surface rounded-lg border border-line overflow-hidden shadow-xs w-full min-w-0 mt-6"
       aria-labelledby={`doradztwo-${planId ?? idx}`}
     >
       <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-line bg-surface-2">
@@ -113,12 +113,12 @@ export default function TabelaDoradztwa({
                     className={`px-4 py-2 text-center border-l-2 border-line align-middle ${
                       klasaId && totalHours > 0
                         ? suma > totalHours
-                          ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
+                          ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded-sm'
                           : suma === totalHours
-                            ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded'
+                            ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded-sm'
                             : totalHours - suma === 1
-                              ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded'
-                              : 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded'
+                              ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded-sm'
+                              : 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded-sm'
                         : ''
                     }`}
                   >

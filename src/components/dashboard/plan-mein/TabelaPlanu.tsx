@@ -82,7 +82,7 @@ export default function TabelaPlanu({
 }: TabelaPlanuProps) {
   return (
           <section
-            className="bg-surface rounded-lg border border-line overflow-hidden shadow-sm w-full min-w-0"
+            className="bg-surface rounded-lg border border-line overflow-hidden shadow-xs w-full min-w-0"
           >
             <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-line">
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-sm">
@@ -142,7 +142,7 @@ export default function TabelaPlanu({
                           {g}
                         </th>
                       ))}
-                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                    <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right min-w-20 sm:min-w-24 w-24 sm:w-28">
                       Razem
                     </th>
                     <th className="px-2 sm:px-3 py-2.5 sm:py-3 font-semibold text-ink-soft text-right w-20 sm:w-24 border-l border-line whitespace-nowrap">
@@ -167,19 +167,19 @@ export default function TabelaPlanu({
                               </span>
                             )}
                           </td>
-                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-ink border-r border-line min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right tabular-nums text-ink border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28">
                             {tot}
                           </td>
                           <td
                             className={`px-2 sm:px-3 py-1.5 sm:py-2 text-right border-l border-line text-xs sm:text-sm ${
                               klasaId && tot > 0
                                 ? assignedDirectorHoursPlan > tot
-                                  ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
+                                  ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded-sm'
                                   : assignedDirectorHoursPlan === tot
-                                    ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded'
+                                    ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded-sm'
                                     : remainingDirectorHours === 1
-                                      ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded'
-                                      : 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded'
+                                      ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded-sm'
+                                      : 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded-sm'
                                 : ''
                             }`}
                           >
@@ -302,8 +302,8 @@ export default function TabelaPlanu({
                       nazwaPogrubiona ? Math.max(0, extendedPoolSize - extendedPoolAssignedTotal) : 0;
                     const rowHasPodzial = groupSplit.rowHasAnySplit(subKey, grades);
 
-                    const cellPodzialClass = trybPodzielNaGrupy && !tylkoOdczyt ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded' : '';
-                    const cellTallClass = 'py-2.5 sm:py-3 min-h-[3.25rem]';
+                    const cellPodzialClass = trybPodzielNaGrupy && !tylkoOdczyt ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded-sm' : '';
+                    const cellTallClass = 'py-2.5 sm:py-3 min-h-13';
                     return (
                       <Fragment key={i}>
                         <tr className={czyRozszerzony ? 'bg-surface-2' : ''}>
@@ -311,7 +311,7 @@ export default function TabelaPlanu({
                               {czyRozszerzony ? 'roz.' : row.lp != null ? row.lp : '–'}
                             </td>
                             <td
-                              className={`px-2 sm:px-3 ${cellTallClass} border-r border-line min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-ink' : 'text-ink'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded' : ''}`}
+                              className={`px-2 sm:px-3 ${cellTallClass} border-r border-line min-w-[100px] sm:min-w-0 align-top ${obramowanieRozszerzony} ${nazwaPogrubiona ? 'font-semibold text-ink' : 'text-ink'} ${kafelekNazwaKlikalny ? 'cursor-pointer bg-violet-50 hover:bg-violet-100 ring-1 ring-violet-200 rounded-sm' : ''}`}
                           onClick={
                             kafelekNazwaKlikalny
                               ? () => {
@@ -347,7 +347,7 @@ export default function TabelaPlanu({
                         >
                           <span>{subject}</span>
                           {nazwaPogrubiona && (
-                            <span className="ml-1.5 inline-block px-1.5 py-0.5 text-xs font-normal text-white bg-violet-700 rounded">rozszerzenie</span>
+                            <span className="ml-1.5 inline-block px-1.5 py-0.5 text-xs font-normal text-white bg-violet-700 rounded-sm">rozszerzenie</span>
                           )}
                         </td>
                         {hasGrades &&
@@ -534,24 +534,24 @@ export default function TabelaPlanu({
                             /** Tło dla komórek z godzinami dyrektorskimi. Nie stosuj gdy tryb przydziału/dyrektorski – wtedy bgKlikalny daje zielony/niebieski/sky. */
                             const bgGodzinyDyrektorskie =
                               maGodzinyDyrektorskie && !maPonadprogramowe && !maNadgodzinyDyrektorWKomorce && !kafelekKlikalnyDyrektor && !kafelekKlikalnyGodziny
-                                ? 'bg-sky-50 ring-2 ring-line-strong rounded'
+                                ? 'bg-sky-50 ring-2 ring-line-strong rounded-sm'
                                 : '';
                             const bgKlikalny =
                               kafelekKlikalny
                                 ? kafelekKlikalnyUsun
                                   ? maPonadprogramowe || maNadgodzinyDyrektorWKomorce
-                                    ? 'cursor-pointer hover:bg-red-300 ring-2 ring-red-400 rounded'
-                                    : 'cursor-pointer bg-red-200 hover:bg-red-300 ring-2 ring-red-400 rounded'
+                                    ? 'cursor-pointer hover:bg-red-300 ring-2 ring-red-400 rounded-sm'
+                                    : 'cursor-pointer bg-red-200 hover:bg-red-300 ring-2 ring-red-400 rounded-sm'
                                   : kafelekKlikalnyDyrektor
                                     ? remainingDirectorHours > 0
-                                      ? 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded'
-                                      : 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded'
+                                      ? 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded-sm'
+                                      : 'cursor-pointer bg-sky-200 hover:bg-sky-300 ring-2 ring-sky-400 rounded-sm'
                                     : kafelekKlikalnyGodziny
                                       ? klikalneRozszerzeniaThis
-                                        ? 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-2 ring-violet-400 rounded'
+                                        ? 'cursor-pointer bg-violet-200 hover:bg-violet-300 ring-2 ring-violet-400 rounded-sm'
                                         : remaining > 0
-                                          ? 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded'
-                                          : 'cursor-pointer bg-blue-200 hover:bg-blue-300 ring-2 ring-blue-400 rounded'
+                                          ? 'cursor-pointer bg-green-200 hover:bg-green-300 ring-2 ring-green-400 rounded-sm'
+                                          : 'cursor-pointer bg-blue-200 hover:bg-blue-300 ring-2 ring-blue-400 rounded-sm'
                                       : ''
                                 : '';
                             /** W trybie „Przydziel godzinę” dostępne pola świecą obwódką i cieniem, żeby były widoczne mimo innego tła */
@@ -562,7 +562,7 @@ export default function TabelaPlanu({
                             /** Wiersz zbiorczy rozszerzeń: bez porównania do planu MEiN — tylko wskaźnik faktycznych godzin w roczniku */
                             const bgZrealizowaneRozszerzony =
                               czyRozszerzony && klasaId && !kafelekKlikalny && assigned > 0
-                                ? 'bg-violet-50 ring-1 ring-violet-200 rounded'
+                                ? 'bg-violet-50 ring-1 ring-violet-200 rounded-sm'
                                 : '';
                             const textZrealizowaneRozszerzony =
                               czyRozszerzony && klasaId && !kafelekKlikalny && assigned > 0
@@ -588,7 +588,7 @@ export default function TabelaPlanu({
                             return (
                               <td
                                 key={g}
-                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-line w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded' : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
+                                className={`px-1.5 sm:px-2 ${cellTallClass} text-center border-r border-line w-12 sm:w-14 align-top ${kafelekKlikalnyPodzial ? 'cursor-pointer bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-300 rounded-sm' : ''} ${bgPonadprogramowa} ${bgGodzinyDyrektorskie} ${!kafelekKlikalnyPodzial ? bgKlikalny : ''} ${swieciPrzydzielGodzine} ${bgZrealizowaneRozszerzony} ${obramowanieRozszerzony}`}
                                 onContextMenu={onContextMenuUsun}
                                 onClick={
                                   kafelekKlikalnyPodzial
@@ -696,7 +696,7 @@ export default function TabelaPlanu({
                               </td>
                             );
                           })}
-                        <td className={`${rowHasPodzial ? 'p-0 min-h-[3.25rem]' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right tabular-nums font-medium text-ink border-r border-line min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28 ${obramowanieRozszerzony}`}>
+                        <td className={`${rowHasPodzial ? 'p-0 min-h-13' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right tabular-nums font-medium text-ink border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28 ${obramowanieRozszerzony}`}>
                           {rowHasPodzial ? (
                             <GroupSplitRazem
                               razemRzeczywiste={razemRzeczywiste}
@@ -721,19 +721,19 @@ export default function TabelaPlanu({
                           )}
                         </td>
                         <td
-                          className={`${rowHasPodzial ? 'p-0 min-h-[3.25rem]' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right border-l border-line w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
+                          className={`${rowHasPodzial ? 'p-0 min-h-13' : `px-2 sm:px-3 ${cellTallClass} align-top`} text-right border-l border-line w-20 sm:w-24 text-xs sm:text-sm ${obramowanieRozszerzony} ${czyRozszerzony ? 'border-r-2 border-r-gray-400' : ''} ${
                             rowHasPodzial
                               ? ''
                               : klasaId && (planoweGodziny > 0 || godzinyRozszerzenia > 0 || (row.hours_to_choose != null && row.hours_to_choose > 0) || czyRozszerzony)
                                 ? planoweGodziny > 0
                                   ? displayedAssigned > displayedTotal
-                                    ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded'
+                                    ? 'bg-blue-200 font-semibold text-blue-900 ring-1 ring-blue-400 rounded-sm'
                                     : displayedAssigned === displayedTotal
-                                      ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded'
+                                      ? 'bg-green-200 font-semibold text-green-900 ring-1 ring-green-500 rounded-sm'
                                       : displayedRemaining === 1
-                                        ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded'
+                                        ? 'bg-amber-200 font-semibold text-amber-900 ring-1 ring-amber-500 rounded-sm'
                                         : displayedRemaining > 1
-                                          ? 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded'
+                                          ? 'bg-red-200 font-semibold text-red-900 ring-1 ring-red-500 rounded-sm'
                                           : ''
                                   : ''
                                 : ''
@@ -824,7 +824,7 @@ export default function TabelaPlanu({
                           </td>
                         );
                       })}
-                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-r border-line min-w-[5rem] sm:min-w-[6rem] w-24 sm:w-28">
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-r border-line min-w-20 sm:min-w-24 w-24 sm:w-28">
                       –
                     </td>
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right text-ink-faint border-l border-line">

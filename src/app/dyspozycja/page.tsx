@@ -19,7 +19,7 @@ import {
 
 /** Wspólny styl selektora (tokeny). */
 const SELECT_CLASS =
-  'border border-line-strong rounded px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
+  'border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
 interface TypSzkoly {
   id: string;
@@ -387,7 +387,7 @@ export default function DyspozycjaPage() {
           {selectedClass && selectedRok && (
             <div className="flex flex-col gap-1 min-w-0">
               <label className="text-xs font-medium text-ink-soft">Rok (w cyklu)</label>
-              <div className="rounded border border-line bg-surface-2 px-3 py-2 text-sm text-ink">
+              <div className="rounded-sm border border-line bg-surface-2 px-3 py-2 text-sm text-ink">
                 {selectedRok} <span className="text-ink-faint text-xs">(na podstawie aktualnej daty)</span>
               </div>
             </div>

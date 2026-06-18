@@ -91,7 +91,7 @@ export default function PrzedmiotPage() {
                           {item.nauczyciele.map((n) => (
                             <li
                               key={n.id}
-                              className="flex items-center justify-between rounded bg-surface-2 px-3 py-2"
+                              className="flex items-center justify-between rounded-sm bg-surface-2 px-3 py-2"
                             >
                               <Link href={`/nauczyciele/${n.id}`} className="text-accent hover:underline">
                                 {n.imie} {n.nazwisko}

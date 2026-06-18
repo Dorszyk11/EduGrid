@@ -72,13 +72,13 @@ export default function HomePage() {
             <div className="flex flex-wrap justify-center gap-3 mb-6">
               <Link
                 href="/dashboard"
-                className="inline-block px-6 py-3 bg-accent text-white rounded hover:bg-accent-strong transition-colors font-medium"
+                className="inline-block px-6 py-3 bg-accent text-white rounded-sm hover:bg-accent-strong transition-colors font-medium"
               >
                 Przejdź do Dashboard
               </Link>
               <Link
                 href="/panel-admin"
-                className="inline-block px-6 py-3 bg-ink text-white rounded hover:bg-navy transition-colors font-medium"
+                className="inline-block px-6 py-3 bg-ink text-white rounded-sm hover:bg-navy transition-colors font-medium"
               >
                 Panel Administracyjny
               </Link>
@@ -121,7 +121,7 @@ export default function HomePage() {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 rounded bg-danger-bg text-danger text-sm">
+            <div className="p-3 rounded-sm bg-danger-bg text-danger text-sm">
               {error}
             </div>
           )}
@@ -136,7 +136,7 @@ export default function HomePage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
+              className="w-full px-3 py-2 border border-line-strong rounded-sm focus:ring-2 focus:ring-accent focus:border-accent"
             />
           </div>
           <div>
@@ -151,7 +151,7 @@ export default function HomePage() {
               required
               autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
               minLength={tab === 'register' ? 8 : undefined}
-              className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
+              className="w-full px-3 py-2 border border-line-strong rounded-sm focus:ring-2 focus:ring-accent focus:border-accent"
             />
             {tab === 'register' && (
               <p className="mt-1 text-xs text-ink-faint">Minimum 8 znaków</p>
@@ -162,7 +162,7 @@ export default function HomePage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-line-strong text-accent focus:ring-accent"
+                  className="rounded-sm border-line-strong text-accent focus:ring-accent"
                 />
                 <span className="text-sm text-ink-soft">Zapamiętaj mnie na tym urządzeniu</span>
               </label>
@@ -181,7 +181,7 @@ export default function HomePage() {
                   onChange={(e) => setImie(e.target.value)}
                   required={tab === 'register'}
                   autoComplete="given-name"
-                  className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
+                  className="w-full px-3 py-2 border border-line-strong rounded-sm focus:ring-2 focus:ring-accent focus:border-accent"
                 />
               </div>
               <div>
@@ -195,7 +195,7 @@ export default function HomePage() {
                   onChange={(e) => setNazwisko(e.target.value)}
                   required={tab === 'register'}
                   autoComplete="family-name"
-                  className="w-full px-3 py-2 border border-line-strong rounded focus:ring-2 focus:ring-accent focus:border-accent"
+                  className="w-full px-3 py-2 border border-line-strong rounded-sm focus:ring-2 focus:ring-accent focus:border-accent"
                 />
               </div>
             </>
@@ -203,7 +203,7 @@ export default function HomePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3 px-4 bg-accent text-white rounded hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="w-full py-3 px-4 bg-accent text-white rounded-sm hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {submitting ? 'Proszę czekać...' : tab === 'login' ? 'Zaloguj się' : 'Załóż konto'}
           </button>

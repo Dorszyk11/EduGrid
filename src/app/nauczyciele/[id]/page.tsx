@@ -164,7 +164,7 @@ export default function NauczycielPage() {
                 <h2 className="mb-3 text-lg font-semibold text-ink">Kwalifikacje</h2>
                 <ul className="space-y-2">
                   {data.kwalifikacje.map((kwal, i) => (
-                    <li key={i} className="flex items-center justify-between rounded bg-surface-2 px-3 py-2">
+                    <li key={i} className="flex items-center justify-between rounded-sm bg-surface-2 px-3 py-2">
                       <span className="font-medium text-ink">{kwal.przedmiot.nazwa}</span>
                       <span className="text-sm text-ink-soft">
                         {[kwal.specjalizacja, kwal.stopien].filter(Boolean).join(' • ')}

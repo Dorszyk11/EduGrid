@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Icon from '@/components/ui/Icon';
 
-const SELECT_CLASS = 'w-full rounded border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
+const SELECT_CLASS = 'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
 
 interface TypSzkoly {
   id: string;
@@ -176,22 +176,22 @@ export default function SiatkaSzkolyPage() {
 
       {/* Komunikat błędu */}
       {error && (
-        <div className="bg-danger-bg border border-danger text-danger px-4 py-3 rounded">
+        <div className="bg-danger-bg border border-danger text-danger px-4 py-3 rounded-sm">
           {error}
         </div>
       )}
 
       {/* Tabela siatki */}
       {ladowanie ? (
-        <div className="bg-surface rounded shadow-card p-6">
+        <div className="bg-surface rounded-sm shadow-card p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-line rounded w-1/4"></div>
-            <div className="h-4 bg-line rounded w-1/2"></div>
-            <div className="h-4 bg-line rounded w-3/4"></div>
+            <div className="h-4 bg-line rounded-sm w-1/4"></div>
+            <div className="h-4 bg-line rounded-sm w-1/2"></div>
+            <div className="h-4 bg-line rounded-sm w-3/4"></div>
           </div>
         </div>
       ) : dane && dane.macierz.length > 0 ? (
-        <div className="bg-surface rounded shadow-card p-6">
+        <div className="bg-surface rounded-sm shadow-card p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">
               Siatka godzin ({przefiltrowanaMacierz.length} przedmiotów, {dane.klasy.length} klas)
@@ -296,7 +296,7 @@ export default function SiatkaSzkolyPage() {
           </div>
         </div>
       ) : dane && dane.macierz.length === 0 ? (
-        <div className="bg-surface rounded shadow-card p-6 text-center text-ink-faint">
+        <div className="bg-surface rounded-sm shadow-card p-6 text-center text-ink-faint">
           Brak danych do wyświetlenia. Upewnij się, że wybrano typ szkoły i że istnieją przypisania godzin.
         </div>
       ) : null}

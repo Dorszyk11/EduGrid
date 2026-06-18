@@ -103,7 +103,7 @@ export default function ImportMeinPdf() {
         sumowania, bez interpretacji przypisów.
       </p>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">1. Wybierz plik PDF</h2>
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
           <input
@@ -132,14 +132,14 @@ export default function ImportMeinPdf() {
         <button
           onClick={handleUpload}
           disabled={!file || status === 'uploading' || status === 'processing'}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {status === 'uploading' ? 'Przetwarzanie…' : 'Importuj i parsuj'}
         </button>
       </div>
 
       {status === 'uploading' && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
             <div className="bg-blue-600 h-2.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
           </div>
@@ -148,7 +148,7 @@ export default function ImportMeinPdf() {
       )}
 
       {results && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-4">2. Wyniki</h2>
           <div className="mb-4">
             <span className="font-medium text-gray-700">Plany: </span>
@@ -159,7 +159,7 @@ export default function ImportMeinPdf() {
           </div>
 
           {results.errors.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
+            <div className="bg-red-50 border border-red-200 rounded-sm p-4 mb-4">
               <p className="font-semibold text-red-800 mb-2">Błędy:</p>
               <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
                 {results.errors.map((err, i) => (
@@ -169,7 +169,7 @@ export default function ImportMeinPdf() {
             </div>
           )}
           {results.warnings.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-4 mb-4">
               <p className="font-semibold text-yellow-800 mb-2">Ostrzeżenia:</p>
               <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
                 {results.warnings.map((w, i) => (
@@ -250,7 +250,7 @@ export default function ImportMeinPdf() {
                   a.click();
                   URL.revokeObjectURL(a.href);
                 }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-sm"
               >
                 Pobierz JSON (plans)
               </button>

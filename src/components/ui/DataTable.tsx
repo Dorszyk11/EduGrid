@@ -60,7 +60,7 @@ export default function DataTable<T>({
               <tr key={`skeleton-${i}`} className="border-b border-line last:border-0">
                 {columns.map((c) => (
                   <td key={c.key} className="px-3 py-3">
-                    <span className="block h-3.5 w-3/4 animate-pulse rounded bg-line" />
+                    <span className="block h-3.5 w-3/4 animate-pulse rounded-sm bg-line" />
                   </td>
                 ))}
               </tr>
