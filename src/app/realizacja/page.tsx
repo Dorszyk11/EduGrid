@@ -6,7 +6,10 @@ import plansData from '@/utils/import/ramowe-plany.json';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
-import { buttonClass } from '@/components/ui/Button';
+import Button, { buttonClass } from '@/components/ui/Button';
+import KomorkaStatusu from '@/components/ui/KomorkaStatusu';
+import { useToast } from '@/components/ui/Toast';
+import { useKomorkaKlawiatura } from '@/lib/hooks/useKomorkaKlawiatura';
 import {
   type PlanItem,
   type PlanRow,
@@ -35,6 +38,56 @@ const allPlans: PlanItem[] = (plansData as { plans?: PlanItem[] }).plans ?? [];
 
 const SELECT_CLASS = 'border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
 
+/**
+ * Pojedyncza komórka roku w siatce realizacji. W trybie edycji klikalna z klawiatury
+ * (Enter/Space → dodaj) z alternatywą usuwania (Delete/Backspace lub prawy przycisk myszy).
+ * Status przekazany komponentem `KomorkaStatusu` (liczba + znak + aria-label, nie tylko kolor).
+ */
+function KomorkaRealizacji({
+  przedmiot, rok, zrealizowane, docelowe, tryb, onDodaj, onUsun,
+}: {
+  przedmiot: string;
+  rok: string;
+  zrealizowane: number;
+  docelowe: number;
+  tryb: boolean;
+  onDodaj: () => void;
+  onUsun: () => void;
+}) {
+  const moznaUsunac = tryb && zrealizowane > 0;
+  const klawiatura = useKomorkaKlawiatura(onDodaj);
+  if (!tryb) {
+    return (
+      <td className="px-4 py-3 text-center border-l border-line min-w-16">
+        <KomorkaStatusu zrealizowane={zrealizowane} docelowe={docelowe} />
+      </td>
+    );
+  }
+  return (
+    <td
+      {...klawiatura}
+      aria-label={`Dodaj realizację: ${przedmiot}, ${rok}. Obecnie ${zrealizowane} z ${docelowe} godzin.`}
+      onKeyDown={(e) => {
+        if ((e.key === 'Delete' || e.key === 'Backspace') && moznaUsunac) {
+          e.preventDefault();
+          onUsun();
+          return;
+        }
+        klawiatura.onKeyDown(e);
+      }}
+      onContextMenu={(e) => {
+        if (moznaUsunac) {
+          e.preventDefault();
+          onUsun();
+        }
+      }}
+      className="px-4 py-3 text-center border-l border-line min-w-16 cursor-pointer hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] outline-accent"
+    >
+      <KomorkaStatusu zrealizowane={zrealizowane} docelowe={docelowe} />
+    </td>
+  );
+}
+
 export default function RealizacjaPage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
   const [typSzkolyId, setTypSzkolyId] = useState<string>('');
@@ -56,7 +109,7 @@ export default function RealizacjaPage() {
   /** Zrealizowane godziny: [rowIndex][rok] = liczba. Ładowane z API, zapisywane przez „Zapisz”. */
   const [realizacjaGodziny, setRealizacjaGodziny] = useState<Record<string, Record<string, number>>>({});
   const [zapisywanie, setZapisywanie] = useState(false);
-  const [komunikatZapis, setKomunikatZapis] = useState<{ typ: 'success' | 'error'; tekst: string } | null>(null);
+  const toast = useToast();
 
   const nazwaTypuSzkoly = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
   const cycleFilter = cycleFilterZNazwy(nazwaTypuSzkoly);
@@ -212,7 +265,6 @@ export default function RealizacjaPage() {
   const zapiszRealizacje = async () => {
     if (!selectedClass?.id || !plan) return;
     setZapisywanie(true);
-    setKomunikatZapis(null);
     const payload: Record<string, Record<string, number>> = {};
     planRzeczywisty.forEach((row, index) => {
       const subKey = subjectKey(plan.plan_id, row.nazwa);
@@ -227,9 +279,9 @@ export default function RealizacjaPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Błąd zapisu');
-      setKomunikatZapis({ typ: 'success', tekst: 'Realizacja zapisana.' });
+      toast.success('Realizacja zapisana.');
     } catch (e) {
-      setKomunikatZapis({ typ: 'error', tekst: e instanceof Error ? e.message : 'Błąd zapisu' });
+      toast.error(e instanceof Error ? e.message : 'Błąd zapisu');
     } finally {
       setZapisywanie(false);
     }
@@ -312,16 +364,16 @@ export default function RealizacjaPage() {
         {selectedClass && (
           <p className="mt-4 text-sm text-ink-soft">
             Wybrana klasa: <strong className="text-ink">{selectedClass.nazwa}</strong> ({selectedRocznik})
-            {selectedClass.id && <span className="text-ink-faint ml-2 tabular">· id: {selectedClass.id}</span>}
+            {selectedClass.id && <span className="text-ink-faint ml-2 tabular-nums">· id: {selectedClass.id}</span>}
           </p>
         )}
       </Card>
 
       {ladowaniePlanu && selectedClass && (
         <Card>
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
             <div className="text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-line border-t-accent" />
+              <div className="mx-auto h-10 w-10 animate-spin motion-reduce:animate-none rounded-full border-2 border-line border-t-accent" />
               <p className="mt-3 text-ink-soft">Ładowanie planu…</p>
             </div>
           </div>
@@ -336,48 +388,40 @@ export default function RealizacjaPage() {
                 Plan do realizacji — Klasa {selectedClass.nazwa} ({selectedRocznik})
               </h2>
               <p className="text-sm text-ink-soft mt-1">
-                Domyślnie 0 — w nawiasie docelowa liczba godzin.
-                {trybDodajRealizacje && ' Klik = dodaj godzinę, prawy przycisk = usuń realizację.'}
+                Domyślnie 0 — po prawej docelowa liczba godzin.
+                {trybDodajRealizacje && ' Klik lub Enter = dodaj godzinę; prawy przycisk lub Delete = usuń realizację.'}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant="toggle"
+                active={trybDodajRealizacje}
                 onClick={() => setTrybDodajRealizacje((v) => !v)}
-                className={trybDodajRealizacje
-                  ? 'inline-flex items-center justify-center rounded-sm px-3.5 py-2 text-sm font-medium bg-ok text-white hover:opacity-90 transition-colors'
-                  : buttonClass('primary')}
               >
                 {trybDodajRealizacje ? 'Zrealizowane (klikaj komórki)' : 'Dodaj realizację'}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={zapiszRealizacje}
                 disabled={zapisywanie}
-                className={buttonClass('secondary')}
               >
                 {zapisywanie ? 'Zapisywanie…' : 'Zapisz realizację'}
-              </button>
+              </Button>
             </div>
           </div>
-          {komunikatZapis && (
-            <div className={`mb-4 p-3 rounded-sm text-sm ${komunikatZapis.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'}`}>
-              {komunikatZapis.tekst}
-            </div>
-          )}
           <div className="overflow-x-auto rounded-card border border-line">
             <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-surface-2">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-line">
+                  <th className="sticky top-0 left-0 z-20 bg-surface-2 px-4 py-3 text-left text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-line">
                     Przedmiot
                   </th>
                   {rokiPlanu.map((rok) => (
-                    <th key={rok} className="px-4 py-3 text-center text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-l border-line">
+                    <th key={rok} className="sticky top-0 z-10 bg-surface-2 px-4 py-3 text-center text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-l border-line">
                       {rok}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-center text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-l border-line">
+                  <th className="sticky top-0 z-10 bg-surface-2 px-4 py-3 text-center text-xs font-medium text-ink-soft uppercase tracking-wider border-b border-l-2 border-line-strong">
                     Razem
                   </th>
                 </tr>
@@ -387,58 +431,25 @@ export default function RealizacjaPage() {
                   const sumaDocelowa = rokiPlanu.reduce((s, r) => s + (row.godzinyByGrade[r] ?? 0), 0);
                   const sumaZrealizowana = rokiPlanu.reduce((s, r) => s + (realizacjaGodziny[String(index)]?.[r] ?? 0), 0);
                   return (
-                    <tr key={index} className="border-b border-line last:border-0 hover:bg-surface-2">
-                      <td className="px-4 py-3 text-ink font-medium whitespace-nowrap border-r border-line">
+                    <tr key={index} className="group border-b border-line last:border-0 hover:bg-surface-2">
+                      <td className="sticky left-0 z-10 bg-surface group-hover:bg-surface-2 px-4 py-3 text-ink font-medium whitespace-nowrap border-r border-line">
                         {row.nazwa}
                       </td>
-                      {rokiPlanu.map((rok) => {
-                        const docelowe = row.godzinyByGrade[rok] ?? 0;
-                        const zrealizowane = realizacjaGodziny[String(index)]?.[rok] ?? 0;
-                        const brakuje = docelowe - zrealizowane;
-                        const moznaDodac = trybDodajRealizacje;
-                        const moznaUsunac = trybDodajRealizacje && zrealizowane > 0;
-                        const klikalna = moznaDodac || moznaUsunac;
-                        const kolorKomorki =
-                          zrealizowane > docelowe
-                            ? 'bg-accent-weak text-accent-strong'
-                            : zrealizowane === docelowe
-                              ? 'bg-ok-bg text-ok'
-                              : brakuje === 1
-                                ? 'bg-warn-bg text-warn'
-                                : 'bg-danger-bg text-danger';
-                        return (
-                          <td
-                            key={rok}
-                            className={`px-4 py-3 text-center border-l border-line min-w-16 tabular ${kolorKomorki} ${klikalna ? 'cursor-pointer hover:opacity-90' : ''}`}
-                            role={klikalna ? 'button' : undefined}
-                            onClick={moznaDodac ? () => dodajGodzineRealizacji(index, rok) : undefined}
-                            onContextMenu={(e) => {
-                              if (moznaUsunac) {
-                                e.preventDefault();
-                                usunGodzineRealizacji(index, rok);
-                              }
-                            }}
-                          >
-                            {zrealizowane} ({docelowe})
-                          </td>
-                        );
-                      })}
-                      {(() => {
-                        const brakujeRazem = sumaDocelowa - sumaZrealizowana;
-                        const kolorRazem =
-                          sumaZrealizowana > sumaDocelowa
-                            ? 'bg-accent-weak text-accent-strong font-medium'
-                            : sumaZrealizowana === sumaDocelowa
-                              ? 'bg-ok-bg text-ok font-medium'
-                              : brakujeRazem === 1
-                                ? 'bg-warn-bg text-warn font-medium'
-                                : 'bg-danger-bg text-danger font-medium';
-                        return (
-                          <td className={`px-4 py-3 text-center font-medium border-l border-line tabular ${kolorRazem}`}>
-                            {sumaZrealizowana} ({sumaDocelowa})
-                          </td>
-                        );
-                      })()}
+                      {rokiPlanu.map((rok) => (
+                        <KomorkaRealizacji
+                          key={rok}
+                          przedmiot={row.nazwa}
+                          rok={rok}
+                          zrealizowane={realizacjaGodziny[String(index)]?.[rok] ?? 0}
+                          docelowe={row.godzinyByGrade[rok] ?? 0}
+                          tryb={trybDodajRealizacje}
+                          onDodaj={() => dodajGodzineRealizacji(index, rok)}
+                          onUsun={() => usunGodzineRealizacji(index, rok)}
+                        />
+                      ))}
+                      <td className="px-4 py-3 text-center border-l-2 border-line-strong">
+                        <KomorkaStatusu zrealizowane={sumaZrealizowana} docelowe={sumaDocelowa} />
+                      </td>
                     </tr>
                   );
                 })}
@@ -446,6 +457,12 @@ export default function RealizacjaPage() {
             </table>
           </div>
         </Card>
+      )}
+
+      {!ladowaniePlanu && selectedClass && plan && rokiPlanu.length > 0 && planRzeczywisty.length === 0 && (
+        <div className="rounded-card border border-warn/30 bg-warn-bg p-4" role="status">
+          <p className="text-warn">Brak przedmiotów do realizacji dla wybranej klasy. Sprawdź przydział godzin.</p>
+        </div>
       )}
 
       {!ladowaniePlanu && selectedClass && plan && rokiPlanu.length === 0 && (
