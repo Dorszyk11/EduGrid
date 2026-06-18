@@ -8,6 +8,7 @@ import DataTable, { type Column } from '@/components/ui/DataTable';
 import Icon from '@/components/ui/Icon';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { useToast } from '@/components/ui/Toast';
+import { PUSTA } from '@/lib/status-realizacji';
 
 interface TypSzkoly {
   id: string | number;
@@ -101,8 +102,17 @@ export default function ZarzadzanieSzkolamiPage() {
       header: 'Nazwa',
       render: (s) => <span className="font-medium text-ink">{s.nazwa}</span>,
     },
-    { key: 'kod', header: 'Kod MEiN', render: (s) => s.kod_mein ?? '–' },
-    { key: 'lata', header: 'Lata', align: 'center', render: (s) => s.liczba_lat ?? '–' },
+    {
+      key: 'kod',
+      header: 'Kod MEiN',
+      render: (s) => <span className="tabular-nums">{s.kod_mein ?? PUSTA}</span>,
+    },
+    {
+      key: 'lata',
+      header: 'Lata',
+      align: 'center',
+      render: (s) => <span className="tabular-nums">{s.liczba_lat ?? PUSTA}</span>,
+    },
     {
       key: 'akcje',
       header: '',
@@ -123,7 +133,7 @@ export default function ZarzadzanieSzkolamiPage() {
   ];
 
   return (
-    <div className="max-w-4xl space-y-6 p-6 md:p-8">
+    <div className="space-y-6 p-6">
       <PageHeader
         title="Zarządzanie szkołami"
         description="Typy szkół w bazie. Możesz je usunąć lub dodać w Panelu admina."

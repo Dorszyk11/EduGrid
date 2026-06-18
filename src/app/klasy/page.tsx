@@ -7,6 +7,10 @@ import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import { buttonClass } from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Select from '@/components/ui/Select';
+import Icon from '@/components/ui/Icon';
+import { PUSTA } from '@/lib/status-realizacji';
 
 interface TypSzkoly {
   id: string;
@@ -77,9 +81,9 @@ export default function KlasyPage() {
         </Link>
       ),
     },
-    { key: 'typ', header: 'Typ szkoły', render: (k) => <span className="text-ink-soft">{k.typ_szkoly?.nazwa ?? '–'}</span> },
-    { key: 'rok', header: 'Rok szkolny (zakres cyklu)', render: (k) => <span className="text-ink-soft">{k.rok_szkolny}</span> },
-    { key: 'profil', header: 'Profil', render: (k) => <span className="text-ink-faint">{k.profil ?? '–'}</span> },
+    { key: 'typ', header: 'Typ szkoły', render: (k) => <span className="text-ink-soft">{k.typ_szkoly?.nazwa ?? PUSTA}</span> },
+    { key: 'rok', header: 'Rok szkolny (zakres cyklu)', render: (k) => <span className="tabular-nums text-ink-soft">{k.rok_szkolny}</span> },
+    { key: 'profil', header: 'Profil', render: (k) => <span className="text-ink-faint">{k.profil ?? PUSTA}</span> },
     {
       key: 'akcje',
       header: 'Akcje',
@@ -99,36 +103,37 @@ export default function KlasyPage() {
         description="Oddziały konta wraz z typem szkoły i rokiem cyklu."
         actions={
           <Link href="/dashboard" className={buttonClass('secondary')}>
-            ← Dashboard
+            <Icon name="back" size={16} />
+            Dashboard
           </Link>
         }
       />
 
       <Card className="space-y-3">
         <h2 className="font-display text-base font-semibold text-ink">Filtruj po typie szkoły</h2>
-        <div>
-          <label className="block text-sm font-medium text-ink-soft mb-1" htmlFor="filtr-typ">Typ szkoły</label>
-          <select
-            id="filtr-typ"
-            value={typSzkolyId}
-            onChange={(e) => {
-              const v = e.target.value;
-              zapiszTypSzkoly(v);
-              setTypSzkolyId(v);
-            }}
-            className="w-full max-w-md border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink"
-          >
-            <option value="">Wszystkie typy</option>
-            {typySzkol.map((t) => (
-              <option key={t.id} value={t.id}>{t.nazwa}</option>
-            ))}
-          </select>
+        <div className="max-w-md">
+          <Field label="Typ szkoły" htmlFor="filtr-typ">
+            <Select
+              id="filtr-typ"
+              value={typSzkolyId}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszTypSzkoly(v);
+                setTypSzkolyId(v);
+              }}
+            >
+              <option value="">Wszystkie typy</option>
+              {typySzkol.map((t) => (
+                <option key={t.id} value={t.id}>{t.nazwa}</option>
+              ))}
+            </Select>
+          </Field>
         </div>
       </Card>
 
       <section className="space-y-3">
         <h2 className="font-display text-base font-semibold text-ink">
-          Lista klas <span className="text-ink-faint tabular">({klasy.length})</span>
+          Lista klas <span className="text-ink-faint tabular-nums">({klasy.length})</span>
         </h2>
         <DataTable
           columns={kolumny}

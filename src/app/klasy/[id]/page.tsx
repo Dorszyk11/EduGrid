@@ -125,7 +125,20 @@ export default function KlasaPage() {
   }
 
   if (!dane) {
-    return null;
+    return (
+      <div className="space-y-4 p-6">
+        <div
+          role="status"
+          className="rounded-card border border-line bg-surface-2 p-4 text-sm text-ink-soft"
+        >
+          Nie znaleziono klasy o podanym identyfikatorze.
+        </div>
+        <Button variant="secondary" onClick={() => router.back()}>
+          <Icon name="back" size={16} />
+          Wróć
+        </Button>
+      </div>
+    );
   }
 
   const profil = dane.klasa.profil;

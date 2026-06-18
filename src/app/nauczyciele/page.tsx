@@ -6,7 +6,13 @@ import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import StatusPill from '@/components/ui/StatusPill';
 import DataTable, { type Column } from '@/components/ui/DataTable';
-import { buttonClass } from '@/components/ui/Button';
+import Button, { buttonClass } from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Select from '@/components/ui/Select';
+import Icon from '@/components/ui/Icon';
+import { useConfirm } from '@/lib/hooks/useConfirm';
+import { useToast } from '@/components/ui/Toast';
+import { PUSTA } from '@/lib/status-realizacji';
 
 interface NauczycielListItem {
   id: string | number;
@@ -54,9 +60,6 @@ interface NauczycielDetail {
   }>;
 }
 
-const SELECT_CLASS =
-  'w-full max-w-md border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
-
 /** Unikalna para klasa + rok (do wyboru w select) */
 function uniqueKlasyRok(obciazenie: ObciazenieItem[]): { klasaId: string; klasaNazwa: string; rokSzkolny: string }[] {
   const seen = new Set<string>();
@@ -86,17 +89,24 @@ export default function NauczycielePage() {
   const [daneNauczyciela, setDaneNauczyciela] = useState<NauczycielDetail | null>(null);
   const [ladowanieListy, setLadowanieListy] = useState(true);
   const [ladowanieSzczegoly, setLadowanieSzczegoly] = useState(false);
+  const [bladListy, setBladListy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usuwanieId, setUsuwanieId] = useState<string | number | null>(null);
+  const toast = useToast();
+  const { confirm, dialog } = useConfirm();
 
   useEffect(() => {
     fetch('/api/nauczyciele', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setNauczyciele(data);
-        else setNauczyciele([]);
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        setNauczyciele(Array.isArray(data) ? data : []);
+        setBladListy(null);
       })
-      .catch(() => setNauczyciele([]))
+      .catch((err) => {
+        setBladListy(err instanceof Error ? err.message : 'Błąd pobierania listy nauczycieli');
+        setNauczyciele([]);
+      })
       .finally(() => setLadowanieListy(false));
   }, []);
 
@@ -127,8 +137,14 @@ export default function NauczycielePage() {
 
   const usunPrzypisanie = async (rozkładId: string | number) => {
     if (!wybranyNauczycielId) return;
+    const ok = await confirm({
+      title: 'Usunąć przypisanie?',
+      description: 'Przypisanie godzin zostanie usunięte z obciążenia nauczyciela.',
+      confirmLabel: 'Usuń',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setUsuwanieId(rozkładId);
-    setError(null);
     try {
       const res = await fetch(`/api/nauczyciele/obciazenie/${rozkładId}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
@@ -136,8 +152,9 @@ export default function NauczycielePage() {
       const next = await fetch(`/api/nauczyciele/${wybranyNauczycielId}`).then((r) => r.json());
       if (next.error) throw new Error(next.error);
       setDaneNauczyciela(next);
+      toast.success('Przypisanie usunięte.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Błąd usuwania');
+      toast.error(err instanceof Error ? err.message : 'Błąd usuwania');
     } finally {
       setUsuwanieId(null);
     }
@@ -173,23 +190,29 @@ export default function NauczycielePage() {
         </Link>
       ),
     },
-    { key: 'rok', header: 'Rok', align: 'center', render: (o) => (o.rok ? o.rok : '—') },
-    { key: 'godz', header: 'Godz./tyg', align: 'center', render: (o) => o.godziny_tyg },
+    { key: 'rok', header: 'Rok', align: 'center', render: (o) => (o.rok ? o.rok : PUSTA) },
+    {
+      key: 'godz',
+      header: 'Godz./tyg',
+      align: 'center',
+      render: (o) => <span className="tabular-nums">{o.godziny_tyg}</span>,
+    },
     {
       key: 'akcje',
       header: '',
       align: 'right',
-      className: 'w-24',
       render: (o) =>
         o.id != null ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger hover:bg-danger-bg hover:text-danger"
             onClick={() => usunPrzypisanie(o.id!)}
             disabled={usuwanieId === o.id}
-            className="text-sm font-medium text-danger hover:opacity-80 disabled:opacity-50"
           >
-            {usuwanieId === o.id ? '…' : 'Usuń'}
-          </button>
+            <Icon name="trash" size={14} />
+            {usuwanieId === o.id ? 'Usuwanie…' : 'Usuń'}
+          </Button>
         ) : null,
     },
   ];
@@ -201,7 +224,8 @@ export default function NauczycielePage() {
         description="Obciążenie i kwalifikacje wybranego nauczyciela."
         actions={
           <Link href="/dashboard" className={buttonClass('secondary')}>
-            ← Dashboard
+            <Icon name="back" size={16} />
+            Dashboard
           </Link>
         }
       />
@@ -209,52 +233,60 @@ export default function NauczycielePage() {
       <Card className="space-y-4">
         <h2 className="font-display text-base font-semibold text-ink">Wybierz nauczyciela, klasę i rok</h2>
 
-        <div>
-          <label className="block text-sm font-medium text-ink-soft mb-1" htmlFor="sel-nauczyciel">Nauczyciel</label>
-          <select
-            id="sel-nauczyciel"
-            value={wybranyNauczycielId}
-            onChange={(e) => setWybranyNauczycielId(e.target.value)}
-            className={SELECT_CLASS}
-            disabled={ladowanieListy}
-          >
-            <option value="">— wybierz nauczyciela —</option>
-            {nauczyciele.map((n) => (
-              <option key={String(n.id)} value={String(n.id)}>
-                {n.imie} {n.nazwisko}
-              </option>
-            ))}
-          </select>
+        <div className="max-w-md">
+          <Field label="Nauczyciel" htmlFor="sel-nauczyciel">
+            <Select
+              id="sel-nauczyciel"
+              value={wybranyNauczycielId}
+              onChange={(e) => setWybranyNauczycielId(e.target.value)}
+              disabled={ladowanieListy}
+            >
+              <option value="">— wybierz nauczyciela —</option>
+              {nauczyciele.map((n) => (
+                <option key={String(n.id)} value={String(n.id)}>
+                  {n.imie} {n.nazwisko}
+                </option>
+              ))}
+            </Select>
+          </Field>
         </div>
 
+        {bladListy && (
+          <div role="alert" className="rounded-sm border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
+            {bladListy}
+          </div>
+        )}
+
         {ladowanieSzczegoly && (
-          <p className="text-sm text-ink-faint">Ładowanie obciążenia nauczyciela…</p>
+          <p role="status" aria-live="polite" className="text-sm text-ink-faint">
+            Ładowanie obciążenia nauczyciela…
+          </p>
         )}
         {error && (
-          <div className="rounded-sm border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
+          <div role="alert" className="rounded-sm border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
             {error}
           </div>
         )}
 
         {daneNauczyciela && opcjeKlasyRok.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-ink-soft mb-1" htmlFor="sel-klasa-rok">Klasa i rok szkolny</label>
-            <select
-              id="sel-klasa-rok"
-              value={wybranaKlasaRok}
-              onChange={(e) => setWybranaKlasaRok(e.target.value)}
-              className={SELECT_CLASS}
-            >
-              <option value="">— wybierz klasę i rok —</option>
-              {opcjeKlasyRok.map((opt) => {
-                const val = `${opt.klasaId}::${opt.rokSzkolny}`;
-                return (
-                  <option key={val} value={val}>
-                    {opt.klasaNazwa} — {opt.rokSzkolny || 'brak roku'}
-                  </option>
-                );
-              })}
-            </select>
+          <div className="max-w-md">
+            <Field label="Klasa i rok szkolny" htmlFor="sel-klasa-rok">
+              <Select
+                id="sel-klasa-rok"
+                value={wybranaKlasaRok}
+                onChange={(e) => setWybranaKlasaRok(e.target.value)}
+              >
+                <option value="">— wybierz klasę i rok —</option>
+                {opcjeKlasyRok.map((opt) => {
+                  const val = `${opt.klasaId}::${opt.rokSzkolny}`;
+                  return (
+                    <option key={val} value={val}>
+                      {opt.klasaNazwa} — {opt.rokSzkolny || 'brak roku'}
+                    </option>
+                  );
+                })}
+              </Select>
+            </Field>
           </div>
         )}
 
@@ -279,8 +311,8 @@ export default function NauczycielePage() {
               </p>
             )}
             {(daneNauczyciela.nauczyciel.etat != null || daneNauczyciela.nauczyciel.max_obciazenie != null) && (
-              <p className="text-sm text-ink-faint mt-1 tabular">
-                Etat: {daneNauczyciela.nauczyciel.etat ?? '—'} • Max obciążenie: {daneNauczyciela.nauczyciel.max_obciazenie ?? '—'}h/tyg
+              <p className="text-sm text-ink-faint mt-1 tabular-nums">
+                Etat: {daneNauczyciela.nauczyciel.etat ?? PUSTA} • Max obciążenie: {daneNauczyciela.nauczyciel.max_obciazenie ?? PUSTA}h/tyg
               </p>
             )}
           </Card>
@@ -292,11 +324,11 @@ export default function NauczycielePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="rounded-sm border border-line bg-surface-2 p-4">
                   <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
-                  <p className="text-2xl font-bold text-ink tabular">{daneNauczyciela.podsumowanie.suma_godzin_tyg}</p>
+                  <p className="text-2xl font-bold text-ink tabular-nums">{daneNauczyciela.podsumowanie.suma_godzin_tyg}</p>
                 </div>
                 <div className="rounded-sm border border-line bg-surface-2 p-4">
                   <p className="text-sm text-ink-soft">Procent obciążenia</p>
-                  <p className="text-2xl font-bold text-ink tabular">{daneNauczyciela.podsumowanie.procent_obciazenia}%</p>
+                  <p className="text-2xl font-bold text-ink tabular-nums">{daneNauczyciela.podsumowanie.procent_obciazenia}%</p>
                 </div>
                 <div className="rounded-sm border border-line bg-surface-2 p-4">
                   <p className="text-sm text-ink-soft mb-1">Status</p>
@@ -304,7 +336,7 @@ export default function NauczycielePage() {
                 </div>
               </div>
               {daneNauczyciela.podsumowanie.roznica !== 0 && (
-                <div className={`mt-4 rounded p-3 text-sm ${
+                <div className={`mt-4 rounded-sm p-3 text-sm ${
                   daneNauczyciela.podsumowanie.roznica > 0 ? 'bg-danger-bg text-danger' : 'bg-warn-bg text-warn'
                 }`}>
                   <p className="font-semibold">
@@ -313,8 +345,8 @@ export default function NauczycielePage() {
                 </div>
               )}
               <div className="mt-4 flex gap-6 text-sm text-ink-soft">
-                <span>Liczba klas: <span className="font-semibold text-ink tabular">{daneNauczyciela.podsumowanie.liczba_klas}</span></span>
-                <span>Liczba przedmiotów: <span className="font-semibold text-ink tabular">{daneNauczyciela.podsumowanie.liczba_przedmiotow}</span></span>
+                <span>Liczba klas: <span className="font-semibold text-ink tabular-nums">{daneNauczyciela.podsumowanie.liczba_klas}</span></span>
+                <span>Liczba przedmiotów: <span className="font-semibold text-ink tabular-nums">{daneNauczyciela.podsumowanie.liczba_przedmiotow}</span></span>
               </div>
             </Card>
           )}
@@ -364,20 +396,21 @@ export default function NauczycielePage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-sm border border-line bg-surface-2 p-4">
                 <p className="text-sm text-ink-soft">Godziny tygodniowo</p>
-                <p className="text-2xl font-bold text-ink tabular">{sumaGodzinTyg}</p>
+                <p className="text-2xl font-bold text-ink tabular-nums">{sumaGodzinTyg}</p>
               </div>
               <div className="rounded-sm border border-line bg-surface-2 p-4">
                 <p className="text-sm text-ink-soft">Liczba klas</p>
-                <p className="text-2xl font-bold text-ink tabular">{liczbaKlas}</p>
+                <p className="text-2xl font-bold text-ink tabular-nums">{liczbaKlas}</p>
               </div>
               <div className="rounded-sm border border-line bg-surface-2 p-4">
                 <p className="text-sm text-ink-soft">Liczba przedmiotów</p>
-                <p className="text-2xl font-bold text-ink tabular">{liczbaPrzedmiotow}</p>
+                <p className="text-2xl font-bold text-ink tabular-nums">{liczbaPrzedmiotow}</p>
               </div>
             </div>
           </Card>
         </div>
       )}
+      {dialog}
     </div>
   );
 }
