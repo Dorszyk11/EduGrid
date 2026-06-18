@@ -1,5 +1,11 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import StatusPill from '@/components/ui/StatusPill';
 import Icon from '@/components/ui/Icon';
+import { PUSTA } from '@/lib/status-realizacji';
 import plansData from '@/utils/import/ramowe-plany.json';
 
 type HoursByGrade = Record<string, number>;
@@ -62,7 +68,7 @@ function cellDisplay(
   const val = row.hours_by_grade?.[grade];
   if (preferRaw && raw !== undefined && raw !== '') return raw;
   if (val !== undefined && val !== null) return String(val);
-  return '–';
+  return PUSTA;
 }
 
 function totalDisplay(row: SubjectRow): React.ReactNode {
@@ -75,26 +81,33 @@ function totalDisplay(row: SubjectRow): React.ReactNode {
   if (row.hours_to_choose != null) {
     return <span className="text-ink-faint">min. {row.hours_to_choose}</span>;
   }
-  return '–';
+  return PUSTA;
 }
 
 export default function PlanyMeinPage() {
-  return (
-    <div className="p-6 md:p-8 max-w-6xl">
-      <div className="mb-6">
-        <Link
-          href="/przydzial"
-          className="inline-flex items-center gap-1.5 text-ink-soft hover:text-ink font-medium"
-        >
-          <Icon name="back" size={16} />
-          Powrót do Przydziału
-        </Link>
-      </div>
-      <h1 className="font-display text-2xl font-bold text-ink tracking-tight mb-1">Plany MEiN</h1>
-      <p className="text-ink-soft mb-8">
-        Ramowe plany nauczania – szkoły, przedmioty i godziny (tygodniowo w klasach oraz razem w cyklu).
-      </p>
+  const router = useRouter();
 
+  return (
+    <div className="p-6 md:p-8 max-w-6xl space-y-6">
+      <PageHeader
+        title="Plany MEiN"
+        description="Ramowe plany nauczania – szkoły, przedmioty i godziny (tygodniowo w klasach oraz razem w cyklu)."
+        actions={
+          <Button variant="ghost" onClick={() => router.push('/przydzial')}>
+            <Icon name="back" size={16} />
+            Powrót do Przydziału
+          </Button>
+        }
+      />
+
+      {plans.length === 0 ? (
+        <div
+          className="rounded-card border border-line bg-surface p-10 text-center text-sm text-ink-faint shadow-card"
+          role="status"
+        >
+          Brak ramowych planów nauczania do wyświetlenia.
+        </div>
+      ) : (
       <div className="space-y-10">
         {plans.map((plan, idx) => {
           const grades = getGrades(plan);
@@ -136,7 +149,9 @@ export default function PlanyMeinPage() {
                   <thead>
                     <tr className="border-b border-line bg-surface-2">
                       <th className="px-3 py-2.5 text-sm font-medium text-ink-soft w-12">Lp.</th>
-                      <th className="px-3 py-2.5 text-sm font-medium text-ink-soft">Przedmiot</th>
+                      <th className="px-3 py-2.5 text-sm font-medium text-ink-soft sticky left-0 z-10 bg-surface-2">
+                        Przedmiot
+                      </th>
                       {hasGrades &&
                         grades.map((g) => (
                           <th
@@ -158,10 +173,13 @@ export default function PlanyMeinPage() {
                         return (
                           <tr
                             key={i}
-                            className="border-b border-line bg-warn-bg font-medium"
+                            className="border-b border-line bg-surface-2 font-medium"
                           >
                             <td className="px-3 py-2.5" colSpan={hasGrades ? 2 + grades.length : 2}>
-                              Godziny do dyspozycji dyrektora
+                              <span className="inline-flex items-center gap-2 text-ink">
+                                <StatusPill status="DYSPOZYCJA" label="dyspozycja dyrektora" />
+                                Godziny do dyspozycji dyrektora
+                              </span>
                             </td>
                             <td className="px-3 py-2.5 text-right tabular-nums">{tot}</td>
                           </tr>
@@ -169,7 +187,7 @@ export default function PlanyMeinPage() {
                       }
 
                       const row = entry as SubjectRow;
-                      const subject = row.subject ?? '–';
+                      const subject = row.subject ?? PUSTA;
 
                       return (
                         <tr
@@ -177,9 +195,9 @@ export default function PlanyMeinPage() {
                           className="border-b border-line last:border-0 hover:bg-surface-2"
                         >
                           <td className="px-3 py-2.5 text-ink-faint tabular-nums">
-                            {row.lp != null ? row.lp : '–'}
+                            {row.lp != null ? row.lp : PUSTA}
                           </td>
-                          <td className="px-3 py-2.5 text-ink">{subject}</td>
+                          <td className="px-3 py-2.5 text-ink sticky left-0 z-10 bg-surface">{subject}</td>
                           {hasGrades &&
                             grades.map((g) => (
                               <td
@@ -202,6 +220,7 @@ export default function PlanyMeinPage() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

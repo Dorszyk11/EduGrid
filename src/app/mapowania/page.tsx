@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
-import Button, { buttonClass } from '@/components/ui/Button';
+import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import DataTable, { type Column } from '@/components/ui/DataTable';
+import StatusPill from '@/components/ui/StatusPill';
 import Icon from '@/components/ui/Icon';
+import { PUSTA } from '@/lib/status-realizacji';
 
 interface Mapowanie {
   id: string;
@@ -20,13 +21,9 @@ interface Mapowanie {
 
 const SELECT_CLASS = 'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
 
-function Badge({ children, tone }: { children: React.ReactNode; tone: 'accent' | 'ok' | 'neutral' }) {
-  const cls =
-    tone === 'accent'
-      ? 'bg-accent-weak text-accent-strong'
-      : tone === 'ok'
-        ? 'bg-ok-bg text-ok'
-        : 'bg-surface-2 text-ink-soft';
+/** Neutralna etykieta kategorii (typ mapowania) — nie jest statusem, więc nie używa StatusPill. */
+function KategoriaBadge({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
+  const cls = accent ? 'bg-accent-weak text-accent-strong' : 'bg-surface-2 text-ink-soft';
   return (
     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>{children}</span>
   );
@@ -76,18 +73,20 @@ export default function MapowaniaPage() {
       key: 'typ',
       header: 'Typ',
       render: (m) => (
-        <Badge tone={m.typ === 'przedmiot' ? 'accent' : 'ok'}>
+        <KategoriaBadge accent={m.typ === 'przedmiot'}>
           {m.typ === 'przedmiot' ? 'Przedmiot' : 'Typ szkoły'}
-        </Badge>
+        </KategoriaBadge>
       ),
     },
     {
       key: 'status',
       header: 'Status',
       align: 'center',
-      render: (m) => <Badge tone={m.aktywne ? 'ok' : 'neutral'}>{m.aktywne ? 'Aktywne' : 'Nieaktywne'}</Badge>,
+      render: (m) => (
+        <StatusPill status={m.aktywne ? 'OK' : 'NIEAKTYWNE'} label={m.aktywne ? 'Aktywne' : 'Nieaktywne'} />
+      ),
     },
-    { key: 'uwagi', header: 'Uwagi', render: (m) => <span className="text-ink-soft">{m.uwagi || '–'}</span> },
+    { key: 'uwagi', header: 'Uwagi', render: (m) => <span className="text-ink-soft">{m.uwagi || PUSTA}</span> },
   ];
 
   return (
@@ -96,16 +95,10 @@ export default function MapowaniaPage() {
         title="Mapowania nazw MEiN ↔ szkoła"
         description="Dopasowanie nazw z dokumentacji MEiN do nazw używanych w szkole."
         actions={
-          <>
-            <Link href="/panel-admin" className={buttonClass('primary')}>
-              <Icon name="plus" size={16} />
-              Dodaj mapowanie
-            </Link>
-            <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-              <Icon name="back" size={16} />
-              Dashboard
-            </Button>
-          </>
+          <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+            <Icon name="back" size={16} />
+            Dashboard
+          </Button>
         }
       />
 
@@ -149,7 +142,7 @@ export default function MapowaniaPage() {
         getRowKey={(m) => m.id}
         loading={ladowanie}
         error={error}
-        empty="Brak mapowań. Dodaj pierwsze mapowanie w panelu administracyjnym."
+        empty="Brak mapowań. Mapowania powstają automatycznie podczas importu siatki godzin MEiN z PDF."
       />
 
       <Card className="flex gap-3 bg-accent-weak">

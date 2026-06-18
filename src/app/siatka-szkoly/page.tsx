@@ -1,14 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Field from '@/components/ui/Field';
+import Select from '@/components/ui/Select';
+import StatusPill from '@/components/ui/StatusPill';
 import Icon from '@/components/ui/Icon';
 
-const SELECT_CLASS = 'w-full rounded-sm border border-line-strong bg-surface px-3 py-2 text-sm text-ink';
+/** Lista lat szkolnych do wyboru: bieżący rok ± kilka, z gwarancją obecności aktualnie wybranej wartości. */
+function lataSzkolne(wybrany: string): string[] {
+  const teraz = new Date();
+  const bazowy = teraz.getMonth() >= 7 ? teraz.getFullYear() : teraz.getFullYear() - 1;
+  const lata: string[] = [];
+  for (let r = bazowy + 1; r >= bazowy - 4; r -= 1) {
+    lata.push(`${r}/${r + 1}`);
+  }
+  if (!lata.includes(wybrany)) lata.push(wybrany);
+  return lata;
+}
 
 interface TypSzkoly {
   id: string;
@@ -115,10 +128,17 @@ export default function SiatkaSzkolyPage() {
     ? dane?.macierz.filter(w => w.sumaGodzinTygodniowo > 0) || []
     : dane?.macierz || [];
 
+  const lata = useMemo(() => lataSzkolne(rokSzkolny), [rokSzkolny]);
+
+  const opis = dane
+    ? `${przefiltrowanaMacierz.length} przedmiotów, ${dane.klasy.length} klas · rok szkolny ${dane.rokSzkolny}`
+    : 'Przegląd przydzielonych godzin według przedmiotów i oddziałów.';
+
   return (
     <div className="p-6 space-y-6">
       <PageHeader
         title="Siatka godzin szkoły"
+        description={opis}
         actions={
           <Button variant="ghost" onClick={() => router.push('/dashboard')}>
             <Icon name="back" size={16} />
@@ -130,44 +150,40 @@ export default function SiatkaSzkolyPage() {
       {/* Formularz filtrowania */}
       <Card>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-ink-soft mb-1">
-              Typ szkoły *
-            </label>
-            <select
+          <Field label="Typ szkoły" htmlFor="typ-szkoly" required>
+            <Select
+              id="typ-szkoly"
               value={typSzkolyId}
               onChange={(e) => setTypSzkolyId(e.target.value)}
-              className={SELECT_CLASS}
             >
               <option value="">Wybierz typ szkoły</option>
               {typySzkol.map(typ => (
                 <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-ink-soft mb-1">
-              Rok szkolny
-            </label>
-            <input
-              type="text"
+          <Field label="Rok szkolny" htmlFor="rok-szkolny">
+            <Select
+              id="rok-szkolny"
               value={rokSzkolny}
               onChange={(e) => setRokSzkolny(e.target.value)}
-              placeholder="2024/2025"
-              className={SELECT_CLASS}
-            />
-          </div>
+            >
+              {lata.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
+          </Field>
 
-          <div className="flex items-center pt-6">
-            <input
-              type="checkbox"
-              id="pokazTylkoZPrzypisaniami"
-              checked={pokazTylkoZPrzypisaniami}
-              onChange={(e) => setPokazTylkoZPrzypisaniami(e.target.checked)}
-              className="mr-2"
-            />
-            <label htmlFor="pokazTylkoZPrzypisaniami" className="text-sm">
+          <div className="flex items-center pt-7">
+            <label htmlFor="pokazTylkoZPrzypisaniami" className="flex items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                id="pokazTylkoZPrzypisaniami"
+                checked={pokazTylkoZPrzypisaniami}
+                onChange={(e) => setPokazTylkoZPrzypisaniami(e.target.checked)}
+                className="rounded-sm border-line-strong text-accent focus:ring-accent"
+              />
               Pokaż tylko przedmioty z przypisaniami
             </label>
           </div>
@@ -176,42 +192,53 @@ export default function SiatkaSzkolyPage() {
 
       {/* Komunikat błędu */}
       {error && (
-        <div className="bg-danger-bg border border-danger text-danger px-4 py-3 rounded-sm">
+        <div role="status" aria-live="polite" className="bg-danger-bg border border-danger text-danger px-4 py-3 rounded-sm">
           {error}
         </div>
       )}
 
       {/* Tabela siatki */}
       {ladowanie ? (
-        <div className="bg-surface rounded-sm shadow-card p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-line rounded-sm w-1/4"></div>
-            <div className="h-4 bg-line rounded-sm w-1/2"></div>
-            <div className="h-4 bg-line rounded-sm w-3/4"></div>
-          </div>
-        </div>
-      ) : dane && dane.macierz.length > 0 ? (
-        <div className="bg-surface rounded-sm shadow-card p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
-              Siatka godzin ({przefiltrowanaMacierz.length} przedmiotów, {dane.klasy.length} klas)
-            </h2>
-            <div className="text-sm text-ink-soft">
-              Rok szkolny: {dane.rokSzkolny}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse border border-line">
+        <Card padding="none">
+          <div className="overflow-x-auto" role="status" aria-live="polite" aria-busy="true">
+            <span className="sr-only">Wczytywanie siatki godzin…</span>
+            <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-surface-2">
-                  <th className="border border-line px-4 py-3 text-left text-xs font-medium text-ink-soft uppercase sticky left-0 bg-surface-2 z-10">
+                <tr className="bg-surface-2 border-b border-line">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <th key={i} className="px-4 py-3 text-left">
+                      <span className="block h-3.5 w-20 animate-pulse motion-reduce:animate-none rounded-sm bg-line" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 6 }).map((_, r) => (
+                  <tr key={r} className="border-b border-line last:border-0">
+                    {Array.from({ length: 5 }).map((_, c) => (
+                      <td key={c} className="px-4 py-3">
+                        <span className="block h-3.5 w-3/4 animate-pulse motion-reduce:animate-none rounded-sm bg-line" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : dane && dane.macierz.length > 0 ? (
+        <Card padding="none">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-surface-2 border-b border-line">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-soft uppercase sticky left-0 bg-surface-2 z-10">
                     Przedmiot
                   </th>
                   {dane.klasy.map(klasa => (
                     <th
                       key={klasa.id}
-                      className="border border-line px-3 py-2 text-center text-xs font-medium text-ink-soft"
+                      className="px-3 py-2 text-center text-xs font-medium text-ink-soft"
                       title={klasa.profil || undefined}
                     >
                       <div>{klasa.nazwa}</div>
@@ -220,15 +247,15 @@ export default function SiatkaSzkolyPage() {
                       )}
                     </th>
                   ))}
-                  <th className="border border-line px-4 py-3 text-center text-xs font-medium text-ink-soft bg-surface-2">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-ink-soft border-l-2 border-line-strong">
                     Suma
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {przefiltrowanaMacierz.map((wiersz, index) => (
-                  <tr key={wiersz.przedmiotId} className={index % 2 === 0 ? 'bg-surface' : 'bg-surface-2'}>
-                    <td className="border border-line px-4 py-3 text-sm font-medium sticky left-0 bg-inherit z-10">
+                {przefiltrowanaMacierz.map((wiersz) => (
+                  <tr key={wiersz.przedmiotId} className="border-b border-line last:border-0 hover:bg-surface-2">
+                    <td className="px-4 py-3 text-sm font-medium sticky left-0 bg-surface z-10">
                       <Link
                         href={`/przedmioty/${wiersz.przedmiotId}`}
                         className="text-accent hover:text-accent-strong hover:underline"
@@ -239,66 +266,69 @@ export default function SiatkaSzkolyPage() {
                     {wiersz.klasy.map((klasa) => (
                       <td
                         key={klasa.klasaId}
-                        className={`border border-line px-3 py-2 text-center text-sm ${
-                          klasa.godzinyTygodniowo === 0
-                            ? 'text-ink-faint bg-surface-2'
-                            : 'text-ink'
+                        className={`px-3 py-2 text-center text-sm ${
+                          klasa.godzinyTygodniowo === 0 ? 'text-ink-faint' : 'text-ink'
                         }`}
                       >
                         {klasa.godzinyTygodniowo > 0 ? (
                           <div>
-                            <div className="font-medium">{klasa.godzinyTygodniowo}h/tyg</div>
-                            <div className="text-xs text-ink-faint">{klasa.godzinyRoczne}h/rok</div>
+                            <div className="font-medium tabular-nums">{klasa.godzinyTygodniowo}h/tyg</div>
+                            <div className="text-xs text-ink-faint tabular-nums">{klasa.godzinyRoczne}h/rok</div>
                             {klasa.nauczycielNazwa && (
                               <div className="text-xs text-accent mt-1">
                                 {klasa.nauczycielNazwa}
                                 {klasa.liczbaNauczycieli > 1 && (
-                                  <span className="text-ink-faint"> +{klasa.liczbaNauczycieli - 1}</span>
+                                  <span className="text-ink-faint tabular-nums"> +{klasa.liczbaNauczycieli - 1}</span>
                                 )}
                               </div>
                             )}
                             {klasa.liczbaNauczycieli === 0 && (
-                              <div className="text-xs text-danger mt-1">Brak nauczyciela</div>
+                              <div className="mt-1 flex justify-center">
+                                <StatusPill status="BRAK" label="Brak nauczyciela" />
+                              </div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-ink-faint">-</span>
+                          <span className="inline-flex items-center gap-1 text-ink-faint">
+                            <Icon name="close" size={12} />
+                            <span className="text-xs">brak godzin</span>
+                          </span>
                         )}
                       </td>
                     ))}
-                    <td className="border border-line px-4 py-3 text-center text-sm font-medium bg-surface-2">
-                      <div>{wiersz.sumaGodzinTygodniowo}h/tyg</div>
-                      <div className="text-xs text-ink-faint">{wiersz.sumaGodzinRocznie}h/rok</div>
+                    <td className="px-4 py-3 text-center text-sm font-medium border-l-2 border-line-strong">
+                      <div className="tabular-nums">{wiersz.sumaGodzinTygodniowo}h/tyg</div>
+                      <div className="text-xs text-ink-faint tabular-nums">{wiersz.sumaGodzinRocznie}h/rok</div>
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-surface-2 font-semibold">
-                  <td className="border border-line px-4 py-3 text-sm">Suma</td>
+                <tr className="bg-surface-2 font-semibold border-t border-line-strong">
+                  <td className="px-4 py-3 text-sm sticky left-0 bg-surface-2 z-10">Suma</td>
                   {dane.klasy.map(klasa => {
                     const suma = przefiltrowanaMacierz.reduce(
                       (sum, w) => sum + (w.klasy.find(k => k.klasaId === klasa.id)?.godzinyTygodniowo || 0),
                       0
                     );
                     return (
-                      <td key={klasa.id} className="border border-line px-3 py-2 text-center text-sm">
+                      <td key={klasa.id} className="px-3 py-2 text-center text-sm tabular-nums">
                         {suma}h/tyg
                       </td>
                     );
                   })}
-                  <td className="border border-line px-4 py-3 text-center text-sm bg-line">
+                  <td className="px-4 py-3 text-center text-sm tabular-nums border-l-2 border-line-strong">
                     {przefiltrowanaMacierz.reduce((sum, w) => sum + w.sumaGodzinTygodniowo, 0)}h/tyg
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
-        </div>
+        </Card>
       ) : dane && dane.macierz.length === 0 ? (
-        <div className="bg-surface rounded-sm shadow-card p-6 text-center text-ink-faint">
+        <Card className="text-center text-ink-faint">
           Brak danych do wyświetlenia. Upewnij się, że wybrano typ szkoły i że istnieją przypisania godzin.
-        </div>
+        </Card>
       ) : null}
     </div>
   );
