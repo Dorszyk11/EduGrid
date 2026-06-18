@@ -124,3 +124,36 @@ it('tryb „Dodaj rozszerzenia": klik w nazwę przedmiotu zapisuje POST z body.r
   expect(Array.isArray(body.rozszerzenia)).toBe(true);
   expect(body.rozszerzenia.length).toBeGreaterThan(0);
 });
+
+// --- Testy wielokrokowe: wykrywają stale-closure (kluczowe dla Krok 5 useDaneKlasy) ---
+
+it('dwukrotny klik w tę samą komórkę akumuluje godziny (przydzial=2, nie 1)', async () => {
+  render(<PlanMeinTabela nazwaTypuSzkoly="Technikum" klasaId="kl-T" trybPrzydzielGodzine />);
+  const cells = await screen.findAllByTitle(/dodać 1 godzinę do wyboru/);
+  fireEvent.click(cells[0]);
+  await waitFor(() => expect(lastPost()).toBeTruthy());
+  fireEvent.click(cells[0]);
+  await waitFor(() => {
+    const body = lastPost()!.body as { przydzial: Record<string, Record<string, number>> };
+    const keys = Object.keys(body.przydzial);
+    const sum = keys.length ? Object.values(body.przydzial[keys[0]]).reduce((a, b) => a + b, 0) : 0;
+    expect(sum).toBe(2);
+  });
+});
+
+it('doradztwo: dodaj potem usuń wraca do 0 (czyszczenie wpisu)', async () => {
+  render(<PlanMeinTabela nazwaTypuSzkoly="Liceum ogólnokształcące" klasaId="klasa-1" />);
+  const dodaj = await screen.findAllByRole('button', { name: '+ Dodaj' });
+  fireEvent.click(dodaj[0]);
+  await waitFor(() => expect(lastPost()).toBeTruthy());
+  const usun = await screen.findAllByRole('button', { name: '− Usuń' });
+  fireEvent.click(usun[0]);
+  await waitFor(() => {
+    const body = lastPost()!.body as { doradztwo: Record<string, Record<string, number>> };
+    const total = Object.values(body.doradztwo).reduce(
+      (acc, byGrade) => acc + Object.values(byGrade).reduce((a, b) => a + b, 0),
+      0,
+    );
+    expect(total).toBe(0);
+  });
+});
