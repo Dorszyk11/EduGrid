@@ -141,6 +141,39 @@ it('dwukrotny klik w tę samą komórkę akumuluje godziny (przydzial=2, nie 1)'
   });
 });
 
+it('modal ponadprogramowy: po wyczerpaniu puli klik otwiera modal, „Tak, dodaj" zapisuje godzinę ponad limit', async () => {
+  render(<PlanMeinTabela nazwaTypuSzkoly="Technikum" klasaId="kl-T" trybPrzydzielGodzine />);
+  const cells = await screen.findAllByTitle(/dodać 1 godzinę do wyboru/);
+  const cell = cells[0];
+  // hours_to_choose=4 → 4 kliknięcia w tę samą komórkę wyczerpują pulę
+  for (let i = 0; i < 4; i++) {
+    fireEvent.click(cell);
+    await waitFor(() => expect(lastPost()).toBeTruthy());
+  }
+  // 5. klik (remaining=0) → modal ponadprogramowy zamiast zapisu
+  fireEvent.click(cell);
+  expect(await screen.findByRole('heading', { name: 'Godziny ponadprogramowe' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Tak, dodaj' }));
+  await waitFor(() => {
+    const body = lastPost()!.body as { przydzial: Record<string, Record<string, number>> };
+    const keys = Object.keys(body.przydzial);
+    const sum = keys.length ? Object.values(body.przydzial[keys[0]]).reduce((a, b) => a + b, 0) : 0;
+    expect(sum).toBe(5); // 4 programowe + 1 ponadprogramowa
+  });
+});
+
+it('tryb „Podziel na grupy": klik toggluje podział i zapisuje (POST body.podzialNaGrupy)', async () => {
+  render(<PlanMeinTabela nazwaTypuSzkoly="Technikum" klasaId="kl-T" trybPodzielNaGrupy />);
+  const toggles = await screen.findAllByTitle(/podzielić na grupy/);
+  expect(toggles.length).toBeGreaterThan(0);
+  fireEvent.click(toggles[0]);
+  await waitFor(() => {
+    const post = lastPost();
+    expect(post).toBeTruthy();
+    expect(post!.body as Record<string, unknown>).toHaveProperty('podzialNaGrupy');
+  });
+});
+
 it('doradztwo: dodaj potem usuń wraca do 0 (czyszczenie wpisu)', async () => {
   render(<PlanMeinTabela nazwaTypuSzkoly="Liceum ogólnokształcące" klasaId="klasa-1" />);
   const dodaj = await screen.findAllByRole('button', { name: '+ Dodaj' });

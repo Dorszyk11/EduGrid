@@ -99,7 +99,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
     onSave: (p, g, pd, gd, gr, extras) => groupSaveRef.current(p, g, pd, gd, gr, extras),
     onChange: onPrzydzialChange,
   });
-  const { podzialNaGrupy, przydzialGrupy, przydzialGrupyDyrektor, przydzialGrupyRozszerzenia, setPodzialNaGrupy, setPrzydzialGrupy, setPrzydzialGrupyDyrektor, setPrzydzialGrupyRozszerzenia } = groupSplit;
+  const { przydzialGrupy, przydzialGrupyDyrektor, przydzialGrupyRozszerzenia, setPrzydzialGrupyRozszerzenia } = groupSplit;
 
 
   const {
