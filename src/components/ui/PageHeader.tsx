@@ -1,4 +1,7 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { usePageChrome } from '@/lib/hooks/usePageChrome';
 
 interface PageHeaderProps {
   title: string;
@@ -7,8 +10,17 @@ interface PageHeaderProps {
   actions?: ReactNode;
 }
 
-/** Nagłówek strony: tytuł (display) + opcjonalny opis + slot akcji. */
+/**
+ * Adapter chrome strony. Pod powłoką (`AppShell`/`PageChromeProvider`) deleguje
+ * tytuł/opis/akcje do sticky `AppBar` i nie renderuje nic w treści — dzięki
+ * temu ekrany pozostają bez zmian. Bez Providera (np. ekran poza powłoką)
+ * renderuje klasyczny nagłówek in-place jako fallback (brak utraty tytułu).
+ */
 export default function PageHeader({ title, description, actions }: PageHeaderProps) {
+  const przejeteByAppBar = usePageChrome({ title, description, actions });
+
+  if (przejeteByAppBar) return null;
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">

@@ -2,38 +2,35 @@
 
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import AppBar from './AppBar';
+import { PageChromeProvider } from './PageChromeContext';
 import RedirectIfNoTypySzkol from './RedirectIfNoTypySzkol';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * Powłoka aplikacji (AppShell): `Sidebar` + sticky `AppBar` + obszar treści.
+ * `PageChromeProvider` zbiera meta strony (tytuł/opis/akcje) z `PageHeader`
+ * i pokazuje je w `AppBar`. Hamburger mobilny żyje w `AppBar`.
+ */
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <RedirectIfNoTypySzkol>
-      <div className="flex min-h-screen bg-bg">
-        <Sidebar
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-        <main className="page-enter flex-1 overflow-x-hidden w-full min-w-0 ml-0 lg:ml-64">
-          {/* Pasek mobile: hamburger + tytuł */}
-          <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-surface border-b border-line lg:hidden">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-sm text-ink-soft hover:bg-bg hover:text-ink"
-              aria-label="Otwórz menu"
-            >
-              <span className="text-xl" aria-hidden>☰</span>
-            </button>
-            <span className="font-display font-semibold text-ink">EduGrid</span>
-          </header>
-          {children}
-        </main>
-      </div>
+      <PageChromeProvider>
+        <div className="flex min-h-screen bg-bg">
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <div className="flex-1 min-w-0 w-full ml-0 lg:ml-64 flex flex-col">
+            <AppBar onOpenMenu={() => setSidebarOpen(true)} />
+            <main className="page-enter flex-1 overflow-x-hidden w-full min-w-0 motion-reduce:animate-none">
+              {children}
+            </main>
+          </div>
+        </div>
+      </PageChromeProvider>
     </RedirectIfNoTypySzkol>
   );
 }
