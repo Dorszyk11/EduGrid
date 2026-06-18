@@ -19,6 +19,13 @@ import {
   canPrzydzielacWKomorce,
   kolorOdProcentuGodzinDodatkowych,
 } from '@/lib/przydzial/reguly';
+import {
+  cacheSet,
+  getUnit,
+  cellDisplay,
+  totalDisplay,
+  cycleFilterZNazwy,
+} from '@/lib/przydzial/tabelaHelpers';
 
 export type { PlanMein };
 
@@ -26,50 +33,8 @@ const STORAGE_PREFIX = 'przydzial-wyboru-';
 const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
 const STORAGE_DYREKTOR = 'dyrektor-godziny-';
 
-/**
- * Zapis do localStorage jako nietrwały cache (źródłem prawdy jest API/baza).
- * Zapis bywa niemożliwy (przekroczona quota, tryb prywatny, wyłączony storage) –
- * wtedy cache pomijamy świadomie i logujemy w trybie debug, zamiast cicho połykać błąd.
- */
-function cacheSet(key: string, value: unknown): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (err) {
-    console.debug('Pominięto zapis cache localStorage:', key, err);
-  }
-}
-
 const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
 const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
-
-function getUnit(plan: PlanMein): string | undefined {
-  return plan.table_structure?.unit;
-}
-
-function cellDisplay(row: SubjectRow, grade: string, preferRaw: boolean): React.ReactNode {
-  const raw = row.raw?.[grade];
-  const val = row.hours_by_grade?.[grade];
-  if (preferRaw && raw !== undefined && raw !== '') return raw;
-  if (val !== undefined && val !== null) return String(val);
-  return '–';
-}
-
-function totalDisplay(row: SubjectRow): React.ReactNode {
-  const r = row.raw?.razem;
-  const t = row.total_hours;
-  // Wiersz „przedmioty o zakresie rozszerzonym” – w kolumnie Razem domyślnie 0 (nie pokazujemy planowych 8/22)
-  if (row.subject && isPrzedmiotRozszerzony(row.subject)) {
-    if (r !== undefined && r !== '') return <span title="Wartość z tabeli">{r}</span>;
-    return '0';
-  }
-  if (r !== undefined && r !== '') return <span title="Wartość z tabeli">{r}</span>;
-  if (t !== undefined && t !== null) return String(t);
-  if (row.hours_to_choose != null) {
-    return <span className="text-ink-faint">min. {row.hours_to_choose}</span>;
-  }
-  return '0';
-}
 
 export interface PlanMeinTabelaProps {
   /** Nazwa typu szkoły z bazy (np. "Szkoła podstawowa", "Liceum ogólnokształcące") – wyświetlane są plany MEiN dla tego typu */
@@ -98,17 +63,6 @@ export interface PlanMeinTabelaProps {
   onPrzydzialChange?: () => void;
   /** Wywoływane po każdej zmianie zrealizowanych godzin doradztwa zawodowego */
   onDoradztwoChange?: () => void;
-}
-
-/** Z nazwy typu (np. "Technikum, Klasy I–V") wyciąga filtr cyklu – żeby pokazać tylko jeden etap. */
-function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
-  const n = (nazwaTypu || '').toLowerCase();
-  if (n.includes('i–iii') || n.includes('i-iii') || n.includes('1–3') || n.includes('1-3')) return 'Klasy I–III';
-  if (n.includes('iv–viii') || n.includes('iv-viii') || n.includes('4–8') || n.includes('4-8')) return 'Klasy IV–VIII';
-  if (n.includes('i–v') || n.includes('i-v') || n.includes('1–5') || n.includes('1-5')) return 'Klasy I–V';
-  if (n.includes('i–iv') || n.includes('i-iv') || n.includes('1–4') || n.includes('1-4')) return 'Klasy I–IV';
-  if (n.includes('vii–viii') || n.includes('vii-viii') || n.includes('7–8') || n.includes('7-8')) return 'Klasy VII–VIII';
-  return undefined;
 }
 
 export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, trybDodajRozszerzenia = false, trybPrzydzielGodzinyRozszerzen = false, trybPodzielNaGrupy = false, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
