@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, full-refactor]
+  pull_request:
+
+# Anuluj starsze runy dla tej samej gałęzi/PR
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, typy, testy, build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (npm ci)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck (tsc)
+        run: npx tsc --noEmit
+
+      - name: Testy (jest)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Wartości tylko na czas builda CI (kompilacja, bez połączenia z bazą).
+          # Realne sekrety ustawiane są w Vercel; tu PAYLOAD_SECRET jedynie odblokowuje
+          # walidację w payload.config (rzuca przy braku). DB nie jest potrzebne do builda.
+          PAYLOAD_SECRET: ci-build-only-secret-not-used-for-tokens
+          NEXT_TELEMETRY_DISABLED: "1"
