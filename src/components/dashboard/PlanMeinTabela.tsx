@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, Fragment } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import plansData from '@/utils/import/ramowe-plany.json';
 import { useGroupSplit, type GroupAssignments, type GroupSplitFlags, type GroupSplitSaveExtras } from '@/hooks/useGroupSplit';
 import { useDaneKlasy, STORAGE_DYREKTOR } from '@/lib/hooks/useDaneKlasy';
@@ -25,8 +25,38 @@ import {
 
 export type { PlanMein };
 
+/**
+ * Podsumowanie puli godzin jednego planu — wyłącznie do wyświetlenia (widżet puli na stronie
+ * Przydziału). Wartości są już policzone w tym komponencie (z `przydzial`/`dyrektor`/
+ * `rozszerzeniaPrzydzial`/`assignedDirectorForPlan`); strona ich NIE liczy ponownie.
+ */
+export interface PulaPlanu {
+  planId: string;
+  cycleLabel: string;
+  /** Godziny „do wyboru”: przydzielone vs pula z planu (suma hours_to_choose). */
+  doWyboru: { przydzielone: number; pula: number };
+  /** Godziny dyrektorskie: przydzielone vs pula z planu. */
+  dyrektorskie: { przydzielone: number; pula: number };
+  /** Godziny rozszerzeń: przydzielone vs pula z planu (gdy plan ma rozszerzenia). */
+  rozszerzenia: { przydzielone: number; pula: number } | null;
+}
+
 const data = plansData as { plans?: PlanMein[]; reference_plans?: PlanMein[] };
 const allPlans: PlanMein[] = data.plans ?? data.reference_plans ?? [];
+
+/**
+ * Emituje podsumowanie puli do rodzica w efekcie (render rodzica pozostaje czysty).
+ * Porównuje sygnaturę, by nie wołać callbacku bez zmiany wartości.
+ */
+function EmitPula({ pula, onPulaChange }: { pula: PulaPlanu[]; onPulaChange?: (pula: PulaPlanu[]) => void }) {
+  const sig = JSON.stringify(pula);
+  useEffect(() => {
+    onPulaChange?.(pula);
+    // sig reprezentuje zawartość `pula`; celowo zależymy od sygnatury, nie od referencji tablicy
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig, onPulaChange]);
+  return null;
+}
 
 export interface PlanMeinTabelaProps {
   /** Nazwa typu szkoły z bazy (np. "Szkoła podstawowa", "Liceum ogólnokształcące") – wyświetlane są plany MEiN dla tego typu */
@@ -55,9 +85,11 @@ export interface PlanMeinTabelaProps {
   onPrzydzialChange?: () => void;
   /** Wywoływane po każdej zmianie zrealizowanych godzin doradztwa zawodowego */
   onDoradztwoChange?: () => void;
+  /** Emituje podsumowanie puli godzin (do wyświetlenia w widżecie puli na stronie Przydziału). */
+  onPulaChange?: (pula: PulaPlanu[]) => void;
 }
 
-export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, trybDodajRozszerzenia = false, trybPrzydzielGodzinyRozszerzen = false, trybPodzielNaGrupy = false, onPrzydzialChange, onDoradztwoChange }: PlanMeinTabelaProps) {
+export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, tylkoOdczyt = false, refetchTrigger, trybPrzydzielGodzine = false, trybPrzydzielDyrektor = false, trybUsunGodzine = false, trybDodajRozszerzenia = false, trybPrzydzielGodzinyRozszerzen = false, trybPodzielNaGrupy = false, onPrzydzialChange, onDoradztwoChange, onPulaChange }: PlanMeinTabelaProps) {
   const cycleFilterAuto = cycleFilter ?? cycleFilterZNazwy(nazwaTypuSzkoly);
   const plans = allPlans.filter(
     (p) =>
@@ -158,6 +190,12 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
   };
 
   const togglePodzialNaGrupy = groupSplit.toggleSplit;
+
+  /**
+   * Podsumowanie puli godzin per plan — zbierane podczas renderu z JUŻ policzonych wartości
+   * (bez ponownej logiki). Emitowane przez `<EmitPula>` w efekcie, aby render pozostał czysty.
+   */
+  const pulaPodsumowanie: PulaPlanu[] = [];
 
   if (plans.length === 0) {
     return (
@@ -302,6 +340,16 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
         const firstRozszerzonyRow = rozszerzonyEntries[0] as SubjectRow | undefined;
         const extendedPoolSize = firstRozszerzonyRow?.total_hours != null ? (firstRozszerzonyRow.total_hours as number) : getGodzinyRozszerzenia(plan.school_type ?? '');
 
+        /** Z JUŻ policzonych wartości — bez ponownej logiki — zbieramy podsumowanie puli dla widżetu. */
+        const przydzieloneDoWyboru = Object.values(assignedSumByGrade).reduce((a, b) => a + b, 0);
+        pulaPodsumowanie.push({
+          planId: plan.plan_id ?? `${plan.school_type}-${plan.cycle}-${idx}`,
+          cycleLabel: cycleLabel ?? '',
+          doWyboru: { przydzielone: przydzieloneDoWyboru, pula: totalGodzinyDoRozdysponowania },
+          dyrektorskie: { przydzielone: assignedDirectorHoursPlan, pula: totalDirectorHours },
+          rozszerzenia: rozszerzonyEntries.length > 0 ? { przydzielone: extendedPoolAssignedTotal, pula: extendedPoolSize } : null,
+        });
+
         return (
           <Fragment key={plan.plan_id ?? `${plan.school_type}-${plan.cycle}-${idx}`}>
           <TabelaPlanu
@@ -373,6 +421,8 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
           </Fragment>
         );
       })}
+
+      <EmitPula pula={pulaPodsumowanie} onPulaChange={onPulaChange} />
 
       {/* Modal: godziny ponadprogramowe (do wyboru lub dyrektorskie ponad pulę) */}
       {modalPonadprogramowa && (

@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import Link from 'next/link';
-import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
+import PlanMeinTabela, { type PulaPlanu } from '@/components/dashboard/PlanMeinTabela';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
-import { buttonClass } from '@/components/ui/Button';
+import PageHeader from '@/components/ui/PageHeader';
+import Button, { buttonClass } from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Select from '@/components/ui/Select';
+import { useConfirm } from '@/lib/hooks/useConfirm';
+import { useToast } from '@/components/ui/Toast';
+import { statusRealizacji, type TonStatusu } from '@/lib/status-realizacji';
 
 interface TypSzkoly {
   id: string;
@@ -18,6 +24,60 @@ interface KlasaItem {
   typ_szkoly: { id: string; nazwa?: string } | null;
 }
 
+const PULA_TON_BG: Record<TonStatusu, string> = {
+  ok: 'bg-ok-bg text-ok',
+  warn: 'bg-warn-bg text-warn',
+  danger: 'bg-danger-bg text-danger',
+  accent: 'bg-accent-weak text-accent-strong',
+};
+
+/** Jedna metryka puli: etykieta + przydzielone/pula, ton z `statusRealizacji` (przekroczenie = nadwyżka). */
+function PulaMetryka({ etykieta, przydzielone, pula }: { etykieta: string; przydzielone: number; pula: number }) {
+  const s = statusRealizacji(przydzielone, pula);
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-xs font-medium uppercase tracking-wide text-ink-faint">{etykieta}</span>
+      <span
+        className={`inline-flex items-center gap-1.5 self-start rounded-sm px-2 py-0.5 text-sm font-semibold tabular-nums ${PULA_TON_BG[s.ton]}`}
+        aria-label={`${etykieta}: przydzielono ${przydzielone} z ${pula}, ${s.opis}`}
+      >
+        <span>{przydzielone} / {pula}</span>
+        <span aria-hidden className="opacity-70">·</span>
+        <span aria-hidden>{s.znak}</span>
+      </span>
+    </div>
+  );
+}
+
+/** Sticky pasek nad tabelą: pula godzin do wyboru / dyrektorskich / rozszerzeń z policzonych już danych planu. */
+function WidzetPuli({ pula }: { pula: PulaPlanu[] }) {
+  if (pula.length === 0) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="sticky top-0 z-30 -mx-4 sm:-mx-6 border-b border-line bg-surface/95 px-4 sm:px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80"
+    >
+      <div className="flex flex-col gap-3">
+        {pula.map((p) => (
+          <div key={p.planId} className="flex flex-wrap items-end gap-x-6 gap-y-2">
+            {pula.length > 1 && p.cycleLabel && (
+              <span className="text-xs font-semibold text-ink-soft self-center">{p.cycleLabel}</span>
+            )}
+            <PulaMetryka etykieta="Do wyboru" przydzielone={p.doWyboru.przydzielone} pula={p.doWyboru.pula} />
+            {p.dyrektorskie.pula > 0 && (
+              <PulaMetryka etykieta="Dyrektorskie" przydzielone={p.dyrektorskie.przydzielone} pula={p.dyrektorskie.pula} />
+            )}
+            {p.rozszerzenia && (
+              <PulaMetryka etykieta="Rozszerzenia" przydzielone={p.rozszerzenia.przydzielone} pula={p.rozszerzenia.pula} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function PrzydzialPage() {
   const [typySzkol, setTypySzkol] = useState<TypSzkoly[]>([]);
   const [typSzkolyId, setTypSzkolyId] = useState<string>('');
@@ -26,17 +86,19 @@ export default function PrzydzialPage() {
   const [selectedLitera, setSelectedLitera] = useState<string>('');
   const [ladowanieTypow, setLadowanieTypow] = useState(true);
   const [ladowanieKlas, setLadowanieKlas] = useState(false);
+  const [bladKlas, setBladKlas] = useState<string | null>(null);
   const [ladowanie, setLadowanie] = useState(false);
   const [resetowanie, setResetowanie] = useState(false);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
-  const [komunikat, setKomunikat] = useState<{ typ: 'success' | 'error'; tekst: string } | null>(null);
-  const [pokazPotwierdzenieReset, setPokazPotwierdzenieReset] = useState(false);
+  const [pula, setPula] = useState<PulaPlanu[]>([]);
   const [trybPrzydzielGodzine, setTrybPrzydzielGodzine] = useState(false);
   const [trybPrzydzielDyrektor, setTrybPrzydzielDyrektor] = useState(false);
   const [trybUsunGodzine, setTrybUsunGodzine] = useState(false);
   const [trybDodajRozszerzenia, setTrybDodajRozszerzenia] = useState(false);
   const [trybPrzydzielGodzinyRozszerzen, setTrybPrzydzielGodzinyRozszerzen] = useState(false);
   const [trybPodzielNaGrupy, setTrybPodzielNaGrupy] = useState(false);
+  const { confirm, dialog } = useConfirm();
+  const toast = useToast();
 
   const roczniki = [...new Set(klasaList.map((k) => k.rok_szkolny))].filter(Boolean).sort();
   const literki = selectedRocznik
@@ -53,24 +115,58 @@ export default function PrzydzialPage() {
   /** Szkoła podstawowa 1–3 nie ma przycisku „Generuj przydział”. */
   const ukryjGenerujPrzydzial = /podstawowa/i.test(nazwaTypuSzkoly) && /1-3|1–3|1—3/.test(nazwaTypuSzkoly);
 
+  /** Wyłącza wszystkie tryby poza tym wskazanym (toggle jak dotąd). */
+  const przelaczTryb = (setter: Dispatch<SetStateAction<boolean>>) => {
+    setTrybPrzydzielGodzine(false);
+    setTrybPrzydzielDyrektor(false);
+    setTrybUsunGodzine(false);
+    setTrybDodajRozszerzenia(false);
+    setTrybPrzydzielGodzinyRozszerzen(false);
+    setTrybPodzielNaGrupy(false);
+    setter((v) => !v);
+  };
+
+  const pobierzTypySzkol = useCallback(async () => {
+    setLadowanieTypow(true);
+    try {
+      const response = await fetch('/api/typy-szkol', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
+      const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
+      setTypySzkol(mapped);
+      const zap = getZapamietanyTypSzkoly();
+      if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
+    } catch (error) {
+      toast.error(error instanceof Error ? `Nie udało się pobrać typów szkół: ${error.message}` : 'Nie udało się pobrać typów szkół');
+    } finally {
+      setLadowanieTypow(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     pobierzTypySzkol();
-  }, []);
+  }, [pobierzTypySzkol]);
 
   useEffect(() => {
     if (typSzkolyId) {
       setLadowanieKlas(true);
+      setBladKlas(null);
       setSelectedRocznik('');
       setSelectedLitera('');
       fetch(`/api/klasy?typSzkolyId=${typSzkolyId}`)
-        .then((res) => res.json())
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
         .then((data) => {
           setKlasaList(data.klasy ?? []);
         })
-        .catch(() => setKlasaList([]))
+        .catch((e) => {
+          setBladKlas(e instanceof Error ? e.message : 'Błąd pobierania klas');
+          setKlasaList([]);
+        })
         .finally(() => setLadowanieKlas(false));
     } else {
       setKlasaList([]);
+      setBladKlas(null);
       setSelectedRocznik('');
       setSelectedLitera('');
     }
@@ -90,36 +186,18 @@ export default function PrzydzialPage() {
     }
   }, [klasaList, typSzkolyId, ladowanieKlas]);
 
-  const pobierzTypySzkol = async () => {
-    setLadowanieTypow(true);
-    try {
-      const response = await fetch('/api/typy-szkol', { cache: 'no-store' });
-      const data = await response.json();
-      const list = Array.isArray(data) ? data : (data?.typySzkol ?? []);
-      const mapped = list.map((t: { id: string; nazwa?: string }) => ({ id: String(t.id), nazwa: t.nazwa ?? 'Brak nazwy' }));
-      setTypySzkol(mapped);
-      const zap = getZapamietanyTypSzkoly();
-      if (zap && mapped.some((t: { id: string }) => t.id === zap)) setTypSzkolyId(zap);
-    } catch (error) {
-      console.error('Błąd przy pobieraniu typów szkół:', error);
-    } finally {
-      setLadowanieTypow(false);
-    }
-  };
-
   /** Przydziela godziny do wyboru do przedmiotów po kolei (po latach) i zapisuje do bazy. */
   const generujPrzydzial = async () => {
     if (!typSzkolyId) {
-      setKomunikat({ typ: 'error', tekst: 'Wybierz typ szkoły' });
+      toast.error('Wybierz typ szkoły');
       return;
     }
     if (!selectedClass?.id) {
-      setKomunikat({ typ: 'error', tekst: 'Wybierz klasę (rocznik i literę)' });
+      toast.error('Wybierz klasę (rocznik i literę)');
       return;
     }
 
     setLadowanie(true);
-    setKomunikat(null);
 
     try {
       const klasaId = String(selectedClass.id);
@@ -137,38 +215,31 @@ export default function PrzydzialPage() {
         throw new Error(data.error || 'Błąd przy generowaniu przydziału');
       }
 
-      setKomunikat({
-        typ: 'success',
-        tekst: data.komunikat ?? 'Przydzielono godziny do wyboru do przedmiotów (po latach po kolei).',
-      });
+      toast.success(data.komunikat ?? 'Przydzielono godziny do wyboru do przedmiotów (po latach po kolei).');
       setRefetchTrigger((t) => t + 1);
     } catch (error) {
-      console.error('Błąd:', error);
-      setKomunikat({
-        typ: 'error',
-        tekst: error instanceof Error ? error.message : 'Nieznany błąd',
-      });
+      toast.error(error instanceof Error ? error.message : 'Nieznany błąd');
     } finally {
       setLadowanie(false);
     }
   };
 
-  /** Otwiera okno potwierdzenia resetu. */
-  const otworzPotwierdzenieReset = () => {
+  /** Pyta o potwierdzenie (danger) i resetuje przydział godzin dla wybranej klasy. */
+  const resetujPrzydzial = async () => {
     if (!selectedClass?.id) {
-      setKomunikat({ typ: 'error', tekst: 'Wybierz klasę (rocznik i literę)' });
+      toast.error('Wybierz klasę (rocznik i literę)');
       return;
     }
-    setPokazPotwierdzenieReset(true);
-  };
+    const ok = await confirm({
+      title: 'Zresetować przydział?',
+      description:
+        'Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego, godziny dyrektorskie, rozszerzenia, godziny rozszerzeń oraz podziały na grupy.',
+      confirmLabel: 'Zresetuj',
+      tone: 'danger',
+    });
+    if (!ok) return;
 
-  /** Wykonuje reset po potwierdzeniu (Tak). */
-  const wykonajReset = async () => {
-    if (!selectedClass?.id) return;
-    setPokazPotwierdzenieReset(false);
     setResetowanie(true);
-    setKomunikat(null);
-
     try {
       const response = await fetch('/api/przydzial-godzin-wybor', {
         method: 'POST',
@@ -193,17 +264,10 @@ export default function PrzydzialPage() {
         throw new Error(data.error || 'Błąd przy resetowaniu');
       }
 
-      setKomunikat({
-        typ: 'success',
-        tekst: 'Przydział godzin dla tej klasy został zresetowany.',
-      });
+      toast.success('Przydział godzin dla tej klasy został zresetowany.');
       setRefetchTrigger((t) => t + 1);
     } catch (error) {
-      console.error('Błąd:', error);
-      setKomunikat({
-        typ: 'error',
-        tekst: error instanceof Error ? error.message : 'Nieznany błąd',
-      });
+      toast.error(error instanceof Error ? error.message : 'Nieznany błąd');
     } finally {
       setResetowanie(false);
     }
@@ -211,211 +275,147 @@ export default function PrzydzialPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:flex-wrap">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">Przydział</h1>
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 flex-1 min-w-0">
-          <Link href="/plany-mein" className={buttonClass('secondary')}>
-            Zobacz plany MEiN
-          </Link>
-          {!ukryjGenerujPrzydzial && (
-            <button
-              onClick={generujPrzydzial}
-              disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
-              className="px-5 py-2.5 bg-accent text-white rounded-sm hover:bg-accent-strong disabled:bg-line-strong disabled:cursor-not-allowed font-medium"
+      <PageHeader
+        title="Przydział"
+        actions={
+          <>
+            <Link href="/plany-mein" className={buttonClass('secondary')}>
+              Zobacz plany MEiN
+            </Link>
+            {!ukryjGenerujPrzydzial && (
+              <Button
+                onClick={generujPrzydzial}
+                disabled={ladowanie || resetowanie || !typSzkolyId || !selectedClass?.id}
+              >
+                {ladowanie ? 'Generowanie…' : 'Generuj przydział'}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              className="text-danger hover:bg-danger-bg hover:text-danger"
+              onClick={resetujPrzydzial}
+              disabled={ladowanie || resetowanie || !selectedClass?.id}
             >
-              {ladowanie ? 'Generowanie...' : 'Generuj przydział'}
-            </button>
+              {resetowanie ? 'Resetowanie…' : 'Reset'}
+            </Button>
+          </>
+        }
+      />
+
+      {selectedClass?.id && (
+        <div className="flex flex-wrap items-center gap-2">
+          {maGodzinyDoWyboru && (
+            <Button
+              type="button"
+              variant="toggle"
+              active={trybPrzydzielGodzine}
+              onClick={() => przelaczTryb(setTrybPrzydzielGodzine)}
+            >
+              Przydziel godzinę
+            </Button>
           )}
-          <button
-            onClick={otworzPotwierdzenieReset}
-            disabled={ladowanie || resetowanie || !selectedClass?.id}
-            className="px-4 py-2.5 bg-danger-bg text-danger rounded-sm hover:bg-danger-bg disabled:bg-surface-2 disabled:text-ink-faint disabled:cursor-not-allowed font-medium border border-line"
+          <Button
+            type="button"
+            variant="toggle"
+            active={trybPrzydzielDyrektor}
+            onClick={() => przelaczTryb(setTrybPrzydzielDyrektor)}
           >
-            {resetowanie ? 'Resetowanie...' : 'Reset'}
-          </button>
-          {selectedClass?.id && (
+            Godz. dyrektorskie
+          </Button>
+          {maRozszerzenia && (
             <>
-              <span className="hidden sm:inline text-ink-faint text-sm mx-1">|</span>
-              {maGodzinyDoWyboru && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTrybPrzydzielDyrektor(false);
-                    setTrybUsunGodzine(false);
-                    setTrybDodajRozszerzenia(false);
-                    setTrybPrzydzielGodzinyRozszerzen(false);
-                    setTrybPodzielNaGrupy(false);
-                    setTrybPrzydzielGodzine((v) => !v);
-                  }}
-                  className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
-                    trybPrzydzielGodzine ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
-                  }`}
-                >
-                  Przydziel godzinę
-                </button>
-              )}
-              <button
+              <span className="hidden sm:inline text-ink-faint text-sm" aria-hidden>|</span>
+              <Button
                 type="button"
-                  onClick={() => {
-                    setTrybPrzydzielGodzine(false);
-                    setTrybUsunGodzine(false);
-                    setTrybDodajRozszerzenia(false);
-                    setTrybPrzydzielGodzinyRozszerzen(false);
-                    setTrybPodzielNaGrupy(false);
-                    setTrybPrzydzielDyrektor((v) => !v);
-                  }}
-                className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybPrzydzielDyrektor ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
-                }`}
+                variant="toggle"
+                active={trybDodajRozszerzenia}
+                onClick={() => przelaczTryb(setTrybDodajRozszerzenia)}
               >
-                Godz. dyrektorskie
-              </button>
-              {maRozszerzenia && (
-                <>
-                  <span className="hidden sm:inline text-ink-faint text-sm mx-1">|</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTrybPrzydzielGodzine(false);
-                      setTrybPrzydzielDyrektor(false);
-                      setTrybUsunGodzine(false);
-                      setTrybPrzydzielGodzinyRozszerzen(false);
-                      setTrybPodzielNaGrupy(false);
-                      setTrybDodajRozszerzenia((v) => !v);
-                    }}
-                    className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
-                      trybDodajRozszerzenia ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
-                    }`}
-                  >
-                    Dodaj rozszerzenia
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTrybPrzydzielGodzine(false);
-                      setTrybPrzydzielDyrektor(false);
-                      setTrybDodajRozszerzenia(false);
-                      setTrybUsunGodzine(false);
-                      setTrybPodzielNaGrupy(false);
-                      setTrybPrzydzielGodzinyRozszerzen((v) => !v);
-                    }}
-                    className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
-                      trybPrzydzielGodzinyRozszerzen ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
-                    }`}
-                  >
-                    Przydziel godziny rozszerzeń
-                  </button>
-                </>
-              )}
-              <span className="hidden sm:inline text-ink-faint text-sm mx-1">|</span>
-              <button
+                Dodaj rozszerzenia
+              </Button>
+              <Button
                 type="button"
-                onClick={() => {
-                  setTrybPrzydzielGodzine(false);
-                  setTrybPrzydzielDyrektor(false);
-                  setTrybDodajRozszerzenia(false);
-                  setTrybPrzydzielGodzinyRozszerzen(false);
-                  setTrybUsunGodzine(false);
-                  setTrybPodzielNaGrupy((v) => !v);
-                }}
-                className={`px-3 py-2.5 rounded font-medium transition-colors text-sm whitespace-nowrap ${
-                  trybPodzielNaGrupy ? 'bg-accent text-white hover:bg-accent-strong ring-2 ring-accent' : 'bg-surface-2 text-ink-soft hover:bg-line'
-                }`}
+                variant="toggle"
+                active={trybPrzydzielGodzinyRozszerzen}
+                onClick={() => przelaczTryb(setTrybPrzydzielGodzinyRozszerzen)}
               >
-                Podziel na grupy (1 i 2)
-              </button>
+                Przydziel godziny rozszerzeń
+              </Button>
             </>
           )}
-        </div>
-      </div>
-
-      {komunikat && (
-        <div
-          className={`p-4 rounded ${
-            komunikat.typ === 'success' ? 'bg-ok-bg text-ok' : 'bg-danger-bg text-danger'
-          }`}
-        >
-          {komunikat.tekst}
-        </div>
-      )}
-
-      {/* Okno potwierdzenia resetu – Tak / Nie */}
-      {pokazPotwierdzenieReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
-          <div className="bg-white rounded-card shadow-pop max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-ink">Czy na pewno?</h3>
-            <p className="text-ink-soft text-sm leading-relaxed">
-              Zresetować przydział godzin dla tej klasy? Zostaną wyzerowane: godziny do wyboru, zajęcia z zakresu doradztwa zawodowego, godziny dyrektorskie, rozszerzenia, godziny rozszerzeń oraz podziały na grupy.
-            </p>
-            <div className="flex flex-row gap-3 justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setPokazPotwierdzenieReset(false)}
-                className="px-4 py-2.5 bg-surface-2 text-ink rounded-sm hover:bg-line font-medium"
-              >
-                Nie
-              </button>
-              <button
-                type="button"
-                onClick={wykonajReset}
-                className="px-4 py-2.5 bg-danger text-white rounded-sm hover:bg-danger font-medium"
-              >
-                Tak
-              </button>
-            </div>
-          </div>
+          <span className="hidden sm:inline text-ink-faint text-sm" aria-hidden>|</span>
+          <Button
+            type="button"
+            variant="toggle"
+            active={trybPodzielNaGrupy}
+            onClick={() => przelaczTryb(setTrybPodzielNaGrupy)}
+          >
+            Podziel na grupy (1 i 2)
+          </Button>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-        <select
-          value={typSzkolyId}
-          onChange={(e) => {
-            const v = e.target.value;
-            zapiszTypSzkoly(v);
-            setTypSzkolyId(v);
-          }}
-          disabled={ladowanieTypow}
-          className="w-full sm:w-[200px] sm:min-w-0 border border-line-strong rounded-sm px-3 py-2.5 text-base bg-white disabled:opacity-60"
-        >
-          <option value="">{ladowanieTypow ? 'Ładowanie...' : 'Wybierz typ szkoły'}</option>
-          {typySzkol.map((typ) => (
-            <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
-          ))}
-        </select>
-        <select
-          value={selectedRocznik}
-          onChange={(e) => {
-            const v = e.target.value;
-            zapiszRocznik(v);
-            setSelectedRocznik(v);
-            setSelectedLitera('');
-          }}
-          disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-          className="w-full sm:w-[140px] sm:min-w-0 border border-line-strong rounded-sm px-3 py-2.5 text-base bg-white disabled:opacity-60"
-        >
-          <option value="">{ladowanieKlas ? 'Ładowanie...' : 'Rocznik'}</option>
-          {roczniki.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        <select
-          value={selectedLitera}
-          onChange={(e) => {
-            const v = e.target.value;
-            zapiszLitera(v);
-            setSelectedLitera(v);
-          }}
-          disabled={!selectedRocznik || literki.length === 0}
-          className="w-full sm:w-[100px] sm:min-w-0 border border-line-strong rounded-sm px-3 py-2.5 text-base bg-white disabled:opacity-60"
-        >
-          <option value="">Klasa</option>
-          {literki.map((l) => (
-            <option key={l} value={l}>{l}</option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+        <div className="w-full sm:w-[200px]">
+          <Field label="Typ szkoły" htmlFor="przydzial-typ-szkoly">
+            <Select
+              id="przydzial-typ-szkoly"
+              value={typSzkolyId}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszTypSzkoly(v);
+                setTypSzkolyId(v);
+              }}
+              disabled={ladowanieTypow}
+            >
+              <option value="">{ladowanieTypow ? 'Ładowanie…' : 'Wybierz typ szkoły'}</option>
+              {typySzkol.map((typ) => (
+                <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <div className="w-full sm:w-[140px]">
+          <Field label="Rocznik" htmlFor="przydzial-rocznik" error={bladKlas ?? undefined}>
+            <Select
+              id="przydzial-rocznik"
+              value={selectedRocznik}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszRocznik(v);
+                setSelectedRocznik(v);
+                setSelectedLitera('');
+              }}
+              disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
+            >
+              <option value="">{ladowanieKlas ? 'Ładowanie…' : 'Rocznik'}</option>
+              {roczniki.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <div className="w-full sm:w-[100px]">
+          <Field label="Klasa" htmlFor="przydzial-litera">
+            <Select
+              id="przydzial-litera"
+              value={selectedLitera}
+              onChange={(e) => {
+                const v = e.target.value;
+                zapiszLitera(v);
+                setSelectedLitera(v);
+              }}
+              disabled={!selectedRocznik || literki.length === 0}
+            >
+              <option value="">Klasa</option>
+              {literki.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
         {selectedClass && (
-          <span className="text-sm text-ink-soft block sm:inline sm:whitespace-nowrap mt-1 sm:mt-0">
+          <span className="text-sm text-ink-soft sm:whitespace-nowrap sm:pb-2">
             Wybrana klasa: <strong>{selectedClass.nazwa}</strong> ({selectedRocznik})
           </span>
         )}
@@ -427,6 +427,7 @@ export default function PrzydzialPage() {
           <p className="text-ink-soft text-sm leading-relaxed">
             Wybierz typ szkoły i klasę. Przycisk „Generuj przydział” przydziela godziny do wyboru do przedmiotów po kolei (po latach: I, II, III… lub IV, V, VI…). Możesz też ręcznie dodawać/usuwać godziny w tabeli.
           </p>
+          {selectedClass?.id && <WidzetPuli pula={pula} />}
           <PlanMeinTabela
             nazwaTypuSzkoly={nazwaTypuSzkoly}
             klasaId={selectedClass?.id}
@@ -437,9 +438,11 @@ export default function PrzydzialPage() {
             trybDodajRozszerzenia={trybDodajRozszerzenia}
             trybPrzydzielGodzinyRozszerzen={trybPrzydzielGodzinyRozszerzen}
             trybPodzielNaGrupy={trybPodzielNaGrupy}
+            onPulaChange={setPula}
           />
         </div>
       )}
+      {dialog}
     </div>
   );
 }
