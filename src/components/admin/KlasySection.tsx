@@ -3,12 +3,16 @@
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import { PUSTA } from '@/lib/status-realizacji';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { useToast } from '@/components/ui/Toast';
 import type { TypSzkoly, KlasaAdmin } from './types';
 
 const LITERY_KLAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-const INPUT = 'rounded-sm border border-line-strong bg-surface px-3 py-2 text-ink';
 
 /** Opcje roku początku cyklu (np. 2022 dla technikum 2022–2027). */
 function opcjeRokuPoczatku(): number[] {
@@ -96,6 +100,40 @@ export default function KlasySection({ szkoly, klasy, reload }: KlasySectionProp
     }
   };
 
+  const columns: Column<KlasaAdmin>[] = [
+    { key: 'nazwa', header: 'Nazwa', render: (k) => <span className="font-medium text-ink">{k.nazwa}</span> },
+    { key: 'typ', header: 'Typ szkoły', render: (k) => <span className="text-ink-soft">{k.typ_szkoly?.nazwa ?? PUSTA}</span> },
+    {
+      key: 'rok',
+      header: 'Rok szkolny (zakres)',
+      render: (k) => <span className="text-ink-soft tabular-nums">{k.rok_szkolny}</span>,
+    },
+    { key: 'profil', header: 'Profil', render: (k) => <span className="text-ink-soft">{k.profil ?? PUSTA}</span> },
+    {
+      key: 'akcje',
+      header: 'Akcje',
+      align: 'right',
+      className: 'w-24',
+      render: (k) =>
+        k.can_manage !== false ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger hover:bg-danger-bg hover:text-danger"
+            onClick={() => handleDelete(k)}
+            disabled={deletingId === String(k.id)}
+          >
+            <Icon name="trash" size={14} />
+            {deletingId === String(k.id) ? '…' : 'Usuń'}
+          </Button>
+        ) : (
+          <span className="text-sm text-ink-faint" title="Tylko konto twórcy może usunąć tę klasę">
+            {PUSTA}
+          </span>
+        ),
+    },
+  ];
+
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
       <div className="border-b border-line bg-surface-2 px-5 py-4">
@@ -107,71 +145,75 @@ export default function KlasySection({ szkoly, klasy, reload }: KlasySectionProp
       </div>
       <div className="space-y-5 p-5">
         <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-ink-soft">Rodzaj szkoły (typ)</span>
-            <select
-              value={form.typSzkolyId}
-              onChange={(e) => setForm((prev) => ({ ...prev, typSzkolyId: e.target.value }))}
-              className={`${INPUT} w-64`}
-            >
-              <option value="">— wybierz typ szkoły —</option>
-              {szkoly.map((s) => (
-                <option key={String(s.id)} value={String(s.id)}>
-                  {s.nazwa} ({s.liczba_lat} lat)
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="w-64">
+            <Field label="Rodzaj szkoły (typ)" htmlFor="klasa-typ">
+              <Select
+                id="klasa-typ"
+                value={form.typSzkolyId}
+                onChange={(e) => setForm((prev) => ({ ...prev, typSzkolyId: e.target.value }))}
+              >
+                <option value="">— wybierz typ szkoły —</option>
+                {szkoly.map((s) => (
+                  <option key={String(s.id)} value={String(s.id)}>
+                    {s.nazwa} ({s.liczba_lat} lat)
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
           {liczbaLat > 0 && (
             <>
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-ink-soft">Rok początku cyklu</span>
-                <select
-                  value={form.rokPoczatku}
-                  onChange={(e) => setForm((s) => ({ ...s, rokPoczatku: e.target.value }))}
-                  className={`${INPUT} w-24`}
-                >
-                  <option value="">—</option>
-                  {opcjeRokuPoczatku().map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="w-28">
+                <Field label="Rok początku cyklu" htmlFor="klasa-rok">
+                  <Select
+                    id="klasa-rok"
+                    value={form.rokPoczatku}
+                    onChange={(e) => setForm((s) => ({ ...s, rokPoczatku: e.target.value }))}
+                  >
+                    <option value="">{PUSTA}</option>
+                    {opcjeRokuPoczatku().map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
               {rokKonca != null && (
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium text-ink-faint">Rok końca cyklu</span>
-                  <span className="text-sm font-semibold text-ink-soft">{rokKonca}</span>
-                  <span className="text-xs text-ink-faint">
+                  <span className="text-sm font-semibold text-ink-soft tabular-nums">{rokKonca}</span>
+                  <span className="text-xs text-ink-faint tabular-nums">
                     (zakres: {form.rokPoczatku}–{rokKonca})
                   </span>
                 </div>
               )}
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-ink-soft">Litera (np. A, B, C)</span>
-                <select
-                  value={form.litera}
-                  onChange={(e) => setForm((s) => ({ ...s, litera: e.target.value }))}
-                  className={`${INPUT} w-20`}
-                >
-                  {LITERY_KLAS.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-ink-soft">Profil (opcjonalnie)</span>
-                <input
-                  type="text"
-                  value={form.profil}
-                  onChange={(e) => setForm((s) => ({ ...s, profil: e.target.value }))}
-                  placeholder="np. matematyczno-fizyczny"
-                  className={`${INPUT} w-48`}
-                />
-              </label>
+              <div className="w-24">
+                <Field label="Litera (np. A, B, C)" htmlFor="klasa-litera">
+                  <Select
+                    id="klasa-litera"
+                    value={form.litera}
+                    onChange={(e) => setForm((s) => ({ ...s, litera: e.target.value }))}
+                  >
+                    {LITERY_KLAS.map((l) => (
+                      <option key={l} value={l}>
+                        {l}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+              <div className="w-48">
+                <Field label="Profil (opcjonalnie)" htmlFor="klasa-profil">
+                  <Input
+                    id="klasa-profil"
+                    type="text"
+                    value={form.profil}
+                    onChange={(e) => setForm((s) => ({ ...s, profil: e.target.value }))}
+                    placeholder="np. matematyczno-fizyczny"
+                  />
+                </Field>
+              </div>
               <Button type="submit" disabled={submitting || !form.rokPoczatku}>
                 {submitting ? 'Dodawanie…' : 'Dodaj klasę'}
               </Button>
@@ -183,49 +225,13 @@ export default function KlasySection({ szkoly, klasy, reload }: KlasySectionProp
             Wybrany typ szkoły nie ma ustawionej liczby lat – ustaw ją w sekcji Typy szkół.
           </p>
         )}
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-line bg-surface-2">
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Nazwa</th>
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Typ szkoły</th>
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Rok szkolny (zakres)</th>
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Profil</th>
-                <th className="w-24 px-4 py-2 text-right text-sm font-medium text-ink-soft">Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {klasy.map((k) => (
-                <tr key={String(k.id)} className="border-b border-line last:border-0 hover:bg-surface-2">
-                  <td className="px-4 py-2 font-medium text-ink">{k.nazwa}</td>
-                  <td className="px-4 py-2 text-ink-soft">{k.typ_szkoly?.nazwa ?? '–'}</td>
-                  <td className="px-4 py-2 text-ink-soft">{k.rok_szkolny}</td>
-                  <td className="px-4 py-2 text-ink-soft">{k.profil ?? '–'}</td>
-                  <td className="px-4 py-2 text-right">
-                    {k.can_manage !== false ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-danger hover:bg-danger-bg hover:text-danger"
-                        onClick={() => handleDelete(k)}
-                        disabled={deletingId === String(k.id)}
-                      >
-                        <Icon name="trash" size={14} />
-                        {deletingId === String(k.id) ? '…' : 'Usuń'}
-                      </Button>
-                    ) : (
-                      <span className="text-sm text-ink-faint" title="Tylko konto twórcy może usunąć tę klasę">
-                        –
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {klasy.length === 0 && (
-            <p className="py-6 text-center text-sm text-ink-faint">Brak klas. Dodaj pierwszą powyżej.</p>
-          )}
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            rows={klasy}
+            getRowKey={(k) => String(k.id)}
+            empty="Brak klas. Dodaj pierwszą powyżej."
+          />
         </div>
       </div>
       {dialog}

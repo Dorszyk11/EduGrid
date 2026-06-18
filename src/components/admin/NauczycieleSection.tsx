@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import { PUSTA } from '@/lib/status-realizacji';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { useToast } from '@/components/ui/Toast';
 import type { Przedmiot, NauczycielAdmin } from './types';
-
-const INPUT = 'rounded-sm border border-line-strong bg-surface px-3 py-2 text-ink';
 
 interface NauczycieleSectionProps {
   przedmioty: Przedmiot[];
@@ -91,6 +93,46 @@ export default function NauczycieleSection({ przedmioty, nauczyciele, reload }: 
     (p) => !search.trim() || p.nazwa.toLowerCase().includes(search.trim().toLowerCase()),
   );
 
+  const columns: Column<NauczycielAdmin>[] = [
+    { key: 'imie', header: 'Imię', render: (n) => <span className="font-medium text-ink">{n.imie}</span> },
+    { key: 'nazwisko', header: 'Nazwisko', render: (n) => <span className="font-medium text-ink">{n.nazwisko}</span> },
+    {
+      key: 'limit',
+      header: 'Limit godz.',
+      align: 'right',
+      render: (n) => (
+        <span className="text-ink-soft tabular-nums">{n.max_obciazenie ?? PUSTA}</span>
+      ),
+    },
+    {
+      key: 'specjalizacja',
+      header: 'Specjalizacja',
+      render: (n) => (
+        <span className="text-ink-soft">
+          {n.przedmioty?.length ? n.przedmioty.map((p) => p.nazwa ?? p.id).join(', ') : PUSTA}
+        </span>
+      ),
+    },
+    {
+      key: 'akcje',
+      header: 'Akcje',
+      align: 'right',
+      className: 'w-24',
+      render: (n) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-danger hover:bg-danger-bg hover:text-danger"
+          onClick={() => handleDelete(n)}
+          disabled={deletingId === String(n.id)}
+        >
+          <Icon name="trash" size={14} />
+          {deletingId === String(n.id) ? '…' : 'Usuń'}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
       <div className="border-b border-line bg-surface-2 px-5 py-4">
@@ -101,53 +143,63 @@ export default function NauczycieleSection({ przedmioty, nauczyciele, reload }: 
       </div>
       <div className="space-y-5 p-5">
         <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-ink-soft">Imię</span>
-            <input
-              type="text"
-              value={form.imie}
-              onChange={(e) => setForm((s) => ({ ...s, imie: e.target.value }))}
-              placeholder="np. Jan"
-              className={`${INPUT} w-40`}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-ink-soft">Nazwisko</span>
-            <input
-              type="text"
-              value={form.nazwisko}
-              onChange={(e) => setForm((s) => ({ ...s, nazwisko: e.target.value }))}
-              placeholder="np. Kowalski"
-              className={`${INPUT} w-44`}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-ink-soft">Limit godzin (tyg.)</span>
-            <input
-              type="number"
-              min={0}
-              max={40}
-              step={0.5}
-              value={form.limitGodzin}
-              onChange={(e) => setForm((s) => ({ ...s, limitGodzin: parseFloat(e.target.value) || 18 }))}
-              placeholder="18"
-              className={`${INPUT} w-24`}
-            />
-          </label>
+          <div className="w-40">
+            <Field label="Imię" htmlFor="naucz-imie">
+              <Input
+                id="naucz-imie"
+                type="text"
+                value={form.imie}
+                onChange={(e) => setForm((s) => ({ ...s, imie: e.target.value }))}
+                placeholder="np. Jan"
+              />
+            </Field>
+          </div>
+          <div className="w-44">
+            <Field label="Nazwisko" htmlFor="naucz-nazwisko">
+              <Input
+                id="naucz-nazwisko"
+                type="text"
+                value={form.nazwisko}
+                onChange={(e) => setForm((s) => ({ ...s, nazwisko: e.target.value }))}
+                placeholder="np. Kowalski"
+              />
+            </Field>
+          </div>
+          <div className="w-28">
+            <Field label="Limit godzin (tyg.)" htmlFor="naucz-limit">
+              <Input
+                id="naucz-limit"
+                type="number"
+                min={0}
+                max={40}
+                step={0.5}
+                value={form.limitGodzin}
+                onChange={(e) => setForm((s) => ({ ...s, limitGodzin: parseFloat(e.target.value) || 18 }))}
+                placeholder="18"
+                className="tabular-nums"
+              />
+            </Field>
+          </div>
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-ink-soft">Specjalizacja (przedmioty)</span>
+            <span id="naucz-spec-label" className="text-sm font-medium text-ink-soft">
+              Specjalizacja (przedmioty)
+            </span>
             {przedmioty.length === 0 ? (
-              <p className="w-48 max-w-full rounded-sm border border-line bg-warn-bg px-2 py-1.5 text-xs text-warn">
+              <p className="w-64 max-w-full rounded-sm border border-line bg-warn-bg px-2 py-1.5 text-xs text-warn">
                 Brak przedmiotów w bazie – nie można wybrać specjalizacji, dopóki nie pojawią się rekordy
                 przedmiotów (np. z migracji lub seed).
               </p>
             ) : (
-              <div className="w-48 rounded-sm border border-line-strong bg-surface-2">
-                <div className="flex max-h-20 flex-wrap gap-x-1 gap-y-0 overflow-y-auto border-b border-line p-1">
+              <div
+                role="group"
+                aria-labelledby="naucz-spec-label"
+                className="w-64 rounded-sm border border-line-strong bg-surface-2"
+              >
+                <div className="flex max-h-40 flex-wrap gap-x-1 gap-y-0.5 overflow-y-auto border-b border-line p-1.5">
                   {widocznePrzedmioty.map((p) => (
                     <label
                       key={String(p.id)}
-                      className="flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-[11px] text-ink hover:bg-surface-2"
+                      className="flex cursor-pointer items-center gap-1 rounded-sm px-1 py-0.5 text-xs text-ink hover:bg-surface"
                     >
                       <input
                         type="checkbox"
@@ -166,19 +218,24 @@ export default function NauczycieleSection({ przedmioty, nauczyciele, reload }: 
                       <span>{p.nazwa}</span>
                     </label>
                   ))}
+                  {widocznePrzedmioty.length === 0 && (
+                    <p className="px-1 py-0.5 text-xs text-ink-faint" role="status" aria-live="polite">
+                      Brak wyników dla „{search.trim()}”.
+                    </p>
+                  )}
                 </div>
                 <input
                   type="text"
                   placeholder="Szukaj przedmiotu…"
                   value={search}
+                  aria-label="Szukaj przedmiotu"
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-b px-2 py-1 text-xs focus:border-accent focus:ring-1 focus:ring-accent"
+                  className="w-full rounded-sm bg-surface px-2 py-1.5 text-xs text-ink focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent"
                 />
-                {form.przedmiotyIds.length > 0 && (
-                  <p className="border-t border-line px-1 pb-1 pt-0.5 text-[10px] text-ink-faint">
-                    Wybrano: {form.przedmiotyIds.length}
-                  </p>
-                )}
+                <p className="border-t border-line px-2 py-1 text-xs text-ink-faint tabular-nums" aria-live="polite">
+                  Widocznych: {widocznePrzedmioty.length} / {przedmioty.length} · wybrano:{' '}
+                  {form.przedmiotyIds.length}
+                </p>
               </div>
             )}
           </div>
@@ -186,45 +243,13 @@ export default function NauczycieleSection({ przedmioty, nauczyciele, reload }: 
             {submitting ? 'Dodawanie…' : 'Dodaj nauczyciela'}
           </Button>
         </form>
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-line bg-surface-2">
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Imię</th>
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Nazwisko</th>
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Limit godz.</th>
-                <th className="px-4 py-2 text-sm font-medium text-ink-soft">Specjalizacja</th>
-                <th className="w-24 px-4 py-2 text-right text-sm font-medium text-ink-soft">Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nauczyciele.map((n) => (
-                <tr key={String(n.id)} className="border-b border-line last:border-0 hover:bg-surface-2">
-                  <td className="px-4 py-2 font-medium text-ink">{n.imie}</td>
-                  <td className="px-4 py-2 font-medium text-ink">{n.nazwisko}</td>
-                  <td className="px-4 py-2 text-ink-soft">{n.max_obciazenie ?? 18}</td>
-                  <td className="px-4 py-2 text-ink-soft">
-                    {n.przedmioty?.length ? n.przedmioty.map((p) => p.nazwa ?? p.id).join(', ') : '–'}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-danger hover:bg-danger-bg hover:text-danger"
-                      onClick={() => handleDelete(n)}
-                      disabled={deletingId === String(n.id)}
-                    >
-                      <Icon name="trash" size={14} />
-                      {deletingId === String(n.id) ? '…' : 'Usuń'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {nauczyciele.length === 0 && (
-            <p className="py-6 text-center text-sm text-ink-faint">Brak nauczycieli. Dodaj pierwszego powyżej.</p>
-          )}
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            rows={nauczyciele}
+            getRowKey={(n) => String(n.id)}
+            empty="Brak nauczycieli. Dodaj pierwszego powyżej."
+          />
         </div>
       </div>
       {dialog}
