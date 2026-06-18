@@ -199,7 +199,7 @@ export default function PlanMeinTabela({ nazwaTypuSzkoly, cycleFilter, klasaId, 
 
   if (plans.length === 0) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-card p-4 text-amber-800">
+      <div className="bg-warn-bg border border-warn rounded-card p-4 text-warn" role="status">
         <p className="font-medium">Brak planu ramowego MEiN dla typu „{nazwaTypuSzkoly}”.</p>
         <p className="text-sm mt-1">
           W pliku ramowe-plany.json dostępne są m.in.: Szkoła podstawowa, Liceum ogólnokształcące, Technikum, Branżowa szkoła I stopnia.
