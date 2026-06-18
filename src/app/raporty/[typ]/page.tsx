@@ -7,6 +7,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import StatusPill from '@/components/ui/StatusPill';
+import DataTable, { type Column } from '@/components/ui/DataTable';
 import Icon from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { statusObciazeniaRaport } from '@/lib/obciazenie';
@@ -22,8 +23,10 @@ const TYTUL: Record<TypRaportu, string> = {
   'arkusz-organizacyjny': 'Arkusz organizacyjny',
 };
 
-const TH = 'px-6 py-3 text-left text-xs font-medium text-ink-soft uppercase tracking-wide';
-const TD = 'px-6 py-4 whitespace-nowrap text-sm';
+/** Typy raportów posiadające widok ekranowy (renderer). `arkusz-organizacyjny` jest tylko eksportem XLS. */
+const RENDEROWALNE: TypRaportu[] = ['zgodnosc-mein', 'obciazenia', 'braki-kadrowe'];
+
+const TD_CELL = 'px-3 py-2.5';
 
 function Stat({
   label,
@@ -46,12 +49,80 @@ function Stat({
 
 function RaportZgodnosci({ data }: { data: RaportZgodnoscMein }) {
   const s = data.statystyki;
+  const sumaWymagane = data.wyniki.reduce((acc, w) => acc + w.wymagane.godziny_w_cyklu, 0);
+  const sumaPlanowane = data.wyniki.reduce((acc, w) => acc + w.planowane.godziny_w_cyklu, 0);
+  const sumaRoznica = data.wyniki.reduce((acc, w) => acc + w.roznica.roznica, 0);
+
+  const columns: Column<RaportZgodnoscMein['wyniki'][number]>[] = [
+    {
+      key: 'przedmiot',
+      header: 'Przedmiot',
+      sticky: true,
+      render: (w) => (
+        <Link href={`/przedmioty/${w.przedmiot.id}`} className="text-accent hover:underline">
+          {w.przedmiot.nazwa}
+        </Link>
+      ),
+    },
+    {
+      key: 'klasa',
+      header: 'Klasa',
+      render: (w) => (
+        <Link href={`/klasy/${w.klasa.id}`} className="text-accent hover:underline">
+          {w.klasa.nazwa}
+        </Link>
+      ),
+    },
+    {
+      key: 'wymagane',
+      header: 'Wymagane',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (w) => w.wymagane.godziny_w_cyklu,
+    },
+    {
+      key: 'planowane',
+      header: 'Planowane',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (w) => w.planowane.godziny_w_cyklu,
+    },
+    {
+      key: 'roznica',
+      header: 'Różnica',
+      align: 'center',
+      render: (w) => (
+        <span
+          className={`font-medium tabular-nums ${
+            w.roznica.roznica < 0 ? 'text-danger' : w.roznica.roznica > 0 ? 'text-ok' : 'text-ink-soft'
+          }`}
+        >
+          {w.roznica.roznica > 0 ? '+' : ''}
+          {w.roznica.roznica}
+        </span>
+      ),
+    },
+    {
+      key: 'realizacja',
+      header: 'Realizacja',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (w) => `${w.roznica.procent_realizacji.toFixed(1)}%`,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (w) => <StatusPill status={w.status} />,
+    },
+  ];
+
   return (
     <>
       {!data.kompletne && (
         <div
           role="status"
-          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="rounded-card border border-warn bg-warn-bg px-4 py-3 text-sm text-warn"
         >
           {data.komunikat ?? 'Dane MEiN są niekompletne — wyniki mogą nie odzwierciedlać pełnej zgodności.'}
         </div>
@@ -67,59 +138,88 @@ function RaportZgodnosci({ data }: { data: RaportZgodnoscMein }) {
         </div>
       </Card>
 
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="border-b border-line bg-surface-2">
-              <tr>
-                <th className={TH}>Przedmiot</th>
-                <th className={TH}>Klasa</th>
-                <th className={`${TH} text-center`}>Wymagane</th>
-                <th className={`${TH} text-center`}>Planowane</th>
-                <th className={`${TH} text-center`}>Różnica</th>
-                <th className={`${TH} text-center`}>Realizacja</th>
-                <th className={`${TH} text-center`}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.wyniki.map((w, index) => (
-                <tr key={index} className="border-b border-line last:border-0 hover:bg-surface-2">
-                  <td className={TD}>
-                    <Link href={`/przedmioty/${w.przedmiot.id}`} className="text-accent hover:underline">
-                      {w.przedmiot.nazwa}
-                    </Link>
-                  </td>
-                  <td className={TD}>
-                    <Link href={`/klasy/${w.klasa.id}`} className="text-accent hover:underline">
-                      {w.klasa.nazwa}
-                    </Link>
-                  </td>
-                  <td className={`${TD} text-center tabular-nums`}>{w.wymagane.godziny_w_cyklu}</td>
-                  <td className={`${TD} text-center tabular-nums`}>{w.planowane.godziny_w_cyklu}</td>
-                  <td
-                    className={`${TD} text-center font-medium tabular-nums ${
-                      w.roznica.roznica < 0 ? 'text-danger' : w.roznica.roznica > 0 ? 'text-ok' : 'text-ink-soft'
-                    }`}
-                  >
-                    {w.roznica.roznica > 0 ? '+' : ''}
-                    {w.roznica.roznica}
-                  </td>
-                  <td className={`${TD} text-center tabular-nums`}>{w.roznica.procent_realizacji.toFixed(1)}%</td>
-                  <td className={`${TD} text-center`}>
-                    <StatusPill status={w.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        rows={data.wyniki}
+        getRowKey={(_w, index) => index}
+        stickyHeader
+        empty="Brak pozycji do oceny zgodności dla wybranych parametrów."
+        footer={
+          data.wyniki.length > 0 ? (
+            <>
+              <td className={`${TD_CELL} sticky left-0 z-10 bg-surface-2`}>Razem</td>
+              <td className={TD_CELL} />
+              <td className={`${TD_CELL} text-center tabular-nums`}>{sumaWymagane}</td>
+              <td className={`${TD_CELL} text-center tabular-nums`}>{sumaPlanowane}</td>
+              <td className={`${TD_CELL} text-center tabular-nums`}>
+                {sumaRoznica > 0 ? '+' : ''}
+                {sumaRoznica}
+              </td>
+              <td className={TD_CELL} />
+              <td className={TD_CELL} />
+            </>
+          ) : undefined
+        }
+      />
     </>
   );
 }
 
 function RaportObciazen({ data }: { data: RaportObciazenia }) {
   const s = data.statystyki;
+  const sumaObciazenie = data.obciazenia.reduce((acc, o) => acc + o.aktualneObciazenie, 0);
+  const sumaPrzypisania = data.obciazenia.reduce((acc, o) => acc + (o.liczbaPrzypisan || 0), 0);
+
+  const columns: Column<RaportObciazenia['obciazenia'][number]>[] = [
+    {
+      key: 'nauczyciel',
+      header: 'Nauczyciel',
+      sticky: true,
+      render: (o) => (
+        <Link href={`/nauczyciele/${o.nauczycielId}`} className="font-medium text-accent hover:underline">
+          {o.nauczycielNazwa}
+        </Link>
+      ),
+    },
+    {
+      key: 'obciazenie',
+      header: 'Obciążenie',
+      align: 'center',
+      className: 'font-medium tabular-nums',
+      render: (o) => `${o.aktualneObciazenie}h`,
+    },
+    {
+      key: 'max',
+      header: 'Max',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (o) => `${o.maxObciazenie}h`,
+    },
+    {
+      key: 'wykorzystanie',
+      header: 'Wykorzystanie',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (o) => `${o.procentWykorzystania.toFixed(1)}%`,
+    },
+    {
+      key: 'przypisania',
+      header: 'Przypisania',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (o) => o.liczbaPrzypisan || 0,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (o) => {
+        const status = statusObciazeniaRaport(o.aktualneObciazenie, o.maxObciazenie, o.procentWykorzystania);
+        return <StatusPill status={status.key} label={status.label} />;
+      },
+    },
+  ];
+
   return (
     <>
       <Card>
@@ -133,56 +233,83 @@ function RaportObciazen({ data }: { data: RaportObciazenia }) {
         </div>
       </Card>
 
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="border-b border-line bg-surface-2">
-              <tr>
-                <th className={TH}>Nauczyciel</th>
-                <th className={`${TH} text-center`}>Obciążenie</th>
-                <th className={`${TH} text-center`}>Max</th>
-                <th className={`${TH} text-center`}>Wykorzystanie</th>
-                <th className={`${TH} text-center`}>Przypisania</th>
-                <th className={`${TH} text-center`}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.obciazenia.map((obc) => {
-                const status = statusObciazeniaRaport(
-                  obc.aktualneObciazenie,
-                  obc.maxObciazenie,
-                  obc.procentWykorzystania,
-                );
-                return (
-                  <tr key={obc.nauczycielId} className="border-b border-line last:border-0 hover:bg-surface-2">
-                    <td className={TD}>
-                      <Link
-                        href={`/nauczyciele/${obc.nauczycielId}`}
-                        className="font-medium text-accent hover:underline"
-                      >
-                        {obc.nauczycielNazwa}
-                      </Link>
-                    </td>
-                    <td className={`${TD} text-center font-medium tabular-nums`}>{obc.aktualneObciazenie}h</td>
-                    <td className={`${TD} text-center tabular-nums`}>{obc.maxObciazenie}h</td>
-                    <td className={`${TD} text-center tabular-nums`}>{obc.procentWykorzystania.toFixed(1)}%</td>
-                    <td className={`${TD} text-center tabular-nums`}>{obc.liczbaPrzypisan || 0}</td>
-                    <td className={`${TD} text-center`}>
-                      <StatusPill status={status.key} label={status.label} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        rows={data.obciazenia}
+        getRowKey={(o) => o.nauczycielId}
+        stickyHeader
+        empty="Brak nauczycieli do wykazania obciążenia."
+        footer={
+          data.obciazenia.length > 0 ? (
+            <>
+              <td className={`${TD_CELL} sticky left-0 z-10 bg-surface-2`}>Razem</td>
+              <td className={`${TD_CELL} text-center tabular-nums`}>{sumaObciazenie}h</td>
+              <td className={TD_CELL} />
+              <td className={TD_CELL} />
+              <td className={`${TD_CELL} text-center tabular-nums`}>{sumaPrzypisania}</td>
+              <td className={TD_CELL} />
+            </>
+          ) : undefined
+        }
+      />
     </>
   );
 }
 
 function RaportBraki({ data }: { data: RaportBrakiKadrowe }) {
   const s = data.statystyki;
+  const sumaGodziny = data.braki.reduce((acc, b) => acc + b.godzinyTygodniowo, 0);
+
+  const columns: Column<RaportBrakiKadrowe['braki'][number]>[] = [
+    {
+      key: 'przedmiot',
+      header: 'Przedmiot',
+      sticky: true,
+      render: (b) => (
+        <Link href={`/przedmioty/${b.przedmiotId}`} className="font-medium text-accent hover:underline">
+          {b.przedmiotNazwa}
+        </Link>
+      ),
+    },
+    {
+      key: 'klasa',
+      header: 'Klasa',
+      render: (b) => (
+        <Link href={`/klasy/${b.klasaId}`} className="text-accent hover:underline">
+          {b.klasaNazwa}
+        </Link>
+      ),
+    },
+    {
+      key: 'godziny',
+      header: 'Godziny/tyg',
+      align: 'center',
+      className: 'font-medium tabular-nums',
+      render: (b) => b.godzinyTygodniowo,
+    },
+    { key: 'powod', header: 'Powód', render: (b) => <span className="text-ink-soft">{b.powod}</span> },
+    {
+      key: 'dostepni',
+      header: 'Dostępni',
+      align: 'center',
+      className: 'tabular-nums',
+      render: (b) => b.dostepniNauczyciele,
+    },
+    {
+      key: 'sugestie',
+      header: 'Sugestie',
+      render: (b) => (
+        <ul className="list-inside list-disc text-ink-soft">
+          {b.sugerowaneRozwiazania?.slice(0, 2).map((sugestia, i) => (
+            <li key={i} className="text-xs">
+              {sugestia}
+            </li>
+          ))}
+        </ul>
+      ),
+    },
+  ];
+
   return (
     <>
       <Card>
@@ -194,53 +321,25 @@ function RaportBraki({ data }: { data: RaportBrakiKadrowe }) {
         </div>
       </Card>
 
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="border-b border-line bg-surface-2">
-              <tr>
-                <th className={TH}>Przedmiot</th>
-                <th className={TH}>Klasa</th>
-                <th className={`${TH} text-center`}>Godziny/tyg</th>
-                <th className={TH}>Powód</th>
-                <th className={`${TH} text-center`}>Dostępni</th>
-                <th className={TH}>Sugestie</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.braki.map((brak, index) => (
-                <tr key={index} className="border-b border-line last:border-0 hover:bg-danger-bg">
-                  <td className={TD}>
-                    <Link
-                      href={`/przedmioty/${brak.przedmiotId}`}
-                      className="font-medium text-accent hover:underline"
-                    >
-                      {brak.przedmiotNazwa}
-                    </Link>
-                  </td>
-                  <td className={TD}>
-                    <Link href={`/klasy/${brak.klasaId}`} className="text-accent hover:underline">
-                      {brak.klasaNazwa}
-                    </Link>
-                  </td>
-                  <td className={`${TD} text-center font-medium tabular-nums`}>{brak.godzinyTygodniowo}</td>
-                  <td className="px-6 py-4 text-sm text-ink-soft">{brak.powod}</td>
-                  <td className={`${TD} text-center tabular-nums`}>{brak.dostepniNauczyciele}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <ul className="list-inside list-disc text-ink-soft">
-                      {brak.sugerowaneRozwiazania?.slice(0, 2).map((sugestia, i) => (
-                        <li key={i} className="text-xs">
-                          {sugestia}
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        rows={data.braki}
+        getRowKey={(_b, index) => index}
+        stickyHeader
+        empty="Brak braków kadrowych dla wybranych parametrów."
+        footer={
+          data.braki.length > 0 ? (
+            <>
+              <td className={`${TD_CELL} sticky left-0 z-10 bg-surface-2`}>Razem</td>
+              <td className={TD_CELL} />
+              <td className={`${TD_CELL} text-center tabular-nums`}>{sumaGodziny}</td>
+              <td className={TD_CELL} />
+              <td className={TD_CELL} />
+              <td className={TD_CELL} />
+            </>
+          ) : undefined
+        }
+      />
     </>
   );
 }
@@ -257,16 +356,22 @@ export default function RaportPage() {
   const [dane, setDane] = useState<RaportData | null>(null);
   const [ladowanie, setLadowanie] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [eksportuje, setEksportuje] = useState(false);
+
+  const renderowalny = typ ? RENDEROWALNE.includes(typ) : false;
 
   useEffect(() => {
     const typZUrl = pathname?.split('/').pop() as TypRaportu;
     if (typZUrl && ['zgodnosc-mein', 'obciazenia', 'braki-kadrowe', 'arkusz-organizacyjny'].includes(typZUrl)) {
       setTyp(typZUrl);
-      if (typSzkolyId) {
+      // „arkusz-organizacyjny" nie ma widoku ekranowego — tylko eksport XLS; nie pobieramy danych.
+      if (typSzkolyId && RENDEROWALNE.includes(typZUrl)) {
         pobierzRaport(typZUrl);
       } else {
         setLadowanie(false);
       }
+    } else {
+      setLadowanie(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, typSzkolyId, rokSzkolny]);
@@ -313,10 +418,11 @@ export default function RaportPage() {
   };
 
   const eksportujDoXLS = async () => {
-    if (!typSzkolyId) return;
+    if (!typSzkolyId || eksportuje) return;
     const url = `/api/export/xls?typSzkolyId=${typSzkolyId}&rokSzkolny=${rokSzkolny}&typ=${
       typ === 'zgodnosc-mein' ? 'zgodnosc-mein' : 'arkusz-organizacyjny'
     }`;
+    setEksportuje(true);
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Błąd przy eksporcie');
@@ -332,34 +438,10 @@ export default function RaportPage() {
     } catch (e) {
       console.error('Błąd eksportu:', e);
       toast.error('Błąd przy eksporcie do XLS');
+    } finally {
+      setEksportuje(false);
     }
   };
-
-  if (ladowanie) {
-    return (
-      <div className="space-y-6 p-6">
-        <Card>
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 w-1/3 rounded-sm bg-line" />
-            <div className="h-4 w-1/2 rounded-sm bg-line" />
-            <div className="h-4 w-2/3 rounded-sm bg-line" />
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-4 p-6">
-        <div className="rounded-card border border-danger bg-danger-bg px-4 py-3 text-sm text-danger">{error}</div>
-        <Button variant="secondary" onClick={() => router.push('/raporty')}>
-          <Icon name="back" size={16} />
-          Powrót do raportów
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 p-6">
@@ -367,9 +449,9 @@ export default function RaportPage() {
         title={typ ? TYTUL[typ] : 'Raport'}
         actions={
           <>
-            <Button variant="secondary" onClick={eksportujDoXLS}>
+            <Button variant="secondary" onClick={eksportujDoXLS} disabled={!typSzkolyId || eksportuje}>
               <Icon name="download" size={16} />
-              Eksportuj do XLS
+              {eksportuje ? 'Eksportowanie…' : 'Eksportuj do XLS'}
             </Button>
             <Button variant="ghost" onClick={() => router.push('/raporty')}>
               <Icon name="back" size={16} />
@@ -379,9 +461,54 @@ export default function RaportPage() {
         }
       />
 
-      {typ === 'zgodnosc-mein' && dane && <RaportZgodnosci data={dane as RaportZgodnoscMein} />}
-      {typ === 'obciazenia' && dane && <RaportObciazen data={dane as RaportObciazenia} />}
-      {typ === 'braki-kadrowe' && dane && <RaportBraki data={dane as RaportBrakiKadrowe} />}
+      {ladowanie ? (
+        <Card>
+          <div className="animate-pulse motion-reduce:animate-none space-y-4" role="status" aria-live="polite">
+            <div className="h-8 w-1/3 rounded-sm bg-line" />
+            <div className="h-4 w-1/2 rounded-sm bg-line" />
+            <div className="h-4 w-2/3 rounded-sm bg-line" />
+            <span className="sr-only">Wczytywanie raportu…</span>
+          </div>
+        </Card>
+      ) : error ? (
+        <div className="space-y-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-card border border-danger bg-danger-bg px-4 py-3 text-sm text-danger"
+          >
+            {error}
+          </div>
+          <Button variant="secondary" onClick={() => router.push('/raporty')}>
+            <Icon name="back" size={16} />
+            Powrót do raportów
+          </Button>
+        </div>
+      ) : typ && !renderowalny ? (
+        <Card className="flex gap-3 bg-warn-bg">
+          <Icon name="info" size={18} className="mt-0.5 shrink-0 text-warn" />
+          <div className="text-sm text-ink-soft">
+            <p className="font-medium text-ink">Raport w przygotowaniu</p>
+            <p className="mt-1">
+              Ten raport nie ma jeszcze widoku ekranowego. Możesz pobrać go jako plik XLS przyciskiem
+              „Eksportuj do XLS” powyżej.
+            </p>
+          </div>
+        </Card>
+      ) : !typSzkolyId ? (
+        <Card className="flex gap-3 bg-warn-bg">
+          <Icon name="warning" size={18} className="mt-0.5 shrink-0 text-warn" />
+          <p className="text-sm text-ink-soft">
+            Wybierz typ szkoły na liście raportów, aby wygenerować ten raport.
+          </p>
+        </Card>
+      ) : (
+        <>
+          {typ === 'zgodnosc-mein' && dane && <RaportZgodnosci data={dane as RaportZgodnoscMein} />}
+          {typ === 'obciazenia' && dane && <RaportObciazen data={dane as RaportObciazenia} />}
+          {typ === 'braki-kadrowe' && dane && <RaportBraki data={dane as RaportBrakiKadrowe} />}
+        </>
+      )}
     </div>
   );
 }
