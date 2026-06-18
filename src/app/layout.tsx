@@ -31,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pl" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body>
+    <html lang="pl" className={`${inter.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AuthProvider>
           <ToastProvider>
             <AuthAwareLayout>{children}</AuthAwareLayout>
