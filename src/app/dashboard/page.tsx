@@ -5,6 +5,7 @@ import Link from 'next/link';
 import PlanMeinTabela from '@/components/dashboard/PlanMeinTabela';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 import KafelkiRealizacji, { type DaneRealizacji } from '@/components/dashboard/KafelkiRealizacji';
+import AgregatSzkoly from '@/components/dashboard/AgregatSzkoly';
 import { obliczRealizacjaZPrzydzialu } from '@/utils/realizacjaZPrzydzialu';
 import PageHeader from '@/components/ui/PageHeader';
 import { buttonClass } from '@/components/ui/Button';
@@ -37,8 +38,6 @@ function rokSzkolnyZRocznika(rocznik: string): string {
 }
 
 export default function DashboardPage() {
-  const [dane, setDane] = useState<{ ok: boolean } | null>(null);
-  const [ladowanie, setLadowanie] = useState(false);
   const [typSzkolyId, setTypSzkolyId] = useState<string>('');
   const [klasaList, setKlasaList] = useState<KlasaItem[]>([]);
   const [selectedRocznik, setSelectedRocznik] = useState<string>('');
@@ -127,15 +126,6 @@ export default function DashboardPage() {
       }
     }
   }, [klasaList, typSzkolyId, ladowanieKlas]);
-
-  useEffect(() => {
-    if (typSzkolyId && selectedRocznik && selectedLitera) {
-      setDane({ ok: true });
-    } else {
-      setDane(null);
-    }
-    setLadowanie(false);
-  }, [typSzkolyId, selectedRocznik, selectedLitera]);
 
   // Realizacja wymagań: tylko gdy wybrana pełna klasa – dane z API (dla szkoły: godziny do wyboru, doradztwo, dyrektor, rozszerzenia)
   const nazwaTypuSzkolyDoZgodnosci = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
@@ -270,82 +260,77 @@ export default function DashboardPage() {
     </div>
   );
 
-  if (!dane || !typSzkolyId || !selectedRocznik || !selectedLitera) {
-    const nazwaTypuSzkolyShort = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
-    return (
-      <div className="p-4 sm:p-6 space-y-5 max-w-full overflow-hidden">
-        <PageHeader
-          title="Dashboard"
-          description="Przegląd zgodności z planem ramowym MEiN."
-          actions={<SelectyKaskadowe />}
-        />
-        <div className="rounded-card border border-accent/20 bg-accent-weak p-4">
-          <p className="text-sm leading-relaxed text-ink-soft">
-            Wybierz <strong className="text-ink">typ szkoły</strong>, potem <strong className="text-ink">rocznik</strong> (zakres lat), a na końcu <strong className="text-ink">klasę</strong> (literę) – wtedy załadują się dane tej klasy w dashboardzie.
-          </p>
-          {typSzkolyId && !ladowanieKlas && roczniki.length === 0 && (
-            <p className="mt-2 text-sm text-warn">Brak klas dla wybranego typu szkoły. Dodaj klasy w panelu admina.</p>
-          )}
-        </div>
-        {/* Realizacja wymagań – tylko gdy wybrana pełna klasa (typ + rocznik + litera) */}
-        {typSzkolyId && selectedRocznik && selectedLitera && selectedClass && (
-          <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-ink">Realizacja wymagań MEiN</h2>
-            <KafelkiRealizacji
-              dane={zgodnoscDane}
-              ladowanie={zgodnoscLadowanie}
-              brakDanychKomunikat="Wybierz typ szkoły, rocznik i klasę, aby zobaczyć statystyki realizacji."
-            />
-          </section>
-        )}
-        {/* Plan MEiN widoczny od razu po wyborze typu szkoły */}
-        {nazwaTypuSzkolyShort && (
-          <section className="space-y-2 min-w-0">
-            <h2 className="font-display text-lg font-semibold text-ink">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
-            <p className="text-sm leading-relaxed text-ink-soft">
-              Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
-            </p>
-            <PlanMeinTabela nazwaTypuSzkoly={nazwaTypuSzkolyShort} tylkoOdczyt />
-          </section>
-        )}
-      </div>
-    );
-  }
-
   const nazwaTypuSzkoly = typySzkol.find((t) => t.id === typSzkolyId)?.nazwa ?? '';
+  const klasaWybrana = Boolean(typSzkolyId && selectedRocznik && selectedLitera && selectedClass);
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 max-w-full overflow-hidden">
+    <div className="p-4 sm:p-6 space-y-6 max-w-full overflow-hidden">
       <PageHeader
         title="Dashboard"
-        description="Przegląd zgodności z planem ramowym MEiN."
+        description="Przegląd zgodności z planem ramowym MEiN — agregat całoszkolny."
         actions={<SelectyKaskadowe />}
       />
 
-      {/* Wykres kołowy + kafelki: procent realizacji, braki godzin, nadwyżki */}
-      <section className="space-y-3">
-        <h2 className="font-display text-lg font-semibold text-ink">Realizacja wymagań MEiN</h2>
-        <KafelkiRealizacji
-          dane={zgodnoscDane}
-          ladowanie={zgodnoscLadowanie}
-          brakDanychKomunikat="Brak danych zgodności dla wybranego typu i rocznika."
-        />
-      </section>
-
-      {/* Plan ramowy MEiN */}
-      {nazwaTypuSzkoly && (
-        <section className="space-y-2 min-w-0">
-          <h2 className="font-display text-lg font-semibold text-ink">Plan ramowy MEiN – przedmioty i wymagane godziny w latach</h2>
+      {/* Agregat całoszkolny — gdy wybrany typ szkoły (nie wymaga pełnej klasy) */}
+      {typSzkolyId ? (
+        <AgregatSzkoly typSzkolyId={typSzkolyId} rokSzkolny={rokSzkolny} />
+      ) : (
+        <div className="rounded-card border border-accent/20 bg-accent-weak p-4">
           <p className="text-sm leading-relaxed text-ink-soft">
-            Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
+            Wybierz <strong className="text-ink">typ szkoły</strong>, aby zobaczyć agregat całoszkolny.
+            Dodatkowo wskaż <strong className="text-ink">rocznik</strong> i <strong className="text-ink">klasę</strong>,
+            aby otworzyć podgląd pojedynczej klasy.
           </p>
-          <PlanMeinTabela
-            nazwaTypuSzkoly={nazwaTypuSzkoly}
-            klasaId={selectedClass?.id}
-            tylkoOdczyt
-            onPrzydzialChange={() => setOdswiezKafelki((n) => n + 1)}
-            onDoradztwoChange={() => setOdswiezKafelki((n) => n + 1)}
-          />
+        </div>
+      )}
+
+      {typSzkolyId && !ladowanieKlas && roczniki.length === 0 && (
+        <p role="status" aria-live="polite" className="text-sm text-warn">
+          Brak klas dla wybranego typu szkoły. Dodaj klasy w panelu admina.
+        </p>
+      )}
+
+      {/* Podgląd klasy — dotychczasowy widok per-klasa (realizacja + plan), zachowana funkcja */}
+      {typSzkolyId && (
+        <section className="space-y-5 min-w-0">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-ink">Podgląd klasy</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              {klasaWybrana
+                ? `Realizacja wymagań i plan ramowy dla klasy ${selectedClass?.nazwa} (${selectedRocznik}).`
+                : 'Wybierz rocznik i klasę powyżej, aby zobaczyć realizację wymagań tej klasy.'}
+            </p>
+          </div>
+
+          {klasaWybrana && (
+            <div className="space-y-3">
+              <h3 className="font-display text-base font-semibold text-ink">Realizacja wymagań MEiN</h3>
+              <KafelkiRealizacji
+                dane={zgodnoscDane}
+                ladowanie={zgodnoscLadowanie}
+                brakDanychKomunikat="Brak danych zgodności dla wybranej klasy."
+              />
+            </div>
+          )}
+
+          {/* Plan ramowy MEiN — widoczny od razu po wyborze typu szkoły */}
+          {nazwaTypuSzkoly && (
+            <div className="space-y-2 min-w-0">
+              <h3 className="font-display text-base font-semibold text-ink">
+                Plan ramowy MEiN – przedmioty i wymagane godziny w latach
+              </h3>
+              <p className="text-sm leading-relaxed text-ink-soft">
+                Wymagania MEiN dla wybranego typu szkoły (godziny tygodniowo w klasach oraz razem w cyklu).
+              </p>
+              <PlanMeinTabela
+                nazwaTypuSzkoly={nazwaTypuSzkoly}
+                klasaId={selectedClass?.id}
+                tylkoOdczyt
+                onPrzydzialChange={() => setOdswiezKafelki((n) => n + 1)}
+                onDoradztwoChange={() => setOdswiezKafelki((n) => n + 1)}
+              />
+            </div>
+          )}
         </section>
       )}
     </div>
