@@ -189,11 +189,24 @@ EduGrid/
 
 ## Testy
 
-Jest 29 + React Testing Library (jsdom per plik przez docblock `@jest-environment jsdom`).
-Pokrycie obejmuje m.in. rdzeń godzin (`src/lib/przydzial`), reguły domenowe, helpery tabeli oraz testy charakteryzujące/regresyjne komponentów (np. `PlanMeinTabela`: tryby przydziału, doradztwo, modal ponadprogramowy, podział na grupy).
+**Jednostkowe / komponentowe** — Jest 29 + React Testing Library (jsdom per plik przez docblock `@jest-environment jsdom`).
+Pokrycie obejmuje m.in. rdzeń godzin (`src/lib/przydzial`), reguły domenowe, helpery tabeli, agregację zgodności MEiN oraz testy charakteryzujące/regresyjne komponentów (np. `PlanMeinTabela`: tryby przydziału, doradztwo, modal ponadprogramowy, podział na grupy).
 
 ```bash
 npm test
+```
+
+**E2E (smoke)** — Playwright (`e2e/smoke.spec.ts`, konfiguracja `playwright.config.ts`):
+
+```bash
+npx playwright install chromium   # jednorazowo
+npm run test:e2e                  # startuje dev i odpala smoke
+```
+
+Ścieżka uwierzytelniona (logowanie → dashboard → przydział → realizacja) jest pomijana, dopóki nie ustawisz konta testowego:
+
+```bash
+E2E_USER=test@example.com E2E_PASS=... npm run test:e2e
 ```
 
 ## System designu
