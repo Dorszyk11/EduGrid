@@ -12,6 +12,8 @@
     "generate:types": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
     "generate:importmap": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:importmap",
     "migrate": "cross-env PAYLOAD_CONFIG_PATH=payload.config.ts payload migrate",
+    "migrate:create": "cross-env PAYLOAD_CONFIG_PATH=payload.config.ts payload migrate:create",
+    "migrate:status": "cross-env PAYLOAD_CONFIG_PATH=payload.config.ts payload migrate:status",
     "test": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts jest --runInBand --forceExit",
     "test:register:http": "node scripts/test-register-http.js",
     "test:db": "node test-db-connection.js",

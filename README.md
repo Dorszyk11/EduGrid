@@ -146,7 +146,10 @@ Dane planów: `src/utils/import/ramowe-plany.json`.
 
 ## Baza danych (Supabase / PostgreSQL)
 
-- **Schemat** zarządzany przez Payload (tryb `push` — synchronizacja schematu z definicji kolekcji; brak osobnych plików migracji w repo). Skrypt `npm run migrate` dostępny dla podejścia migracyjnego.
+- **Schemat / migracje**: w **dev** Payload używa `push` (auto-sync schematu z kolekcji). W **produkcji** `push` jest wyłączony — schemat aplikują **migracje** z `src/migrations` (`migrationDir` w `payload.config.ts`).
+  - Wygenerowanie migracji po zmianie kolekcji (lokalnie, połączenie **session-mode 5432**): `npm run migrate:create -- --name <opis>`.
+  - Zastosowanie na deployu: `npm run migrate` (status: `npm run migrate:status`).
+  - Uwaga: `migrate:create` introspektuje schemat zapytaniami parametryzowanymi — uruchamiaj na poolerze **session-mode (5432)**, nie transaction (6543).
 - **Pooler**: zalecany **session mode (port 5432)** — w transaction mode (6543) PgBouncer cicho odrzuca zapytania parametryzowane używane przez introspekcję drizzle. `pool.max:2`, `connectionTimeoutMillis:10s` (zimny pooler nie blokuje wtedy ładowania aplikacji w „pending”).
 - **SSL** (deploy) — gdy pojawi się `self-signed certificate in certificate chain`:
   - `DB_SSL_MODE=require`

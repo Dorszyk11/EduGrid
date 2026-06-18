@@ -68,6 +68,9 @@ export default buildConfig({
     PrzydzialGodzinWybor,
   ],
   db: postgresAdapter({
+    // Katalog migracji — w produkcji Payload nie używa `push`, lecz zaaplikowanych migracji.
+    // W dev `push` nadal synchronizuje schemat (domyślnie). Generowanie: `npm run migrate:create`.
+    migrationDir: path.resolve(process.cwd(), 'src/migrations'),
     pool: (() => {
       const uri = process.env.DATABASE_URI || '';
       const poolConfig: Record<string, unknown> = {
