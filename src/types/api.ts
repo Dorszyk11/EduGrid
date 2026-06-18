@@ -21,8 +21,14 @@ export interface RaportZgodnoscMein {
     zgodne: number;
     zBrakami: number;
     zNadwyzkami: number;
+    /** Pozycje bez wymagań MEiN (status BRAK_DANYCH). */
+    bezDanych: number;
     sredniProcent: number;
   };
+  /** Czy były jakiekolwiek wymagania MEiN do oceny i wszystkie miały dane. */
+  kompletne: boolean;
+  /** Wyjaśnienie, gdy dane są niekompletne (brak siatek lub pozycje BRAK_DANYCH). */
+  komunikat?: string;
 }
 
 /** GET /api/dashboard/obciazenie-nauczycieli */

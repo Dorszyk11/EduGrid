@@ -48,6 +48,14 @@ function RaportZgodnosci({ data }: { data: RaportZgodnoscMein }) {
   const s = data.statystyki;
   return (
     <>
+      {!data.kompletne && (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          {data.komunikat ?? 'Dane MEiN są niekompletne — wyniki mogą nie odzwierciedlać pełnej zgodności.'}
+        </div>
+      )}
       <Card>
         <h2 className="mb-4 text-lg font-semibold text-ink">Statystyki</h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">

@@ -60,9 +60,57 @@ export interface ParametryObliczen {
   userId?: string;
 }
 
+export interface StatystykiZgodnosci {
+  lacznie: number;
+  zgodne: number;
+  zBrakami: number;
+  zNadwyzkami: number;
+  /** Pozycje bez wymagań MEiN (status BRAK_DANYCH). */
+  bezDanych: number;
+  sredniProcent: number;
+}
+
+export interface AgregatZgodnosci {
+  statystyki: StatystykiZgodnosci;
+  /** Czy były jakiekolwiek wymagania MEiN do oceny i wszystkie miały dane. */
+  kompletne: boolean;
+  /** Wyjaśnienie, gdy dane są niekompletne (brak siatek lub pozycje BRAK_DANYCH). */
+  komunikat?: string;
+}
+
+/**
+ * Agreguje wyniki zgodności do statystyk dashboardu i sygnalizuje kompletność danych.
+ * Rozróżnia „realne 0" od „brak / niekompletne dane MEiN" (audyt [12]) — bez tego
+ * pusty wynik wyglądał jak „sprawdzono i wszystko 0". Pola lacznie/zgodne/zBrakami/
+ * zNadwyzkami/sredniProcent zgodne 1:1 z dawną inline-agregacją trasy; dodane:
+ * bezDanych, kompletne, komunikat.
+ */
+export function agregujStatystykiZgodnosci(wyniki: WynikZgodnosciMein[]): AgregatZgodnosci {
+  const bezDanych = wyniki.filter((w) => w.status === 'BRAK_DANYCH').length;
+  const statystyki: StatystykiZgodnosci = {
+    lacznie: wyniki.length,
+    zgodne: wyniki.filter((w) => w.status === 'OK').length,
+    zBrakami: wyniki.filter((w) => w.status === 'BRAK').length,
+    zNadwyzkami: wyniki.filter((w) => w.status === 'NADWYŻKA').length,
+    bezDanych,
+    sredniProcent:
+      wyniki.length > 0
+        ? wyniki.reduce((sum, w) => sum + w.roznica.procent_realizacji, 0) / wyniki.length
+        : 0,
+  };
+  const kompletne = wyniki.length > 0 && bezDanych === 0;
+  const komunikat =
+    wyniki.length === 0
+      ? 'Brak siatek godzin MEiN dla tego typu szkoły — nie można ocenić zgodności.'
+      : bezDanych > 0
+        ? `Dla ${bezDanych} pozycji brakuje wymagań MEiN (status BRAK_DANYCH).`
+        : undefined;
+  return { statystyki, kompletne, komunikat };
+}
+
 /**
  * Główna funkcja obliczająca zgodność z MEiN
- * 
+ *
  * @param payload - Instancja Payload CMS
  * @param parametry - Parametry filtrowania (przedmiot, typ szkoły, klasa, rok szkolny)
  * @returns Tablica wyników zgodności dla każdego przedmiotu/klasy

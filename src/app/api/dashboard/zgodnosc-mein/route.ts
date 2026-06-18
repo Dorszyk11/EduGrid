@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
-import { obliczZgodnoscDlaSzkoly } from '@/utils/zgodnoscMein';
+import { obliczZgodnoscDlaSzkoly, agregujStatystykiZgodnosci } from '@/utils/zgodnoscMein';
 import { requireUserId } from '@/lib/api/guard';
 import { errorResponse } from '@/lib/api/respond';
 import { ValidationError } from '@/lib/errors';
@@ -21,20 +21,14 @@ export async function GET(request: Request) {
 
     const wyniki = await obliczZgodnoscDlaSzkoly(payload, typSzkolyId, rokSzkolny, userId);
 
-    // Agreguj dane dla dashboardu
-    const statystyki = {
-      lacznie: wyniki.length,
-      zgodne: wyniki.filter(w => w.status === 'OK').length,
-      zBrakami: wyniki.filter(w => w.status === 'BRAK').length,
-      zNadwyzkami: wyniki.filter(w => w.status === 'NADWYŻKA').length,
-      sredniProcent: wyniki.length > 0
-        ? wyniki.reduce((sum, w) => sum + w.roznica.procent_realizacji, 0) / wyniki.length
-        : 0,
-    };
+    // Agreguj dane dla dashboardu + sygnalizuj kompletność (rozróżnienie realne 0 vs brak danych)
+    const { statystyki, kompletne, komunikat } = agregujStatystykiZgodnosci(wyniki);
 
     return NextResponse.json({
       wyniki,
       statystyki,
+      kompletne,
+      komunikat,
     });
   } catch (error) {
     return errorResponse(error);
