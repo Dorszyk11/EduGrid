@@ -7,7 +7,12 @@ import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapisz
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Button, { buttonClass } from '@/components/ui/Button';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import StatusPill from '@/components/ui/StatusPill';
+import Field from '@/components/ui/Field';
+import Select from '@/components/ui/Select';
 import PrzydzielModal from '@/components/dyspozycja/PrzydzielModal';
+import { useKomorkaKlawiatura } from '@/lib/hooks/useKomorkaKlawiatura';
 import {
   type PlanItem,
   getGradesFromPlan,
@@ -17,9 +22,46 @@ import {
   obliczPrzedmiotyDlaRoku,
 } from '@/lib/dyspozycja/plan';
 
-/** Wspólny styl selektora (tokeny). */
-const SELECT_CLASS =
-  'border border-line-strong rounded-sm px-3 py-2 text-sm bg-surface text-ink disabled:opacity-60';
+type WierszPrzedmiotu = { nazwa: string; godziny: number; doPrzydzielenia: number };
+
+/** Status „Do przydzielenia" jako tekst (nie sam kolor): gotowe / brakuje N. */
+function statusPrzydzielenia(doPrz: number): { status: string; label: string } {
+  if (doPrz <= 0) return { status: 'OK', label: 'gotowe' };
+  return { status: 'BRAK', label: `brakuje ${doPrz}` };
+}
+
+/**
+ * Komórka „Do przydzielenia" — klikalna w trybie przydziału (semantyka przycisku z klawiatury).
+ * Hook `useKomorkaKlawiatura` wywołany w osobnym komponencie (nie w `.map`), zgodnie z rules-of-hooks.
+ */
+function KomorkaDoPrzydzielenia({
+  row,
+  klikalny,
+  onActivate,
+}: {
+  row: WierszPrzedmiotu;
+  klikalny: boolean;
+  onActivate: () => void;
+}) {
+  const kbd = useKomorkaKlawiatura(onActivate);
+  const { status, label } = statusPrzydzielenia(row.doPrzydzielenia);
+  const pill = (
+    <span className="inline-flex items-center gap-2 tabular-nums">
+      <span className="text-ink-soft">{row.doPrzydzielenia}</span>
+      <StatusPill status={status} label={label} />
+    </span>
+  );
+  if (!klikalny) return pill;
+  return (
+    <span
+      {...kbd}
+      aria-label={`Przydziel nauczyciela: ${row.nazwa}, do przydzielenia ${row.doPrzydzielenia}`}
+      className="inline-flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 focus-visible:outline-2 focus-visible:outline-accent hover:bg-surface-2"
+    >
+      {pill}
+    </span>
+  );
+}
 
 interface TypSzkoly {
   id: string;
@@ -43,6 +85,8 @@ export default function DyspozycjaPage() {
   const [selectedLitera, setSelectedLitera] = useState<string>('');
   const [ladowanieTypow, setLadowanieTypow] = useState(true);
   const [ladowanieKlas, setLadowanieKlas] = useState(false);
+  const [bladKlas, setBladKlas] = useState<string | null>(null);
+  const [bladPrzydzial, setBladPrzydzial] = useState<string | null>(null);
   const [przydzialData, setPrzydzialData] = useState<{
     przydzial: Record<string, Record<string, number>>;
     dyrektor: Record<string, Record<string, number>>;
@@ -56,7 +100,7 @@ export default function DyspozycjaPage() {
   } | null>(null);
   const [ladowaniePrzydzial, setLadowaniePrzydzial] = useState(false);
   const [trybPrzydziel, setTrybPrzydziel] = useState(false);
-  const [modalRow, setModalRow] = useState<{ nazwa: string; godziny: number; doPrzydzielenia: number } | null>(null);
+  const [modalRow, setModalRow] = useState<WierszPrzedmiotu | null>(null);
   const [modalGodziny, setModalGodziny] = useState(1);
   const [modalNauczycielId, setModalNauczycielId] = useState('');
   const [zapisywanie, setZapisywanie] = useState(false);
@@ -64,6 +108,7 @@ export default function DyspozycjaPage() {
   const [przedmioty, setPrzedmioty] = useState<{ id: string; nazwa: string }[]>([]);
   const [nauczyciele, setNauczyciele] = useState<{ id: string; imie: string; nazwisko: string; przedmioty: { id: string; nazwa?: string }[] }[]>([]);
   const [nauczycieleLoading, setNauczycieleLoading] = useState(false);
+  const [nauczycieleError, setNauczycieleError] = useState(false);
   /** Przypisane godziny per (przedmiotId, rok) – do wyliczenia „Do przydzielenia”. */
   const [assignedGodziny, setAssignedGodziny] = useState<Record<string, Record<string, number>> | null>(null);
 
@@ -99,17 +144,22 @@ export default function DyspozycjaPage() {
   useEffect(() => {
     if (typSzkolyId) {
       setLadowanieKlas(true);
+      setBladKlas(null);
       setSelectedRocznik('');
       setSelectedLitera('');
       fetch(`/api/klasy?typSzkolyId=${typSzkolyId}`)
-        .then((res) => res.json())
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
         .then((data) => {
           setKlasaList(data.klasy ?? []);
         })
-        .catch(() => setKlasaList([]))
+        .catch((err) => {
+          setBladKlas(err instanceof Error ? err.message : 'Błąd pobierania klas');
+          setKlasaList([]);
+        })
         .finally(() => setLadowanieKlas(false));
     } else {
       setKlasaList([]);
+      setBladKlas(null);
       setSelectedRocznik('');
       setSelectedLitera('');
     }
@@ -136,6 +186,7 @@ export default function DyspozycjaPage() {
       return;
     }
     setLadowaniePrzydzial(true);
+    setBladPrzydzial(null);
     Promise.all([
       fetch(`/api/przydzial-godzin-wybor?klasaId=${encodeURIComponent(selectedClass.id)}`, { cache: 'no-store' }).then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed')))),
       fetch('/api/przedmioty', { cache: 'no-store' }).then((r) => r.json()),
@@ -170,6 +221,7 @@ export default function DyspozycjaPage() {
       })
       .catch((err) => {
         console.error('Nie udało się pobrać przydziału/przedmiotów:', err);
+        setBladPrzydzial(err instanceof Error ? err.message : 'Błąd pobierania danych przydziału');
         setPrzydzialData(null);
       })
       .finally(() => setLadowaniePrzydzial(false));
@@ -192,9 +244,10 @@ export default function DyspozycjaPage() {
   useEffect(() => {
     if (!trybPrzydziel && !modalRow) return;
     setNauczycieleLoading(true);
+    setNauczycieleError(false);
     Promise.all([
-      fetch('/api/przedmioty', { cache: 'no-store' }).then((r) => r.json()),
-      fetch('/api/nauczyciele', { cache: 'no-store' }).then((r) => r.json()),
+      fetch('/api/przedmioty', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('przedmioty')))),
+      fetch('/api/nauczyciele', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('nauczyciele')))),
     ]).then(([przedmiotyRes, nauczycieleRes]) => {
       const pList = Array.isArray(przedmiotyRes) ? przedmiotyRes : przedmiotyRes?.error ? [] : (przedmiotyRes?.przedmioty ?? []);
       setPrzedmioty(pList.map((p: { id: string; nazwa?: string }) => ({ id: String(p.id), nazwa: p.nazwa ?? '' })));
@@ -205,7 +258,9 @@ export default function DyspozycjaPage() {
         nazwisko: n.nazwisko ?? '',
         przedmioty: Array.isArray(n.przedmioty) ? n.przedmioty : [],
       })));
-    }).catch(() => {}).finally(() => setNauczycieleLoading(false));
+    }).catch(() => {
+      setNauczycieleError(true);
+    }).finally(() => setNauczycieleLoading(false));
   }, [trybPrzydziel, modalRow]);
 
   const przedmiotIdDlaNazwy = (nazwa: string): string | null => {
@@ -222,7 +277,7 @@ export default function DyspozycjaPage() {
     return nauczyciele.filter((n) => n.przedmioty.some((p) => String(p.id) === przedmiotId));
   };
 
-  const otworzModalPrzydziel = (row: { nazwa: string; godziny: number; doPrzydzielenia: number }) => {
+  const otworzModalPrzydziel = (row: WierszPrzedmiotu) => {
     setModalRow(row);
     const maxH = Math.min(10, Math.max(0, Math.floor(row.doPrzydzielenia) || 0));
     setModalGodziny(maxH > 0 ? Math.min(1, maxH) : 0);
@@ -298,6 +353,36 @@ export default function DyspozycjaPage() {
     }
   };
 
+  const kolumny: Column<WierszPrzedmiotu>[] = [
+    {
+      key: 'przedmiot',
+      header: 'Przedmiot',
+      render: (row) => <span className="text-ink">{row.nazwa}</span>,
+    },
+    {
+      key: 'godziny',
+      header: 'Godz./tyg',
+      align: 'right',
+      className: 'tabular-nums w-24',
+      render: (row) => <span className="text-ink-soft">{row.godziny}</span>,
+    },
+    {
+      key: 'doPrzydzielenia',
+      header: 'Do przydzielenia',
+      align: 'right',
+      className: 'w-44',
+      render: (row) => (
+        <KomorkaDoPrzydzielenia
+          row={row}
+          klikalny={trybPrzydziel}
+          onActivate={() => otworzModalPrzydziel(row)}
+        />
+      ),
+    },
+  ];
+
+  const sumaGodzin = przedmiotyDlaRoku.reduce((s, r) => s + r.godziny, 0);
+
   const pobierzTypySzkol = async () => {
     setLadowanieTypow(true);
     try {
@@ -329,81 +414,86 @@ export default function DyspozycjaPage() {
       <Card>
         <h2 className="mb-4 text-sm font-semibold text-ink">Wybierz szkołę, rok i klasę</h2>
         <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-end gap-3 sm:gap-4 w-full sm:w-auto">
-          <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-xs font-medium text-ink-soft">Typ szkoły</label>
-            <select
-              value={typSzkolyId}
-              onChange={(e) => {
-                const v = e.target.value;
-                zapiszTypSzkoly(v);
-                setTypSzkolyId(v);
-              }}
-              disabled={ladowanieTypow}
-              className={`${SELECT_CLASS} w-full sm:w-[220px]`}
-            >
-              <option value="">{ladowanieTypow ? 'Ładowanie...' : '— wybierz typ szkoły —'}</option>
-              {typySzkol.map((typ) => (
-                <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
-              ))}
-            </select>
+          <div className="min-w-0 sm:w-[220px]">
+            <Field label="Typ szkoły" htmlFor="dysp-typ">
+              <Select
+                id="dysp-typ"
+                value={typSzkolyId}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  zapiszTypSzkoly(v);
+                  setTypSzkolyId(v);
+                }}
+                disabled={ladowanieTypow}
+              >
+                <option value="">{ladowanieTypow ? 'Ładowanie…' : 'wybierz typ szkoły'}</option>
+                {typySzkol.map((typ) => (
+                  <option key={typ.id} value={typ.id}>{typ.nazwa}</option>
+                ))}
+              </Select>
+            </Field>
           </div>
-          <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-xs font-medium text-ink-soft">Rok szkolny</label>
-            <select
-              value={selectedRocznik}
-              onChange={(e) => {
-                const v = e.target.value;
-                zapiszRocznik(v);
-                setSelectedRocznik(v);
-                setSelectedLitera('');
-              }}
-              disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
-              className={`${SELECT_CLASS} w-full sm:w-[160px]`}
-            >
-              <option value="">{ladowanieKlas ? 'Ładowanie...' : '— rocznik —'}</option>
-              {roczniki.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+          <div className="min-w-0 sm:w-[160px]">
+            <Field label="Rok szkolny" htmlFor="dysp-rok">
+              <Select
+                id="dysp-rok"
+                value={selectedRocznik}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  zapiszRocznik(v);
+                  setSelectedRocznik(v);
+                  setSelectedLitera('');
+                }}
+                disabled={!typSzkolyId || ladowanieKlas || roczniki.length === 0}
+              >
+                <option value="">{ladowanieKlas ? 'Ładowanie…' : 'rocznik'}</option>
+                {roczniki.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </Select>
+            </Field>
           </div>
-          <div className="flex flex-col gap-1 min-w-0">
-            <label className="text-xs font-medium text-ink-soft">Klasa</label>
-            <select
-              value={selectedLitera}
-              onChange={(e) => {
-                const v = e.target.value;
-                zapiszLitera(v);
-                setSelectedLitera(v);
-              }}
-              disabled={!selectedRocznik || literki.length === 0}
-              className={`${SELECT_CLASS} w-full sm:w-[120px]`}
-            >
-              <option value="">— klasa —</option>
-              {literki.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
-            </select>
+          <div className="min-w-0 sm:w-[120px]">
+            <Field label="Klasa" htmlFor="dysp-klasa">
+              <Select
+                id="dysp-klasa"
+                value={selectedLitera}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  zapiszLitera(v);
+                  setSelectedLitera(v);
+                }}
+                disabled={!selectedRocznik || literki.length === 0}
+              >
+                <option value="">klasa</option>
+                {literki.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </Select>
+            </Field>
           </div>
           {selectedClass && selectedRok && (
-            <div className="flex flex-col gap-1 min-w-0">
-              <label className="text-xs font-medium text-ink-soft">Rok (w cyklu)</label>
+            <div className="min-w-0">
+              <label className="block text-sm font-medium text-ink-soft mb-1">Rok (w cyklu)</label>
               <div className="rounded-sm border border-line bg-surface-2 px-3 py-2 text-sm text-ink">
                 {selectedRok} <span className="text-ink-faint text-xs">(na podstawie aktualnej daty)</span>
               </div>
             </div>
           )}
         </div>
+        {bladKlas && (
+          <p className="mt-4 text-sm text-danger" role="alert">
+            Nie udało się pobrać klas: {bladKlas}
+          </p>
+        )}
         {selectedClass && (
           <p className="mt-4 text-sm text-ink-soft">
             Wybrana klasa: <strong className="text-ink">{selectedClass.nazwa}</strong> ({selectedRocznik})
-            {selectedClass.id && (
-              <span className="text-ink-faint ml-2">· id: {selectedClass.id}</span>
-            )}
           </p>
         )}
       </Card>
 
-      {selectedRok && przedmiotyDlaRoku.length > 0 && (
+      {selectedClass && selectedRok && (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
@@ -416,65 +506,35 @@ export default function DyspozycjaPage() {
             </div>
             <Button
               type="button"
-              variant={trybPrzydziel ? 'primary' : 'secondary'}
+              variant="toggle"
+              active={trybPrzydziel}
               onClick={() => setTrybPrzydziel((v) => !v)}
             >
               {trybPrzydziel ? 'Anuluj wybór kafelka' : 'Przydziel nauczyciela'}
             </Button>
           </div>
           {trybPrzydziel && (
-            <p className="text-sm text-accent mb-2">Kliknij kafelek w kolumnie „Do przydzielenia”, aby przypisać nauczyciela.</p>
+            <p className="text-sm text-accent mb-2" role="status" aria-live="polite">
+              Wybierz komórkę w kolumnie „Do przydzielenia” (klik lub Enter/Spacja), aby przypisać nauczyciela.
+            </p>
           )}
-          {ladowaniePrzydzial && (
-            <p className="text-sm text-warn mb-2">Ładowanie przydziału…</p>
-          )}
-          <div className="overflow-x-auto max-w-2xl">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-2">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-ink-soft uppercase tracking-wide">
-                    Przedmiot
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-ink-soft uppercase tracking-wide w-24">
-                    Godz./tyg
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-ink-soft uppercase tracking-wide w-28">
-                    Do przydzielenia
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {przedmiotyDlaRoku.map((row, index) => {
-                  const doPrz = row.doPrzydzielenia;
-                  const bgClass =
-                    doPrz === 0
-                      ? 'bg-ok-bg text-ok'
-                      : doPrz === 1
-                        ? 'bg-warn-bg text-warn'
-                        : doPrz >= 2
-                          ? 'bg-danger-bg text-danger'
-                          : 'bg-surface-2 text-ink-soft';
-                  const klikalny = trybPrzydziel;
-                  return (
-                    <tr key={index} className="border-t border-line hover:bg-surface-2">
-                      <td className="px-4 py-2 text-ink">{row.nazwa}</td>
-                      <td className="px-4 py-2 text-right text-ink-soft">{row.godziny}</td>
-                      <td
-                        className={`px-4 py-2 text-right font-medium ${bgClass} ${klikalny ? 'cursor-pointer hover:ring-2 hover:ring-accent ring-offset-1' : ''}`}
-                        role={klikalny ? 'button' : undefined}
-                        onClick={klikalny ? () => otworzModalPrzydziel(row) : undefined}
-                      >
-                        {row.doPrzydzielenia}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="max-w-2xl">
+            <DataTable
+              columns={kolumny}
+              rows={przedmiotyDlaRoku}
+              getRowKey={(row) => row.nazwa}
+              loading={ladowaniePrzydzial}
+              error={bladPrzydzial}
+              empty="Brak przedmiotów do wyświetlenia dla tego roku."
+              footer={
+                <>
+                  <td className="px-3 py-2.5 text-ink">Suma</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-ink">{sumaGodzin}</td>
+                  <td className="px-3 py-2.5 text-right text-ink-faint">godz./tyg</td>
+                </>
+              }
+            />
           </div>
-          <p className="mt-3 text-sm text-ink-faint">
-            Suma: {przedmiotyDlaRoku.reduce((s, r) => s + r.godziny, 0)} godz./tyg
-          </p>
         </Card>
       )}
 
@@ -489,11 +549,13 @@ export default function DyspozycjaPage() {
               nazwaPrzedmiotu={modalRow.nazwa}
               godziny={modalGodziny}
               maxGodziny={maxGodziny}
+              doPrzydzielenia={modalRow.doPrzydzielenia}
               onGodzinyChange={setModalGodziny}
               nauczycielId={modalNauczycielId}
               onNauczycielChange={setModalNauczycielId}
               dostepniNauczyciele={dostepni}
               nauczycieleLoading={nauczycieleLoading}
+              nauczycieleError={nauczycieleError}
               brakDopasowanych={!!przId && dostepni.length === 0}
               komunikat={komunikatPrzydziel}
               zapisywanie={zapisywanie}
