@@ -9,6 +9,7 @@ import Card from '@/components/ui/Card';
 import StatusPill from '@/components/ui/StatusPill';
 import Icon from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
+import { statusObciazeniaRaport } from '@/lib/obciazenie';
 import type { RaportZgodnoscMein, RaportObciazenia, RaportBrakiKadrowe } from '@/types/api';
 
 type TypRaportu = 'zgodnosc-mein' | 'obciazenia' | 'braki-kadrowe' | 'arkusz-organizacyjny';
@@ -139,14 +140,11 @@ function RaportObciazen({ data }: { data: RaportObciazenia }) {
             </thead>
             <tbody>
               {data.obciazenia.map((obc) => {
-                const status =
-                  obc.aktualneObciazenie > obc.maxObciazenie
-                    ? { label: 'Przekroczone', key: 'PRZECIĄŻENIE' }
-                    : obc.procentWykorzystania >= 90
-                      ? { label: 'Pełne', key: 'OK' }
-                      : obc.procentWykorzystania < 50
-                        ? { label: 'Niskie', key: 'NIEDOCIĄŻENIE' }
-                        : { label: 'W normie', key: 'NEUTRAL' };
+                const status = statusObciazeniaRaport(
+                  obc.aktualneObciazenie,
+                  obc.maxObciazenie,
+                  obc.procentWykorzystania,
+                );
                 return (
                   <tr key={obc.nauczycielId} className="border-b border-line last:border-0 hover:bg-surface-2">
                     <td className={TD}>
