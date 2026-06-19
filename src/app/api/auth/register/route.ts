@@ -5,6 +5,7 @@ import config from '@/payload.config';
 import crypto from 'crypto';
 import { Pool } from 'pg';
 import { getDbSslConfig } from '@/lib/dbSsl';
+import { rateLimit, clientKey } from '@/lib/api/rate-limit';
 
 const registerSchema = z.object({
   email: z.string().trim().min(1, 'Podaj email i hasło.').email('Podaj poprawny adres email.'),
@@ -99,6 +100,15 @@ async function registerViaDb(email: string, password: string, imie: string, nazw
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate-limit per-IP — utrudnia masową enumerację kont (odpowiedź 409 ujawnia istnienie e-maila).
+    const rlIp = rateLimit(clientKey(request, 'register'), 15, 10 * 60 * 1000);
+    if (!rlIp.allowed) {
+      return NextResponse.json(
+        { error: 'Zbyt wiele prób. Spróbuj ponownie później.' },
+        { status: 429, headers: { 'Retry-After': String(rlIp.retryAfterSec) } }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {

@@ -28,10 +28,13 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ user: null }, { status: 200 });
     }
+    // Token już zweryfikowany kryptograficznie powyżej → odczyt z overrideAccess
+    // (kolekcja Users ma zawężony read do własnego rekordu, anty-enumeracja).
     const user = await payload.findByID({
       collection: collectionSlug,
       id: userId,
       depth: 0,
+      overrideAccess: true,
     });
     if (!user) {
       return NextResponse.json({ user: null }, { status: 200 });

@@ -12,6 +12,7 @@ import {
 import { getDbSslConfig } from '@/lib/dbSsl';
 import { assertDatabaseHostResolvable } from '@/lib/dbHost';
 import { verifyPassword } from '@/lib/auth/haslo';
+import { rateLimit, clientKey } from '@/lib/api/rate-limit';
 
 const PAYLOAD_TIMEOUT_MS = 10_000;
 
@@ -124,6 +125,16 @@ export async function POST(request: NextRequest) {
     const email = typeof body.email === 'string' ? body.email.trim() : '';
     const password = typeof body.password === 'string' ? body.password : '';
     const rememberMe = body.rememberMe === true;
+
+    // Rate-limit: per-email (brute-force jednego konta) + per-IP (credential stuffing).
+    const rlEmail = rateLimit(clientKey(request, 'login', email.toLowerCase()), 8, 5 * 60 * 1000);
+    const rlIp = rateLimit(clientKey(request, 'login-ip'), 40, 5 * 60 * 1000);
+    if (!rlEmail.allowed || !rlIp.allowed) {
+      return NextResponse.json(
+        { error: 'Zbyt wiele prób logowania. Spróbuj ponownie później.' },
+        { status: 429, headers: { 'Retry-After': String(Math.max(rlEmail.retryAfterSec, rlIp.retryAfterSec)) } }
+      );
+    }
 
     if (!email || !password) {
       return NextResponse.json(

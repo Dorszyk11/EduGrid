@@ -7,7 +7,9 @@ export const Users: CollectionConfig = {
     useAsTitle: "email",
   },
   access: {
-    read: () => true,
+    // Odczyt tylko własnego rekordu (anty-enumeracja e-maili). Trasy auth (login/register/me)
+    // używają overrideAccess, więc ten zawężony read ich nie blokuje.
+    read: ({ req }) => (req.user ? { id: { equals: req.user.id } } : false),
     create: () => true,
   },
   fields: [
