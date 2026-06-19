@@ -92,101 +92,146 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg p-4">
-      <div className="w-full max-w-md bg-surface rounded-card shadow-card border border-line overflow-hidden">
-        <div className="px-6 py-5 border-b border-line">
-          <h1 className="font-display text-2xl font-bold text-ink tracking-tight">EduGrid</h1>
-          <p className="text-sm text-ink-soft mt-1">System planowania siatki godzin</p>
+    <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
+      {/* Panel marki — granatowa powłoka z „ledgerową” siatką (sygnatura produktu). Tylko desktop. */}
+      <aside className="relative hidden overflow-hidden bg-navy text-white lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-35"
+          style={{
+            backgroundImage:
+              'linear-gradient(var(--navy-line) 1px, transparent 1px), linear-gradient(90deg, var(--navy-line) 1px, transparent 1px)',
+            backgroundSize: '46px 46px',
+            maskImage: 'radial-gradient(125% 95% at 12% 0%, #000 30%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(125% 95% at 12% 0%, #000 30%, transparent 100%)',
+          }}
+        />
+        <div className="relative">
+          <span className="font-display text-2xl font-bold tracking-tight">EduGrid</span>
         </div>
-        <div className="flex border-b border-line">
-          <button
-            type="button"
-            onClick={() => { setTab('login'); setError(''); }}
-            className={`flex-1 py-3 text-sm font-medium ${tab === 'login' ? 'text-accent border-b-2 border-accent' : 'text-ink-faint hover:text-ink-soft'}`}
-          >
-            Logowanie
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('register'); setError(''); }}
-            className={`flex-1 py-3 text-sm font-medium ${tab === 'register' ? 'text-accent border-b-2 border-accent' : 'text-ink-faint hover:text-ink-soft'}`}
-          >
-            Zakładanie konta
-          </button>
+        <div className="relative max-w-md">
+          <h2 className="font-display text-3xl font-semibold leading-tight tracking-tight xl:text-4xl">
+            Siatka godzin zgodna z ramowym planem nauczania.
+          </h2>
+          <ul className="mt-8 space-y-3.5">
+            {[
+              'Przydzielaj godziny do wyboru, dyrektorskie i rozszerzenia.',
+              'Na bieżąco sprawdzaj zgodność z ramowym planem MEiN.',
+              'Analizuj realizację i zapotrzebowanie kadrowe.',
+            ].map((linia) => (
+              <li key={linia} className="flex items-start gap-3 text-slate-300">
+                <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-[1px] bg-accent" />
+                <span className="text-sm leading-relaxed">{linia}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div role="alert" className="p-3 rounded-sm bg-danger-bg text-danger text-sm">
-              {error}
-            </div>
-          )}
-          <Field label="Email" htmlFor="email">
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              invalid={!!error}
-            />
-          </Field>
-          <div>
-            <Field label="Hasło" htmlFor="password" hint={tab === 'register' ? 'Minimum 8 znaków' : undefined}>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-                minLength={tab === 'register' ? 8 : undefined}
-                invalid={!!error}
-              />
-            </Field>
-            {tab === 'login' && (
-              <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded-sm border-line-strong text-accent focus:ring-accent"
-                />
-                <span className="text-sm text-ink-soft">Zapamiętaj mnie na tym urządzeniu</span>
-              </label>
-            )}
+        <p className="relative text-xs text-slate-400">
+          Zgodnie z Dz.U. 2025 poz. 363 — ramowe plany nauczania.
+        </p>
+      </aside>
+
+      {/* Kolumna logowania */}
+      <main className="flex min-h-screen items-center justify-center bg-bg p-4 sm:p-6">
+        <div className="w-full max-w-md">
+          {/* Nagłówek marki na mobile (panel granatowy ukryty) */}
+          <div className="mb-6 text-center lg:hidden">
+            <span className="font-display text-2xl font-bold tracking-tight text-ink">EduGrid</span>
+            <p className="mt-1 text-sm text-ink-soft">System planowania siatki godzin</p>
           </div>
-          {tab === 'register' && (
-            <>
-              <Field label="Imię" htmlFor="imie">
+
+          <div className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+            <div className="flex border-b border-line">
+              <button
+                type="button"
+                onClick={() => { setTab('login'); setError(''); }}
+                className={`flex-1 py-3 text-sm font-medium ${tab === 'login' ? 'text-accent border-b-2 border-accent' : 'text-ink-faint hover:text-ink-soft'}`}
+              >
+                Logowanie
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTab('register'); setError(''); }}
+                className={`flex-1 py-3 text-sm font-medium ${tab === 'register' ? 'text-accent border-b-2 border-accent' : 'text-ink-faint hover:text-ink-soft'}`}
+              >
+                Zakładanie konta
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {error && (
+                <div role="alert" className="p-3 rounded-sm bg-danger-bg text-danger text-sm">
+                  {error}
+                </div>
+              )}
+              <Field label="Email" htmlFor="email">
                 <Input
-                  id="imie"
-                  type="text"
-                  value={imie}
-                  onChange={(e) => setImie(e.target.value)}
-                  required={tab === 'register'}
-                  autoComplete="given-name"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
                   invalid={!!error}
                 />
               </Field>
-              <Field label="Nazwisko" htmlFor="nazwisko">
-                <Input
-                  id="nazwisko"
-                  type="text"
-                  value={nazwisko}
-                  onChange={(e) => setNazwisko(e.target.value)}
-                  required={tab === 'register'}
-                  autoComplete="family-name"
-                  invalid={!!error}
-                />
-              </Field>
-            </>
-          )}
-          <Button type="submit" disabled={submitting} className="w-full">
-            {submitting ? 'Proszę czekać...' : tab === 'login' ? 'Zaloguj się' : 'Załóż konto'}
-          </Button>
-        </form>
-      </div>
+              <div>
+                <Field label="Hasło" htmlFor="password" hint={tab === 'register' ? 'Minimum 8 znaków' : undefined}>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                    minLength={tab === 'register' ? 8 : undefined}
+                    invalid={!!error}
+                  />
+                </Field>
+                {tab === 'login' && (
+                  <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded-sm border-line-strong text-accent focus:ring-accent"
+                    />
+                    <span className="text-sm text-ink-soft">Zapamiętaj mnie na tym urządzeniu</span>
+                  </label>
+                )}
+              </div>
+              {tab === 'register' && (
+                <>
+                  <Field label="Imię" htmlFor="imie">
+                    <Input
+                      id="imie"
+                      type="text"
+                      value={imie}
+                      onChange={(e) => setImie(e.target.value)}
+                      required={tab === 'register'}
+                      autoComplete="given-name"
+                      invalid={!!error}
+                    />
+                  </Field>
+                  <Field label="Nazwisko" htmlFor="nazwisko">
+                    <Input
+                      id="nazwisko"
+                      type="text"
+                      value={nazwisko}
+                      onChange={(e) => setNazwisko(e.target.value)}
+                      required={tab === 'register'}
+                      autoComplete="family-name"
+                      invalid={!!error}
+                    />
+                  </Field>
+                </>
+              )}
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? 'Proszę czekać...' : tab === 'login' ? 'Zaloguj się' : 'Załóż konto'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

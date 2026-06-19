@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Button, { buttonClass } from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import Select from '@/components/ui/Select';
+import Icon, { type IconName } from '@/components/ui/Icon';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { useToast } from '@/components/ui/Toast';
 import { statusRealizacji, type TonStatusu } from '@/lib/status-realizacji';
@@ -38,11 +39,11 @@ function PulaMetryka({ etykieta, przydzielone, pula }: { etykieta: string; przyd
     <div className="flex flex-col gap-0.5 min-w-0">
       <span className="text-xs font-medium uppercase tracking-wide text-ink-faint">{etykieta}</span>
       <span
-        className={`inline-flex items-center gap-1.5 self-start rounded-sm px-2 py-0.5 text-sm font-semibold tabular-nums ${PULA_TON_BG[s.ton]}`}
+        className={`inline-flex items-center gap-1.5 self-start whitespace-nowrap rounded-sm px-2 py-0.5 text-sm font-semibold tabular-nums ${PULA_TON_BG[s.ton]}`}
         aria-label={`${etykieta}: przydzielono ${przydzielone} z ${pula}, ${s.opis}`}
       >
         <span>{przydzielone} / {pula}</span>
-        <span aria-hidden className="opacity-70">·</span>
+        <span aria-hidden className="opacity-50">·</span>
         <span aria-hidden>{s.znak}</span>
       </span>
     </div>
@@ -114,6 +115,20 @@ export default function PrzydzialPage() {
   const maRozszerzenia = /liceum|technikum/i.test(nazwaTypuSzkoly);
   /** Szkoła podstawowa 1–3 nie ma przycisku „Generuj przydział”. */
   const ukryjGenerujPrzydzial = /podstawowa/i.test(nazwaTypuSzkoly) && /1-3|1–3|1—3/.test(nazwaTypuSzkoly);
+
+  /** Aktywny tryb edycji → instrukcja „gdzie kliknąć”. Nazwy kolorów zgodne z podświetleniem komórek w tabeli. */
+  const aktywnyTryb: { ikona: IconName; tytul: string; opis: string } | null =
+    trybPrzydzielGodzine
+      ? { ikona: 'plus', tytul: 'Przydzielanie godzin do wyboru', opis: 'Kliknij podświetlone komórki, aby dodać godzinę: zielone — wolne godziny do wyboru, niebieskie — ponad limit (po potwierdzeniu). Prawy przycisk myszy usuwa.' }
+      : trybPrzydzielDyrektor
+        ? { ikona: 'plus', tytul: 'Godziny dyrektorskie', opis: 'Kliknij podświetlone (niebieskie) komórki, aby dodać godzinę dyrektorską. Prawy przycisk myszy usuwa.' }
+        : trybDodajRozszerzenia
+          ? { ikona: 'plus', tytul: 'Oznaczanie rozszerzeń', opis: 'Kliknij podświetloną (niebieską) nazwę przedmiotu, aby oznaczyć go jako rozszerzenie (i z powrotem).' }
+          : trybPrzydzielGodzinyRozszerzen
+            ? { ikona: 'plus', tytul: 'Godziny rozszerzeń', opis: 'Kliknij podświetlone (niebieskie) komórki przedmiotów rozszerzonych, aby dodać godzinę. Prawy przycisk myszy usuwa.' }
+            : trybPodzielNaGrupy
+              ? { ikona: 'info', tytul: 'Podział na grupy', opis: 'Kliknij podświetlone (żółte) komórki, aby podzielić rocznik na grupy 1 i 2 albo scalić je z powrotem.' }
+              : null;
 
   /** Wyłącza wszystkie tryby poza tym wskazanym (toggle jak dotąd). */
   const przelaczTryb = (setter: Dispatch<SetStateAction<boolean>>) => {
@@ -352,6 +367,20 @@ export default function PrzydzialPage() {
           >
             Podziel na grupy (1 i 2)
           </Button>
+        </div>
+      )}
+
+      {selectedClass?.id && aktywnyTryb && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-start gap-2.5 rounded-card border border-accent/30 bg-accent-weak px-3.5 py-2.5"
+        >
+          <Icon name={aktywnyTryb.ikona} size={18} className="mt-0.5 shrink-0 text-accent-strong" />
+          <p className="text-sm text-ink-soft">
+            <span className="font-semibold text-accent-strong">Tryb: {aktywnyTryb.tytul}.</span>{' '}
+            {aktywnyTryb.opis}
+          </p>
         </div>
       )}
 

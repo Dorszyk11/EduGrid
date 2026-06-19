@@ -18,10 +18,10 @@ export default function KomorkaStatusu({ zrealizowane, docelowe, className = '' 
   return (
     <span
       aria-label={`${zrealizowane} z ${docelowe}, ${s.opis}`}
-      className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-sm font-semibold tabular-nums ${TON_BG[s.ton]} ${className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-0.5 text-sm font-semibold tabular-nums ${TON_BG[s.ton]} ${className}`}
     >
       <span>{zrealizowane} / {docelowe}</span>
-      <span aria-hidden className="opacity-80">·</span>
+      <span aria-hidden className="opacity-50">·</span>
       <span aria-hidden>{s.znak}</span>
     </span>
   );
