@@ -3,6 +3,7 @@
  * ekrany Dyspozycji i Realizacji. Jedno źródło prawdy (koniec duplikacji między stronami).
  * Logika godzin/zgodności musi respektować Dz.U. 2025 poz. 363.
  */
+import { subjectKey } from './subjectKey';
 
 export type HoursByGrade = Record<string, number>;
 export type SubjectRow = {
@@ -40,10 +41,8 @@ export function getGradesFromPlan(plan: PlanItem): string[] {
   return plan.table_structure?.grades ?? plan.grades ?? [];
 }
 
-/** Klucz jak w PlanMeinTabela – używany w przydziale. */
-export function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
+/** Klucz jak w PlanMeinTabela – re-eksport jedynego źródła ([[subjectKey]]). */
+export { subjectKey };
 
 const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
 

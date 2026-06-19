@@ -5,6 +5,7 @@
 
 import plansData from '@/utils/import/ramowe-plany.json';
 import type { Payload } from '@/types/payload';
+import { subjectKey } from '@/lib/subjectKey';
 
 type HoursByGrade = Record<string, number>;
 
@@ -36,9 +37,7 @@ function getGradesFromPlan(plan: PlanItem): string[] {
   return plan.table_structure?.grades ?? plan.grades ?? [];
 }
 
-export function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
+export { subjectKey };
 
 const PRZEDMIOTY_LACZNE_CYKL = ['Zajęcia z zakresu doradztwa zawodowego'];
 function isPrzedmiotLaczny(subjectName: string): boolean {

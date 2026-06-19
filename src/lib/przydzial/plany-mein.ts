@@ -41,10 +41,8 @@ export function isPrzedmiotRozszerzony(subjectName: string): boolean {
   return /w\s+zakresie\s+rozszerzonym|przedmioty\s+.*\s+rozszerz/i.test((subjectName || '').trim());
 }
 
-/** Stabilny klucz przedmiotu w obrębie planu (plan_id + nazwa). */
-export function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
-}
+/** Stabilny klucz przedmiotu w obrębie planu (plan_id + nazwa) — jedno źródło prawdy. */
+export { subjectKey } from '../subjectKey';
 
 /**
  * Limity godzin rozszerzeń na rocznik (łączna pula dla wszystkich przedmiotów

@@ -4,6 +4,7 @@
  */
 
 import plansData from '@/utils/import/ramowe-plany.json';
+import { subjectKey } from '@/lib/subjectKey';
 
 const STORAGE_PREFIX = 'przydzial-wyboru-';
 const STORAGE_DORADZTWO = 'zrealizowane-doradztwo-';
@@ -56,10 +57,6 @@ function cycleFilterZNazwy(nazwaTypu: string): string | undefined {
 
 function getGrades(plan: PlanMein): string[] {
   return plan.table_structure?.grades ?? plan.grades ?? [];
-}
-
-function subjectKey(planId: string | undefined, subjectName: string): string {
-  return `${planId ?? 'plan'}_${(subjectName || '').trim()}`;
 }
 
 function isDirectorRow(r: SubjectRow | DirectorRow): r is DirectorRow {
