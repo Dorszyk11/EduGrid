@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Błąd przetwarzania PDF:', error);
       return NextResponse.json(
-        { 
-          error: error instanceof Error ? error.message : 'Błąd przetwarzania pliku PDF',
+        {
+          error: 'Nie udało się przetworzyć pliku PDF.',
           success: false,
         },
         { status: 500 }
@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
     if (error instanceof DomainError) return errorResponse(error);
     console.error('Błąd importu PDF:', error);
     return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
+      {
+        error: 'Nie udało się zaimportować pliku.',
         success: false,
       },
       { status: 500 }

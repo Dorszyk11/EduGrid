@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { seedDozwolony } from '@/lib/api/seed-guard';
 
 /** Kolejność usuwania (zależności FK): najpierw zależne, na końcu typy-szkol, przedmioty, nauczyciele. */
 const COLLECTIONS_TO_CLEAR = [
@@ -35,7 +36,7 @@ const SCHOOLS_FROM_PLANS: { nazwa: string; liczba_lat: number; kod_mein: string 
  * Tylko w NODE_ENV !== 'production'.
  */
 export async function POST() {
-  if (process.env.NODE_ENV === 'production') {
+  if (!seedDozwolony()) {
     return NextResponse.json(
       { error: 'Reset i seed szkół dostępny tylko w środowisku deweloperskim' },
       { status: 403 }

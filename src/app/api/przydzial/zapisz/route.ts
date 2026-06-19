@@ -93,9 +93,10 @@ export async function POST(request: NextRequest) {
           utworzone.push(String(nowe.id));
         }
       } catch (error) {
+        console.error("Błąd zapisu przypisania:", error);
         bledy.push({
           przypisanie,
-          error: error instanceof Error ? error.message : "Nieznany błąd",
+          error: "Nie udało się zapisać tego przypisania.",
         });
       }
     }

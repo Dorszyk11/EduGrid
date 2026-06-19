@@ -16,6 +16,19 @@ const nextConfig = {
     'pg',
     'pg-native',
   ],
+  async headers() {
+    // Nagłówki bezpieczeństwa dla całej aplikacji (defense-in-depth).
+    // Świadomie BEZ pełnego CSP script/style (zerwałby Next/Payload) — tylko frame-ancestors.
+    const securityHeaders = [
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+      { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+    ]
+    return [{ source: '/:path*', headers: securityHeaders }]
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.plugins.push(

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { seedDozwolony } from '@/lib/api/seed-guard';
 import path from 'path';
 import fs from 'fs';
 
@@ -75,7 +76,7 @@ function subjectToKod(nazwa: string): string {
  * Tylko NODE_ENV !== 'production'.
  */
 export async function POST() {
-  if (process.env.NODE_ENV === 'production') {
+  if (!seedDozwolony()) {
     return NextResponse.json(
       { error: 'Import ramowych planów dostępny tylko w środowisku deweloperskim' },
       { status: 403 }

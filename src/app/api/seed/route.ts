@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { seedDozwolony } from '@/lib/api/seed-guard';
 
 /**
  * API endpoint do wypełnienia bazy danymi testowymi
@@ -9,8 +10,8 @@ import config from '@/payload.config';
  * UWAGA: Tylko dla środowiska deweloperskiego!
  */
 export async function GET() {
-  // Sprawdź, czy to środowisko deweloperskie
-  if (process.env.NODE_ENV === 'production') {
+  // Fail-closed: tylko dev/test lub jawny opt-in (chroni przed błędnym NODE_ENV)
+  if (!seedDozwolony()) {
     return NextResponse.json(
       { error: 'Seed jest dostępny tylko w środowisku deweloperskim' },
       { status: 403 }
@@ -271,7 +272,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Nieznany błąd',
+        error: 'Błąd serwera',
       },
       { status: 500 }
     );
