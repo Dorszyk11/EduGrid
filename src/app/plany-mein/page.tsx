@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import StatusPill from '@/components/ui/StatusPill';
 import Icon from '@/components/ui/Icon';
 import { PUSTA } from '@/lib/status-realizacji';
-import plansData from '@/utils/import/ramowe-plany.json';
+import plansData from '@/data/ramowe-plany.json';
 
 type HoursByGrade = Record<string, number>;
 type RawByGrade = Record<string, string>;

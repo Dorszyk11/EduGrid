@@ -3,7 +3,7 @@
  * mapowane na parę klasaId + przedmiotId — używane gdy rozkład jest jeszcze pusty.
  */
 
-import plansData from '@/utils/import/ramowe-plany.json';
+import plansData from '@/data/ramowe-plany.json';
 import type { Payload } from '@/types/payload';
 import { subjectKey } from '@/lib/subjectKey';
 

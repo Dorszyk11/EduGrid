@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import { z } from 'zod';
 import config from '@/payload.config';
-import plansData from '@/utils/import/ramowe-plany.json';
+import plansData from '@/data/ramowe-plany.json';
 import { requireUserId } from '@/lib/api/guard';
 import { assertKlasaAccess } from '@/lib/api/klasa-scope';
 import { errorResponse } from '@/lib/api/respond';

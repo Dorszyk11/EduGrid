@@ -20,7 +20,6 @@ import {
   School,
   Grid3x3,
   ArrowLeftRight,
-  Upload,
   FileBarChart,
   Users,
   GraduationCap,
@@ -55,7 +54,6 @@ const ICONS = {
   'plany-mein': FileText,
   'siatka-szkoly': Grid3x3,
   mapowania: ArrowLeftRight,
-  import: Upload,
   raporty: FileBarChart,
   admin: Settings,
 } satisfies Record<string, LucideIcon>;

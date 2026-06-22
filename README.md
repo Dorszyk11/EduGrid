@@ -31,7 +31,6 @@ Multi-tenant: każde konto widzi wyłącznie własne dane (izolacja per `wlascic
 - **Doradztwo zawodowe** — godziny liczone łącznie dla cyklu (nie per rocznik).
 - **Dashboard** — podsumowanie, obciążenie nauczycieli, braki kadrowe, wskaźnik ryzyka, zgodność z MEiN, alerty.
 - **Raporty i eksport** — raporty per typ + eksport do XLSX.
-- **Import planów MEiN z PDF** — parsowanie PDF (pdf-parse / pdfjs) z OCR (tesseract.js) i mapowaniem nazw przedmiotów.
 - **Zapotrzebowanie kadrowe / dyspozycja** — analiza obsady i dyspozycyjności nauczycieli wg kwalifikacji.
 - **Uwierzytelnianie** — logowanie/rejestracja z JWT (jose), hasła weryfikowane stałoczasowo.
 
@@ -45,7 +44,7 @@ Multi-tenant: każde konto widzi wyłącznie własne dane (izolacja per `wlascic
 | Baza | **PostgreSQL** (Supabase pooler) |
 | Auth | Payload Users + JWT (`jose`), hasła stałoczasowo |
 | Walidacja | **Zod** na granicach tras API |
-| Import/Eksport | pdf-parse, pdfjs-dist, tesseract.js, xlsx |
+| Eksport | xlsx |
 | Testy | **Jest 29** + React Testing Library (jsdom) |
 | Ikony | lucide-react |
 
@@ -79,7 +78,7 @@ Wszystkie kolekcje danych są **izolowane per konto** (`wlasciciel`) — odczyt/
 - **dashboard**: `podsumowanie`, `obciazenie-nauczycieli`, `braki-kadrowe`, `wskaznik-ryzyka`, `zgodnosc-mein`, `alerty`
 - **przydział**: `przydzial-godzin-wybor`, `przydzial/generuj`, `przydzial/zapisz`, `przydzial/przydziel-godziny-rozszerzen`
 - **zasoby**: `klasy`, `nauczyciele`, `przedmioty`, `typy-szkol`, `siatka-szkoly`, `mapowania` (+ trasy `[id]`)
-- **import/eksport**: `import/mein-pdf`, `export/xls`
+- **eksport**: `export/xls`
 - **dyspozycja**: `dyspozycja/przydziel`
 - **seed** (dev): `seed`, `seed/ramowe-plany`, `seed/reset-and-schools`
 

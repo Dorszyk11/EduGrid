@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import plansData from '@/utils/import/ramowe-plany.json';
+import plansData from '@/data/ramowe-plany.json';
 import { getZapamietanyTypSzkoly, zapiszTypSzkoly, getZapamietanyRocznik, zapiszRocznik, getZapamietanaLitera, zapiszLitera } from '@/utils/typSzkolyStorage';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';

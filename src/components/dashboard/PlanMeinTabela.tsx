@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, Fragment } from 'react';
-import plansData from '@/utils/import/ramowe-plany.json';
+import plansData from '@/data/ramowe-plany.json';
 import { useGroupSplit, type GroupAssignments, type GroupSplitFlags, type GroupSplitSaveExtras } from '@/hooks/useGroupSplit';
 import { useDaneKlasy, STORAGE_DYREKTOR } from '@/lib/hooks/useDaneKlasy';
 import TabelaDoradztwa from './plan-mein/TabelaDoradztwa';

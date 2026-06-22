@@ -53,7 +53,6 @@ export const NAWIGACJA: NavGroup[] = [
       { name: 'Plany MEiN', href: '/plany-mein', icon: 'plany-mein' },
       { name: 'Siatka szkoły', href: '/siatka-szkoly', icon: 'siatka-szkoly' },
       { name: 'Mapowania', href: '/mapowania', icon: 'mapowania' },
-      { name: 'Import PDF', href: '/import/mein-pdf', icon: 'import' },
     ],
   },
   {

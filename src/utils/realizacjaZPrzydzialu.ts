@@ -3,7 +3,7 @@
  * oraz przypisanych godzin z localStorage (te same klucze co w PlanMeinTabela).
  */
 
-import plansData from '@/utils/import/ramowe-plany.json';
+import plansData from '@/data/ramowe-plany.json';
 import { subjectKey } from '@/lib/subjectKey';
 
 const STORAGE_PREFIX = 'przydzial-wyboru-';
